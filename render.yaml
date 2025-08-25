@@ -65,4 +65,6 @@ services:
     staticPublishPath: ./frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://snowball-u411.onrender.com 
+        value: https://snowball-u411.onrender.com
+      - key: VITE_GOOGLE_CLIENT_ID
+        value: 735125698217-lahsiqjejpplb9fp249kj5ntdt8ehf3q.apps.googleusercontent.com 
