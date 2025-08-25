@@ -1,21 +1,29 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { apiService } from '../utils/api';
 
 const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
   const googleButtonRef = useRef();
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
+  const [initAttempts, setInitAttempts] = useState(0);
+  const maxAttempts = 50; // 5 seconds with 100ms intervals
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     console.log('🔑 Google Client ID:', clientId);
     console.log('🌐 Environment variables:', import.meta.env);
+    console.log('🔍 Disabled prop:', disabled);
+    console.log('🌍 Current URL:', window.location.href);
     
     if (!clientId) {
       console.error('❌ Google Client ID is missing from environment variables');
+      console.error('📝 Available env vars:', Object.keys(import.meta.env));
       return;
     }
     
-    const initializeGoogle = () => {
+    const initializeGoogle = (attemptNumber = 1) => {
+      console.log(`🔄 Attempt ${attemptNumber}/${maxAttempts} to initialize Google Sign-in`);
+      
       if (window.google && window.google.accounts && window.google.accounts.id) {
         console.log('✅ Google API loaded, initializing with Client ID:', clientId.substring(0, 20) + '...');
         
@@ -28,6 +36,7 @@ const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
           });
 
           if (googleButtonRef.current) {
+            console.log('🎯 Rendering Google button...');
             window.google.accounts.id.renderButton(
               googleButtonRef.current,
               {
@@ -40,13 +49,23 @@ const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
                 width: '100%'
               }
             );
+            setIsGoogleLoaded(true);
+            console.log('✅ Google button rendered successfully');
+          } else {
+            console.error('❌ googleButtonRef.current is null');
           }
         } catch (error) {
           console.error('❌ Google Sign-in initialization error:', error);
         }
       } else {
-        console.log('⏳ Google API not loaded yet, retrying in 100ms...');
-        setTimeout(initializeGoogle, 100);
+        setInitAttempts(attemptNumber);
+        if (attemptNumber < maxAttempts) {
+          console.log(`⏳ Google API not loaded yet (attempt ${attemptNumber}/${maxAttempts}), retrying in 100ms...`);
+          console.log('🔍 Window.google status:', window.google ? 'exists' : 'undefined');
+          setTimeout(() => initializeGoogle(attemptNumber + 1), 100);
+        } else {
+          console.error('❌ Google API failed to load after maximum attempts');
+        }
       }
     };
 
@@ -94,9 +113,36 @@ const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
     );
   }
 
+  // Show loading state while Google API loads
+  if (!isGoogleLoaded && initAttempts > 0 && initAttempts < maxAttempts) {
+    return (
+      <div className="w-full h-12 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-blue-600 text-sm">Loading Google Sign-in... ({initAttempts}/{maxAttempts})</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if Google API failed to load
+  if (initAttempts >= maxAttempts && !isGoogleLoaded) {
+    return (
+      <div className="w-full h-12 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
+        <span className="text-red-600 text-sm">Google Sign-in failed to load. Please refresh the page.</span>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <div ref={googleButtonRef} className="w-full flex justify-center"></div>
+      {/* Debug info - remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-2 text-xs text-gray-500">
+          Debug: Loaded={isGoogleLoaded.toString()}, Attempts={initAttempts}, ClientID={import.meta.env.VITE_GOOGLE_CLIENT_ID ? 'Present' : 'Missing'}
+        </div>
+      )}
     </div>
   );
 };
