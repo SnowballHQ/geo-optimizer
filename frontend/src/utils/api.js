@@ -2,7 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // API Configuration
-const API_BASE_URL = 'https://geo-optimizer.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 console.log('API Base URL:', API_BASE_URL);
 console.log('Environment:', import.meta.env.MODE);
@@ -76,9 +76,16 @@ export const apiService = {
   // Authentication
   login: (data) => api.post('/api/v1/login', data),
   register: (data) => api.post('/api/v1/register', data),
-  logout: () => {
-    localStorage.removeItem('auth');
-    window.location.href = '/login';
+  logout: async () => {
+    try {
+      await api.post('/api/v1/logout');
+    } catch (error) {
+      console.error('Logout API call failed:', error);
+      // Continue with client-side logout even if API fails
+    } finally {
+      localStorage.removeItem('auth');
+      window.location.href = '/login';
+    }
   },
   
   // Onboarding API methods

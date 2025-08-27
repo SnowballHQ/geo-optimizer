@@ -29,6 +29,14 @@ router.get("/me", authenticationMiddleware, (req, res) => {
   });
 });
 
+// Logout route
+router.post("/logout", authenticationMiddleware, (req, res) => {
+  res.json({
+    success: true,
+    message: "Logged out successfully"
+  });
+});
+
 // Brand settings routes
 router.get("/brand-settings", authenticationMiddleware, getBrandSettings);
 router.post("/brand-settings", authenticationMiddleware, saveBrandSettings);
