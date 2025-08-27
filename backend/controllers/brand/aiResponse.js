@@ -18,7 +18,7 @@ IMPORTANT: In your response, make sure to explicitly mention the brand names tha
     const aiResp = await openai.chat.completions.create({
       model: "gpt-5",
       messages: [{ role: "user", content: enhancedPrompt }],
-      max_tokens: 800,
+      // max_tokens: 800,
     });
     
     const responseContent = aiResp.choices[0].message.content;

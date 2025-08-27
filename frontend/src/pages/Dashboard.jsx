@@ -113,7 +113,36 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
-    apiService.logout();
+    try {
+      console.log('Dashboard: Logout button clicked');
+      
+      // Try multiple approaches for deployment compatibility
+      console.log('Dashboard: Clearing storage...');
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      console.log('Dashboard: Attempting React Router navigation...');
+      
+      // Method 1: Try React Router first (if available)
+      if (typeof window !== 'undefined' && window.history) {
+        console.log('Dashboard: Using history.pushState...');
+        window.history.pushState(null, null, '/login');
+        window.location.reload();
+      } else {
+        console.log('Dashboard: Falling back to window.location...');
+        apiService.logout();
+      }
+      
+    } catch (error) {
+      console.error('Dashboard: Logout error', error);
+      // Ultimate fallback
+      console.log('Dashboard: Ultimate fallback...');
+      localStorage.clear();
+      sessionStorage.clear();
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 500);
+    }
   };
 
   const handleDomainAnalysisSubmit = (e) => {

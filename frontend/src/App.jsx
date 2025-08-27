@@ -10,6 +10,7 @@ import SuperUserHistoryPage from "./pages/SuperUserHistoryPage";
 import { ToastContainer, toast } from 'react-toastify';
 import ErrorBoundary from './components/ErrorBoundary';
 
+
 const router = createBrowserRouter([
   {
     path: "/",

@@ -319,9 +319,11 @@ class OnboardingController {
       console.log(`🚀 Completing onboarding for user: ${userId}`);
       
       // Set a timeout to prevent hanging requests
+      let timeoutTriggered = false;
       const timeout = setTimeout(() => {
         console.log('⏰ Request timeout reached, sending response anyway');
-        if (!res.headersSent) {
+        if (!res.headersSent && !timeoutTriggered) {
+          timeoutTriggered = true;
           res.json({
             success: true,
             message: 'Onboarding completed (timeout reached)',
@@ -489,8 +491,12 @@ class OnboardingController {
       clearTimeout(timeout);
       
       console.log('📤 Calling res.json() now...');
-      res.json(successResponse);
-      console.log('📤 Response sent successfully!');
+      if (!res.headersSent && !timeoutTriggered) {
+        res.json(successResponse);
+        console.log('📤 Response sent successfully!');
+      } else {
+        console.log('📤 Response already sent, skipping...');
+      }
 
     } catch (error) {
       console.error('Error completing onboarding and triggering analysis:', error);
@@ -500,7 +506,12 @@ class OnboardingController {
         clearTimeout(timeout);
       }
       
-      res.status(500).json({ error: 'Failed to complete onboarding and trigger analysis' });
+      // Only send error response if headers haven't been sent
+      if (!res.headersSent && !timeoutTriggered) {
+        res.status(500).json({ error: 'Failed to complete onboarding and trigger analysis' });
+      } else {
+        console.log('Error occurred but response already sent');
+      }
     }
   }
 

@@ -82,17 +82,45 @@ export const apiService = {
   login: (data) => api.post('/api/v1/login', data),
   register: (data) => api.post('/api/v1/register', data),
   logout: () => {
-    console.log('🚪 Starting logout process...');
+    console.log('🚪 LOGOUT: Starting logout process');
+    console.log('🌐 LOGOUT: Current URL:', window.location.href);
+    console.log('🌐 LOGOUT: Origin:', window.location.origin);
+    console.log('🌐 LOGOUT: Environment:', import.meta.env.MODE);
     
-    // Step 1: Clean localStorage immediately
-    localStorage.removeItem('auth');
-    console.log('🧹 Auth token removed from localStorage');
+    // Clear all storage
+    localStorage.clear();
+    sessionStorage.clear();
+    console.log('🧹 LOGOUT: All storage cleared');
     
-    // Step 2: Redirect immediately without any API calls
-    console.log('🔄 Redirecting to login page...');
-    window.location.href = '/login';
+    // Try multiple redirect methods for maximum compatibility
+    const loginUrl = window.location.origin + '/login';
+    console.log('🔄 LOGOUT: Target URL:', loginUrl);
     
-    // No API calls to avoid any potential conflicts
+    try {
+      // Method 1: Direct assignment
+      console.log('🔄 LOGOUT: Trying window.location assignment...');
+      window.location = loginUrl;
+    } catch (error1) {
+      console.error('❌ LOGOUT: Method 1 failed:', error1);
+      
+      try {
+        // Method 2: href assignment
+        console.log('🔄 LOGOUT: Trying window.location.href...');
+        window.location.href = loginUrl;
+      } catch (error2) {
+        console.error('❌ LOGOUT: Method 2 failed:', error2);
+        
+        try {
+          // Method 3: replace
+          console.log('🔄 LOGOUT: Trying window.location.replace...');
+          window.location.replace(loginUrl);
+        } catch (error3) {
+          console.error('❌ LOGOUT: All methods failed:', error3);
+          // Last resort - try just /login
+          window.location.href = '/login';
+        }
+      }
+    }
   },
   
   // Onboarding API methods
