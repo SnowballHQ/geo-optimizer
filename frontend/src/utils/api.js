@@ -84,8 +84,8 @@ export const apiService = {
       // Continue with client-side logout even if API fails
     } finally {
       localStorage.removeItem('auth');
-      // Use relative path that works with React Router
-      window.location.href = window.location.origin + '/login';
+      // Force a full page reload to the login page to ensure clean state
+      window.location.replace('/login');
     }
   },
   
