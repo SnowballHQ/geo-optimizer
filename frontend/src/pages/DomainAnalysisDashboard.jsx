@@ -40,9 +40,7 @@ const DomainAnalysisDashboard = () => {
   }, []);
 
   const handleLogout = () => {
-    console.log('🚪 Domain Analysis Dashboard: MINIMAL LOGOUT');
-    localStorage.removeItem('auth');
-    window.location.href = '/login';
+    apiService.logout();
   };
 
   const handleNavigate = (path, section = null) => {

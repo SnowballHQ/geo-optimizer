@@ -89,12 +89,9 @@ export const apiService = {
     sessionStorage.clear();
     console.log('🧹 LOGOUT: All storage cleared');
     
-    // Determine redirect URL based on environment
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const redirectUrl = isLocalhost ? '/login' : 'https://geo-optimizer-land.onrender.com/';
-    
-    console.log('🔄 LOGOUT: Redirecting to:', redirectUrl);
-    window.location.href = redirectUrl;
+    // Always redirect to main landing page (root)
+    console.log('🔄 LOGOUT: Redirecting to main landing page');
+    window.location.href = '/';
   },
   
   // Onboarding API methods

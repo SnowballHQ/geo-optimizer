@@ -113,28 +113,7 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
-    console.log('🚪 STARTING LOGOUT - MINIMAL VERSION');
-    
-    // Step 1: Clear storage immediately (synchronous)
-    try {
-      localStorage.removeItem('auth');
-      console.log('✅ Auth token removed');
-    } catch (e) {
-      console.log('❌ Could not remove auth token:', e);
-    }
-    
-    // Step 2: Redirect using the most basic method possible
-    console.log('🔄 Redirecting to login...');
-    
-    // Create a simple anchor element and click it
-    const link = document.createElement('a');
-    link.href = '/login';
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    console.log('✅ Logout complete');
+    apiService.logout();
   };
 
   const handleDomainAnalysisSubmit = (e) => {
