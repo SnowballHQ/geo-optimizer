@@ -42,10 +42,15 @@ api.interceptors.response.use(
     console.error('API Error:', error.response?.status, error.config?.url, error.message);
     const message = error.response?.data?.msg || error.message || 'An error occurred';
     
+    // Skip error handling for logout endpoint - let logout function handle it
+    if (error.config?.url?.includes('/logout')) {
+      return Promise.reject(error);
+    }
+    
     // Handle different error types
     if (error.response?.status === 401) {
       localStorage.removeItem('auth');
-      window.location.href = '/login';
+      window.location.replace('/login');
       toast.error('Session expired. Please login again.');
     } else if (error.response?.status === 403) {
       toast.error('Access denied');
@@ -77,16 +82,22 @@ export const apiService = {
   login: (data) => api.post('/api/v1/login', data),
   register: (data) => api.post('/api/v1/register', data),
   logout: async () => {
+    // Always do client-side cleanup first
+    localStorage.removeItem('auth');
+    
     try {
-      await api.post('/api/v1/logout');
+      // Try to call logout endpoint, but don't wait for it
+      api.post('/api/v1/logout').catch((error) => {
+        console.error('Logout API call failed:', error);
+        // Ignore API failures during logout
+      });
     } catch (error) {
       console.error('Logout API call failed:', error);
-      // Continue with client-side logout even if API fails
-    } finally {
-      localStorage.removeItem('auth');
-      // Force a full page reload to the login page to ensure clean state
-      window.location.replace('/login');
+      // Continue with logout regardless
     }
+    
+    // Immediately redirect to login
+    window.location.replace('/login');
   },
   
   // Onboarding API methods
