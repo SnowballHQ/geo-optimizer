@@ -15,6 +15,7 @@ console.log('PORT:', process.env.PORT || '5000 (default)');
 const connectDB = require("./db/connect");
 const express = require("express");
 const cors = require('cors');
+const path = require('path');
 const app = express();
 const mainRouter = require("./routes/user");
 const brandRouter = require("./routes/brand");
@@ -75,6 +76,18 @@ app.use("/api/v1/cms-credentials", cmsCredentialsRouter);
 app.use("/api/v1/shopify", shopifyRouter);
 app.use("/api/v1/onboarding", onboardingRouter);
 app.use("/api/v1/regenerate", regenerateAnalysisRouter);
+
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// Handle React Router - serve index.html for all non-API routes
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
 
 // Global error handler
 app.use((err, req, res, next) => {
