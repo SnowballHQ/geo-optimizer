@@ -72,7 +72,9 @@ const SuperUserAnalysisPage = () => {
   };
 
   const handleLogout = () => {
-    apiService.logout();
+    console.log('🚪 SuperUser Page: MINIMAL LOGOUT');
+    localStorage.removeItem('auth');
+    window.location.href = '/login';
   };
 
   const handleBack = () => {
