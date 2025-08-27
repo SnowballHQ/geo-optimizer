@@ -83,44 +83,15 @@ export const apiService = {
   register: (data) => api.post('/api/v1/register', data),
   logout: () => {
     console.log('🚪 LOGOUT: Starting logout process');
-    console.log('🌐 LOGOUT: Current URL:', window.location.href);
-    console.log('🌐 LOGOUT: Origin:', window.location.origin);
-    console.log('🌐 LOGOUT: Environment:', import.meta.env.MODE);
     
     // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
     console.log('🧹 LOGOUT: All storage cleared');
     
-    // Try multiple redirect methods for maximum compatibility
-    const loginUrl = window.location.origin + '/login';
-    console.log('🔄 LOGOUT: Target URL:', loginUrl);
-    
-    try {
-      // Method 1: Direct assignment
-      console.log('🔄 LOGOUT: Trying window.location assignment...');
-      window.location = loginUrl;
-    } catch (error1) {
-      console.error('❌ LOGOUT: Method 1 failed:', error1);
-      
-      try {
-        // Method 2: href assignment
-        console.log('🔄 LOGOUT: Trying window.location.href...');
-        window.location.href = loginUrl;
-      } catch (error2) {
-        console.error('❌ LOGOUT: Method 2 failed:', error2);
-        
-        try {
-          // Method 3: replace
-          console.log('🔄 LOGOUT: Trying window.location.replace...');
-          window.location.replace(loginUrl);
-        } catch (error3) {
-          console.error('❌ LOGOUT: All methods failed:', error3);
-          // Last resort - try just /login
-          window.location.href = '/login';
-        }
-      }
-    }
+    // Use client-side routing instead of server URL
+    console.log('🔄 LOGOUT: Redirecting to /login');
+    window.location.href = '/login';
   },
   
   // Onboarding API methods
