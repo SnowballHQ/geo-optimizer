@@ -38,6 +38,7 @@ const allowedOrigins = [
   'https://snowball-frontend.onrender.com',
   'https://snowball-land.onrender.com',
   'https://geo-optimizer-land.onrender.com',
+  'https://geo-optimizer.onrender.com', // Backend domain
   process.env.FRONTEND_URL
 ].filter(Boolean);
 

@@ -96,8 +96,9 @@ export const apiService = {
       // Continue with logout regardless
     }
     
-    // Immediately redirect to login
-    window.location.replace('/login');
+    // Use window.location.href for SPA routing instead of replace
+    // This ensures proper client-side routing in production
+    window.location.href = '/login';
   },
   
   // Onboarding API methods
