@@ -84,7 +84,8 @@ export const apiService = {
       // Continue with client-side logout even if API fails
     } finally {
       localStorage.removeItem('auth');
-      window.location.href = '/login';
+      // Use relative path that works with React Router
+      window.location.href = window.location.origin + '/login';
     }
   },
   
