@@ -81,24 +81,18 @@ export const apiService = {
   // Authentication
   login: (data) => api.post('/api/v1/login', data),
   register: (data) => api.post('/api/v1/register', data),
-  logout: async () => {
-    // Always do client-side cleanup first
+  logout: () => {
+    console.log('🚪 Starting logout process...');
+    
+    // Step 1: Clean localStorage immediately
     localStorage.removeItem('auth');
+    console.log('🧹 Auth token removed from localStorage');
     
-    try {
-      // Try to call logout endpoint, but don't wait for it
-      api.post('/api/v1/logout').catch((error) => {
-        console.error('Logout API call failed:', error);
-        // Ignore API failures during logout
-      });
-    } catch (error) {
-      console.error('Logout API call failed:', error);
-      // Continue with logout regardless
-    }
-    
-    // Use window.location.href for SPA routing instead of replace
-    // This ensures proper client-side routing in production
+    // Step 2: Redirect immediately without any API calls
+    console.log('🔄 Redirecting to login page...');
     window.location.href = '/login';
+    
+    // No API calls to avoid any potential conflicts
   },
   
   // Onboarding API methods
