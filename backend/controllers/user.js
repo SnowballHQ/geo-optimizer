@@ -76,7 +76,19 @@ const register = async (req, res) => {
         password,
       });
       await person.save();
-      return res.status(201).json({ person });
+      
+      // Generate JWT token for automatic login
+      const token = jwt.sign(
+        { id: person._id, name: person.name, role: person.role || 'user' },
+        process.env.JWT_SECRET,
+        { expiresIn: "30d" }
+      );
+      
+      return res.status(201).json({ 
+        person,
+        token, // Add token to response
+        message: "Registration successful"
+      });
     } else {
       return res.status(400).json({ msg: "Please add all values in the request body" });
     }

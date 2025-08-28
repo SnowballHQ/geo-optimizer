@@ -6,6 +6,7 @@ const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
   const googleButtonRef = useRef();
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const [initAttempts, setInitAttempts] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false); // New state for backend processing
   const maxAttempts = 50; // 5 seconds with 100ms intervals
 
   useEffect(() => {
@@ -69,7 +70,7 @@ const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
       }
     };
 
-    if (!disabled) {
+    if (!disabled && !isProcessing) {
       initializeGoogle();
     }
   }, [disabled]);
@@ -77,6 +78,9 @@ const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
   const handleCredentialResponse = async (response) => {
     try {
       console.log('Google credential response:', response);
+      
+      // Show loading state during backend processing
+      setIsProcessing(true);
       
       // Send the Google ID token to our backend for verification
       const result = await apiService.post('/api/v1/auth/google', {
@@ -102,6 +106,9 @@ const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
       if (onError) {
         onError(error);
       }
+    } finally {
+      // Always hide loading state
+      setIsProcessing(false);
     }
   };
 
@@ -109,6 +116,18 @@ const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
     return (
       <div className="w-full h-12 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
         <span className="text-gray-400 text-sm">Google Sign-in unavailable</span>
+      </div>
+    );
+  }
+
+  // Show processing state during backend authentication
+  if (isProcessing) {
+    return (
+      <div className="w-full h-12 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-blue-600 text-sm">Authenticating with Google...</span>
+        </div>
       </div>
     );
   }

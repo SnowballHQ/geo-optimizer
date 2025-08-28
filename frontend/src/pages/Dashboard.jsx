@@ -242,18 +242,22 @@ const Dashboard = () => {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
-          <button
-            onClick={() => { setActiveSection('dashboard'); setActiveTool(null); }}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'dashboard' && !activeTool
-                ? 'nav-active'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span>Dashboard</span>
-          </button>
+          {/* Show Dashboard only for superusers */}
+          {isUserSuperuser && (
+            <button
+              onClick={() => { setActiveSection('dashboard'); setActiveTool(null); }}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeSection === 'dashboard' && !activeTool
+                  ? 'nav-active'
+                  : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Dashboard</span>
+            </button>
+          )}
 
+          {/* Blog Analysis - visible to all users */}
           <button
             onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -266,6 +270,7 @@ const Dashboard = () => {
             <span>Blog Analysis</span>
           </button>
 
+          {/* Domain Analysis - only for superusers */}
           {isUserSuperuser && (
             <button
               onClick={() => { setActiveSection('dashboard'); setActiveTool('domain'); }}
@@ -280,71 +285,74 @@ const Dashboard = () => {
             </button>
           )}
 
-          {userBrands.length > 0 && (
+                     {/* Brand Dashboard - visible to all users with brands */}
+           {userBrands.length > 0 && (
+             <button
+               onClick={() => { setActiveSection('brand-dashboard'); setActiveTool(null); }}
+               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                 activeSection === 'brand-dashboard'
+                   ? 'nav-active'
+                   : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+               }`}
+             >
+               <BarChart3 className="w-4 h-4" />
+               <span>Brand Dashboard</span>
+             </button>
+           )}
+
+          {/* Content Calendar - only for superusers */}
+          {isUserSuperuser && (
             <button
-              onClick={() => navigate('/domain-analysis')}
-              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
+              onClick={() => { setActiveSection('dashboard'); setActiveTool('content-calendar'); }}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeSection === 'content-calendar' || activeTool === 'content-calendar'
+                  ? 'nav-active'
+                  : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+              }`}
             >
-              <BarChart3 className="w-4 h-4" />
-              <span>Brand Dashboard</span>
+              <Calendar className="w-4 h-4" />
+              <span>Content Calendar</span>
             </button>
           )}
 
-          <button
-            onClick={() => { setActiveSection('dashboard'); setActiveTool('link'); }}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'link-analysis' || activeTool === 'link'
-                ? 'nav-active'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
-            <LinkIcon className="w-4 h-4" />
-            <span>Link Analysis</span>
-          </button>
+          {/* Shopify Integration - only for superusers */}
+          {isUserSuperuser && (
+            <button
+              onClick={() => navigate('/shopify-integration')}
+              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Shopify Integration</span>
+            </button>
+          )}
 
-          <button
-            onClick={handleContentCalendarClick}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'content-calendar' || activeTool === 'content-calendar'
-                ? 'nav-active'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Content Calendar</span>
-          </button>
+          {/* History - only for superusers */}
+          {isUserSuperuser && (
+            <button
+              onClick={() => navigate('/history')}
+              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
+            >
+              <Activity className="w-4 h-4" />
+              <span>History</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => window.location.href = '/shopify-integration'}
-            className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
-          >
-            <Building2 className="w-4 h-4" />
-            <span>Shopify Integration</span>
-          </button>
+          {/* Settings - only for superusers */}
+          {isUserSuperuser && (
+            <button
+              onClick={() => setActiveSection('settings')}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeSection === 'settings'
+                  ? 'nav-active'
+                  : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span>Settings</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => { setActiveSection('history'); setActiveTool(null); }}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'history'
-                ? 'nav-active'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            <span>History</span>
-          </button>
 
-          <button
-            onClick={() => { setActiveSection('settings'); setActiveTool(null); }}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'settings'
-                ? 'nav-active'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            <span>Settings</span>
-          </button>
 
           {/* Super User Domain Analysis - Only visible to super users */}
           {isUserSuperuser && (
@@ -353,12 +361,12 @@ const Dashboard = () => {
               className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
             >
               <Globe className="w-4 h-4" />
-              <span>Domain Analysis</span>
+              <span>Super User Domain Analysis</span>
             </button>
           )}
         </nav>
 
-        {/* Logout */}
+        {/* Logout - visible to all users */}
         <div className="p-4 border-t border-[#ffffff]">
           <Button
             variant="ghost"
@@ -447,62 +455,66 @@ const Dashboard = () => {
                       </CardContent>
                     </Card>
 
-                    {/* Content Calendar Card */}
-                    <Card 
-                      className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
-                      onClick={() => setActiveTool('content-calendar')}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-center space-x-4 mb-4">
-                          <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                            <Calendar className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-[#000000]">
-                              Content Calendar
-                            </h3>
-                            <p className="text-sm text-[#4a4a6a]">
-                              AI-powered content planning
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-[#4a4a6a]">
-                          Generate 30-day content plans and auto-publish to your CMS platforms.
-                        </p>
-                      </CardContent>
-                    </Card>
+                                         {/* Content Calendar Card - Only for superusers */}
+                     {isUserSuperuser && (
+                       <Card 
+                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
+                         onClick={() => setActiveTool('content-calendar')}
+                       >
+                         <CardContent className="p-6">
+                           <div className="flex items-center space-x-4 mb-4">
+                             <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
+                               <Calendar className="w-6 h-6 text-white" />
+                             </div>
+                             <div>
+                               <h3 className="text-lg font-semibold text-[#000000]">
+                                 Content Calendar
+                               </h3>
+                               <p className="text-sm text-[#4a4a6a]">
+                                 AI-powered content planning
+                               </p>
+                             </div>
+                           </div>
+                           <p className="text-sm text-[#4a4a6a]">
+                             Generate 30-day content plans and auto-publish to your CMS platforms.
+                           </p>
+                         </CardContent>
+                       </Card>
+                     )}
 
-                    {/* Shopify Integration Card */}
-                    <Card 
-                      className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
-                      onClick={() => window.location.href = '/shopify-integration'}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-center space-x-4 mb-4">
-                          <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-[#000000]">
-                              Shopify Integration
-                            </h3>
-                            <p className="text-sm text-[#4a4a6a]">
-                              OAuth & content publishing
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-[#4a4a6a]">
-                          Connect to Shopify stores and publish content directly via OAuth integration.
-                        </p>
-                      </CardContent>
-                    </Card>
+                     {/* Shopify Integration Card - Only for superusers */}
+                     {isUserSuperuser && (
+                       <Card 
+                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
+                         onClick={() => window.location.href = '/shopify-integration'}
+                       >
+                         <CardContent className="p-6">
+                           <div className="flex items-center space-x-4 mb-4">
+                             <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
+                               <Building2 className="w-6 h-6 text-white" />
+                             </div>
+                             <div>
+                               <h3 className="text-lg font-semibold text-[#000000]">
+                                 Shopify Integration
+                               </h3>
+                               <p className="text-sm text-[#4a4a6a]">
+                                 OAuth & content publishing
+                               </p>
+                             </div>
+                           </div>
+                           <p className="text-sm text-[#4a4a6a]">
+                             Connect to Shopify stores and publish content directly via OAuth integration.
+                           </p>
+                         </CardContent>
+                       </Card>
+                     )}
 
-                    {/* Brand Dashboard Card - Available for all users with brands */}
-                    {userBrands.length > 0 && (
-                      <Card 
-                        className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
-                        onClick={() => navigate('/domain-analysis')}
-                      >
+                                         {/* Brand Dashboard Card - Available for all users with brands */}
+                     {userBrands.length > 0 && (
+                       <Card 
+                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
+                         onClick={() => { setActiveSection('brand-dashboard'); setActiveTool(null); }}
+                       >
                         <CardContent className="p-6">
                           <div className="flex items-center space-x-4 mb-4">
                             <div className="w-12 h-12 bg-[#7765e3] rounded-lg flex items-center justify-center">
@@ -569,11 +581,78 @@ const Dashboard = () => {
                 </>
               )}
 
-              {activeTool && renderInlineTool()}
-            </div>
-          )}
+                             {activeTool && renderInlineTool()}
+             </div>
+           )}
 
-          {activeSection === 'history' && (
+           {activeSection === 'brand-dashboard' && (
+             <div className="space-y-6">
+               <div>
+                 <h2 className="text-2xl font-semibold text-[#4a4a6a] mb-2">Brand Dashboard</h2>
+                 <p className="text-[#4a4a6a]">View your complete brand analysis, AI responses, and Share of Voice metrics</p>
+               </div>
+               
+               {/* Brand Dashboard Content */}
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 {/* Brand Summary */}
+                 <Card className="border border-[#b0b0d8] bg-white">
+                   <CardHeader>
+                     <CardTitle className="text-[#4a4a6a]">Brand Summary</CardTitle>
+                   </CardHeader>
+                   <CardContent>
+                     <div className="space-y-4">
+                       <div className="flex items-center space-x-2">
+                         <Globe className="w-4 h-4 text-[#6658f4]" />
+                         <span className="text-sm font-medium">Domain</span>
+                       </div>
+                       <p className="text-sm text-[#4a4a6a]">
+                         {userBrands.length > 0 ? userBrands[0].domain : 'No brand configured'}
+                       </p>
+                       <div className="pt-2">
+                                                 <Button 
+                          onClick={() => navigate('/domain-analysis')}
+                          className="w-full gradient-primary"
+                        >
+                          View Full Analysis
+                        </Button>
+                       </div>
+                     </div>
+                   </CardContent>
+                 </Card>
+
+                 {/* Quick Actions */}
+                 <Card className="border border-[#b0b0d8] bg-white">
+                   <CardHeader>
+                     <CardTitle className="text-[#4a4a6a]">Quick Actions</CardTitle>
+                   </CardHeader>
+                   <CardContent>
+                     <div className="space-y-3">
+                       <Button 
+                         onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
+                         variant="outline"
+                         className="w-full border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
+                       >
+                         <FileText className="w-4 h-4 mr-2" />
+                         Blog Analysis
+                       </Button>
+                                               <Button 
+                          onClick={() => navigate('/domain-analysis')}
+                          variant="outline"
+                          className="w-full border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
+                        >
+                          <BarChart3 className="w-4 h-4 mr-2" />
+                          View Complete Analysis
+                        </Button>
+                     </div>
+                   </CardContent>
+                 </Card>
+               </div>
+             </div>
+           )}
+
+           
+
+           {activeSection === 'history' && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-semibold text-[#4a4a6a] mb-2">Analysis History</h2>

@@ -31,23 +31,10 @@ const Login = () => {
       const onboardingResponse = await apiService.getOnboardingStatus();
       
       if (onboardingResponse.data.isCompleted) {
-        // User has completed onboarding, check if they are superuser and have a brand profile
-        try {
-          const brandResponse = await apiService.getUserBrands();
-          if (brandResponse.data.brands && brandResponse.data.brands.length > 0) {
-            // User with brands, redirect to brand dashboard (domain analysis dashboard)
-            console.log('User has brands, redirecting to brand dashboard');
-            navigate('/domain-analysis');
-          } else {
-            // User without brands, go to regular dashboard
-            console.log('User completed onboarding but no brands, going to regular dashboard');
-            navigate('/dashboard');
-          }
-        } catch (brandError) {
-          console.error('Error checking user brands:', brandError);
-          // If we can't check brands, go to regular dashboard
-          navigate('/dashboard');
-        }
+        // User has completed onboarding, always go to main dashboard first
+        // From there they can access Brand Dashboard or other features
+        console.log('User completed onboarding, going to main dashboard');
+        navigate('/dashboard');
       } else {
         // User needs to complete onboarding
         navigate('/onboarding');

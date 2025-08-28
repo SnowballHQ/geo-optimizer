@@ -116,37 +116,37 @@ const DomainAnalysisDashboard = () => {
             </button>
           )}
 
-          <button
+          {/* <button
             onClick={() => handleNavigate('/dashboard', 'content-calendar')}
             className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
           >
             <Calendar className="w-4 h-4" />
             <span>Content Calendar</span>
-          </button>
+          </button> */}
 
-          <button
+          {/* <button
             onClick={() => window.location.href = '/shopify-integration'}
             className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
           >
             <Building2 className="w-4 h-4" />
-            <span>Shopify Integration</span>
-          </button>
+            <span>Shopify Interation</span>
+          </button> */}
 
-          <button
+          {/* <button
             onClick={() => handleNavigate('/history', 'history')}
             className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
           >
             <Activity className="w-4 h-4" />
             <span>History</span>
-          </button>
+          </button> */}
 
-          <button
+          {/* <button
             onClick={() => handleNavigate('/dashboard', 'settings')}
             className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
           >
             <Settings className="w-4 h-4" />
             <span>Settings</span>
-          </button>
+          </button> */}
 
           {/* Super User Domain Analysis - Only visible to super users */}
           {isSuperuser() && (

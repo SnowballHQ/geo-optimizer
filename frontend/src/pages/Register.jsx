@@ -40,9 +40,28 @@ const Register = () => {
       const { confirmPassword, ...registrationData } = formData;
       const response = await apiService.register(registrationData);
       
-      if (response.data) {
-        toast.success('Registration successful! Please login.');
-        navigate('/login');
+      if (response.data && response.data.token) {
+        // Store the token for automatic login
+        localStorage.setItem('auth', response.data.token);
+        
+        toast.success('Registration successful! Welcome to Snowball!');
+        
+        // Check onboarding status and redirect accordingly
+        try {
+          const onboardingResponse = await apiService.getOnboardingStatus();
+          
+          if (onboardingResponse.data.isCompleted) {
+            // User has completed onboarding, go to dashboard
+            navigate('/dashboard');
+          } else {
+            // User needs to complete onboarding
+            navigate('/onboarding');
+          }
+        } catch (onboardingError) {
+          console.error('Error checking onboarding status:', onboardingError);
+          // If we can't check onboarding status, go to onboarding
+          navigate('/onboarding');
+        }
       } else {
         toast.error('Registration failed. Please try again.');
       }
