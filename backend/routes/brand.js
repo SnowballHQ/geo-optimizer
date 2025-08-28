@@ -60,6 +60,9 @@ router.get("/:brandId/sov-trends", auth, brandController.getSOVTrends);
 // Manual rerun analysis button
 router.post("/:brandId/rerun-analysis", auth, brandController.rerunAnalysis);
 
+// Get AI responses for a brand
+router.get("/:brandId/responses", auth, brandController.getBrandResponses);
+
 // Mention extraction and analysis endpoints
 router.post("/:brandId/mentions/process", auth, mentionController.processBrandMentions);
 router.get("/:brandId/mentions/companies", auth, mentionController.getUniqueCompanies);

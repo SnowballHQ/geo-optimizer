@@ -6,7 +6,7 @@ import Step2Categories from './onboarding/Step2Categories';
 import Step3Competitors from './onboarding/Step3Competitors';
 import Step4Prompts from './onboarding/Step4Prompts';
 import ProgressBar from './onboarding/ProgressBar';
-import SuperUserAnalysisResults from './SuperUserAnalysisResults';
+import PostAnalysisFlow from './shared/PostAnalysisFlow';
 import { toast } from 'react-toastify';
 import { Button } from './ui/button';
 import { Download, RefreshCw, Crown } from 'lucide-react';
@@ -283,32 +283,26 @@ const SuperUserDomainAnalysisFlow = ({ onAnalysisComplete }) => {
   };
 
   const renderAnalysisComplete = () => {
-    // Show detailed analysis results instead of summary
+    // Show the new unified post-analysis flow (Responses → Mentions → SOV → Dashboard)
     return (
-      <SuperUserAnalysisResults
-        analysisData={{
-          analysisId: analysisId,
-          domain: progress.step1?.domain,
-          brandName: progress.step1?.brandName,
-          brandInformation: progress.step1?.brandInformation || progress.step1?.description,
-          createdAt: new Date().toISOString(),
-          analysisResults: progress.analysisResult,
-          // Include all step data for proper display
-          step1Data: progress.step1,
-          step2Data: progress.step2,
-          step3Data: progress.step3,
-          step4Data: progress.step4
-        }}
-        onBack={() => {
-          // This will be used when viewing from history
-          console.log('Back button clicked from results');
-        }}
+      <PostAnalysisFlow
+        brandId={progress.analysisResult?.brandId}
+        analysisId={analysisId}
+        brandName={progress.step1?.brandName}
+        competitors={progress.step3?.competitors || []}
         onStartNewAnalysis={handleStartNewAnalysis}
-        downloadingPdf={downloadingPdf}
         onDownloadPDF={handleDownloadPDF}
+        downloadingPdf={downloadingPdf}
+        isSuperUser={true}
+        initialStep="responses"
       />
     );
   };
+
+  // Show analysis complete flow full screen
+  if (analysisComplete) {
+    return renderAnalysisComplete();
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -330,30 +324,23 @@ const SuperUserDomainAnalysisFlow = ({ onAnalysisComplete }) => {
         )}
       </div>
 
-      {/* Show Analysis Complete or Progress */}
-      {analysisComplete ? (
-        renderAnalysisComplete()
-      ) : (
-        <>
-          {/* Progress Bar */}
-          <ProgressBar currentStep={currentStep} totalSteps={4} />
-          <div className="text-center mb-4 text-sm text-gray-600">
-            <p>Step 4 includes: Prompts → AI Analysis → Mentions → Share of Voice</p>
-          </div>
+      {/* Progress Bar */}
+      <ProgressBar currentStep={currentStep} totalSteps={4} />
+      <div className="text-center mb-4 text-sm text-gray-600">
+        <p>Step 4 includes: Prompts → AI Analysis → Mentions → Share of Voice</p>
+      </div>
 
-          {/* Error Display */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Current Step */}
-          <div className="mt-8">
-            {renderCurrentStep()}
-          </div>
-        </>
+      {/* Error Display */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-800 text-sm">{error}</p>
+        </div>
       )}
+
+      {/* Current Step */}
+      <div className="mt-8">
+        {renderCurrentStep()}
+      </div>
     </div>
   );
 };

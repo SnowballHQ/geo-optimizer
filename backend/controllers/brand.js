@@ -1243,3 +1243,57 @@ exports.generateCustomResponse = async (req, res) => {
     });
   }
 };
+
+// Get AI responses for a brand
+exports.getBrandResponses = async (req, res) => {
+  try {
+    const { brandId } = req.params;
+    const userId = req.user.id;
+
+    console.log(`🔍 Getting AI responses for brand: ${brandId}, user: ${userId}`);
+
+    // Find the brand and verify ownership
+    const brand = await BrandProfile.findOne({ _id: brandId, ownerUserId: userId });
+    if (!brand) {
+      return res.status(404).json({ error: 'Brand not found or access denied' });
+    }
+
+    // Get AI responses for this brand
+    const responses = await PromptAIResponse.find({
+      brandId: brandId,
+      userId: userId
+    })
+    .populate({
+      path: 'promptId',
+      populate: {
+        path: 'categoryId',
+        select: 'categoryName'
+      }
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+
+    console.log(`✅ Found ${responses.length} AI responses for brand ${brandId}`);
+
+    // Format responses for frontend consumption
+    const formattedResponses = responses.map(response => ({
+      _id: response._id,
+      promptText: response.promptId?.promptText || 'Unknown prompt',
+      responseText: response.responseText,
+      categoryName: response.promptId?.categoryId?.categoryName || 'Unknown category',
+      createdAt: response.createdAt,
+      runAt: response.runAt
+    }));
+
+    res.json({
+      success: true,
+      responses: formattedResponses,
+      totalResponses: formattedResponses.length,
+      brandId: brandId
+    });
+
+  } catch (error) {
+    console.error('Error getting brand responses:', error);
+    res.status(500).json({ error: 'Failed to get brand responses' });
+  }
+};
