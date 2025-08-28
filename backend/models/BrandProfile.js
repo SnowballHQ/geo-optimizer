@@ -16,7 +16,7 @@ const BrandProfileSchema = new mongoose.Schema({
     required: false, 
     default: "", 
     trim: true, 
-    maxlength: 2000 
+    maxlength: 10000 
   },
   competitors: [{ type: String }], // Add missing competitors field
   isAdminAnalysis: { type: Boolean, default: false }, // Flag for super user admin analyses

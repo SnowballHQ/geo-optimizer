@@ -14,10 +14,13 @@ exports.extractCategories = async (domain) => {
   try {
     console.log(`🔍 Getting domain information and description from Perplexity for: ${domain}`);
     const response = await perplexityService.getDomainInfo(domain);
-    domainInfo = response.domainInfo;
+    
+         // Store the complete Perplexity response as one piece
+     domainInfo = response.domainInfo; // Save the full response directly
+    
     brandDescription = response.description;
     console.log(`Successfully retrieved domain info and description from Perplexity`);
-    console.log("Domain info:", domainInfo);
+    console.log("Full Perplexity data stored in domainInfo");
     console.log("Brand description:", brandDescription);
     
     // Store the description globally for later use
@@ -25,20 +28,14 @@ exports.extractCategories = async (domain) => {
     
   } catch (error) {
     console.error(`Failed to get domain info from Perplexity for ${domain}:`, error.message);
-    domainInfo = `Information about ${domain} - a business website offering various services and solutions.`;
+         domainInfo = `OVERVIEW: Information about ${domain} - a business website offering various services and solutions.\nDESCRIPTION: ${domain} is a business website that provides various services and solutions to its customers.`;
+    
     brandDescription = `${domain} is a business website that provides various services and solutions to its customers.`;
     global.extractedBrandDescription = brandDescription;
   }
 
-  const catPrompt = `identify a company's main customer-facing primary product/service offering
-
-Website: ${domain}
-Domain Information: ${domainInfo}
-
-Instructions:
-- identify the main primary product/service offering categories.
-- Avoid vague, internal, or technical terms that are not customer-facing.
-
+  const catPrompt = `figure out what does  ${domain} do and what are the main categories of services/products it offers? Give categories for it's exact niche.
+domain information: ${domainInfo}
 Output:
 Return a JSON array of 4 category names with no explanation or extra formatting.`;
   
@@ -61,22 +58,22 @@ Return a JSON array of 4 category names with no explanation or extra formatting.
   
   try {
     console.log("🔍 Making OpenAI API request...");
-    const catResp = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: 'user', content: catPrompt }],
-      max_tokens: 200,
-      temperature: 0.1
-    });
+         const catResp = await openai.chat.completions.create({
+       model: "gpt-4o-mini-search-preview",
+       messages: [{ role: 'user', content: catPrompt }],
+       // max_tokens: 200,
+       // temperature: 0.1
+     });
     
     const responseContent = catResp.choices[0].message.content;
     
-    // Log token usage and cost for OpenAI
-    tokenLogger.logOpenAICall(
-      'Category Extraction',
-      catPrompt,
-      responseContent,
-      'gpt-3.5-turbo'
-    );
+         // Log token usage and cost for OpenAI
+     tokenLogger.logOpenAICall(
+       'Category Extraction',
+       catPrompt,
+       responseContent,
+       'gpt-4o-search-preview'
+     );
     
     console.log("✅ OpenAI API response received");
     console.log("OpenAI catResp:", responseContent);

@@ -607,7 +607,7 @@ class SuperUserAnalysisController {
         brandId: 'temp_id'
       }));
       
-      // Generate prompts using the isolated categories only
+      // Generate prompts using the enhanced logic (same as prompt.js)
       const OpenAI = require('openai');
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       
@@ -615,51 +615,112 @@ class SuperUserAnalysisController {
       
       const allPrompts = [];
       for (const catDoc of categoryDocs) {
-        console.log(`📝 Generating prompts for category: ${catDoc.categoryName}`);
+        console.log(`📝 Generating keywords and prompts for category: ${catDoc.categoryName}`);
         
-        // Generate prompts for this category (simplified version)
-        const promptGen = `You are helping a digital marketing researcher generate realistic, user-like questions that people typically ask ChatGPT about ${catDoc.categoryName} services.
-
-Generate 5 natural, conversational questions that users typically ask ChatGPT about ${catDoc.categoryName}. These questions should be framed so that responses would naturally mention ${analysis.brandName} and similar companies.
-
-Guidelines:
-- Use natural, conversational phrasing reflecting genuine user curiosity (e.g., "What are the best…", "Which platforms…", "How do I choose…").
-- Cover themes like comparisons, alternatives, recommendations, trending tools, and value-for-money.
-- Do NOT mention the brand name in the questions themselves.
-- Create questions that lead naturally to mentioning brands in answers.
-- Focus on questions that users would actually ask ChatGPT for help with.
-
-Format: Output only a JSON array of 5 strings.`;
-
+        // Single mixed prompt that generates both keywords and prompts
+        let keywords = [];
+        let promptArr = [];
+        
+        console.log(`🔄 About to generate keywords and prompts for ${catDoc.categoryName}`);
+        console.log(`🔑 Brand: ${analysis.brandName}, Domain: ${analysis.domain}`);
+        console.log(`📝 Brand Information: ${analysis.brandInformation || 'None provided'}`);
+        console.log(`🤖 About to call OpenAI for mixed generation...`);
+        
         try {
-          const promptResp = await openai.chat.completions.create({
+          // Get competitors from step 3 if available
+          const competitors = analysis.step3Data?.competitors || [];
+          const competitorList = competitors.length > 0 ? competitors : [
+            'competitor1', 'competitor2', 'competitor3', 'competitor4', 'competitor5'
+          ];
+          
+          // Single mixed prompt that generates both keywords and prompts
+          const mixedPrompt = `You are helping a digital marketing researcher. For the category "${catDoc.categoryName}" for ${analysis.domain}, please do the following:
+
+Brand Context: ${analysis.brandInformation || `${analysis.brandName} operates at ${analysis.domain}`}
+
+Popular competitors include: ${competitorList.join(', ')}.
+
+STEP 1: Generate 10 long-tail keywords that users might search for when looking for ${catDoc.categoryName} services.
+STEP 2: Based on those keywords, generate 5 natural, conversational questions that users typically ask ChatGPT.
+
+Requirements:
+- Keywords should be specific, long-tail search terms
+- Questions should be framed so responses would naturally mention ${analysis.brandName} but NOT explicitly mention the brand name
+- Questions should use natural, conversational phrasing
+- Cover themes like comparisons, alternatives, recommendations, trending tools, and value-for-money
+
+Return ONLY a JSON object with this exact format:
+{
+  "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5", "keyword6", "keyword7", "keyword8", "keyword9", "keyword10"],
+  "prompts": ["question1", "question2", "question3", "question4", "question5"]
+}`;
+
+          // Log the complete mixed prompt
+          console.log("🔍 Complete OpenAI Mixed Prompt for Keywords + Prompts:");
+          console.log("=" .repeat(80));
+          console.log(mixedPrompt);
+          console.log("=" .repeat(80));
+
+          const mixedResponse = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
-            messages: [{ role: "user", content: promptGen }],
-            max_tokens: 300,
+            messages: [{ role: "user", content: mixedPrompt }],
+            max_tokens: 500,
+            temperature: 0.1
           });
-          
-          const promptContent = promptResp.choices[0].message.content;
-          console.log("OpenAI prompt response:", promptContent);
-          
-          let promptArr = [];
+
+          const mixedContent = mixedResponse.choices[0].message.content;
+          console.log("OpenAI mixed response:", mixedContent);
+
+          // Parse the mixed response
           try {
-            promptArr = JSON.parse(promptContent);
+            const parsedResponse = JSON.parse(mixedContent);
+            if (parsedResponse.keywords && Array.isArray(parsedResponse.keywords)) {
+              keywords = parsedResponse.keywords.slice(0, 10);
+            }
+            if (parsedResponse.prompts && Array.isArray(parsedResponse.prompts)) {
+              promptArr = parsedResponse.prompts.slice(0, 5);
+            }
           } catch (parseError) {
-            console.log("⚠️ JSON parsing failed for prompts, extracting with regex");
-            const quotedStrings = promptContent.match(/"([^"]+)"/g);
+            console.log("⚠️ JSON parsing failed for mixed response, extracting with regex");
+            // Fallback: Extract keywords and prompts separately
+            const quotedStrings = mixedContent.match(/"([^"]+)"/g);
             if (quotedStrings) {
-              promptArr = quotedStrings.map(s => s.replace(/"/g, ""));
+              const allStrings = quotedStrings.map(s => s.replace(/"/g, ""));
+              // First 10 are keywords, next 5 are prompts
+              keywords = parsedResponse.keywords.slice(0, 10);
+              promptArr = allStrings.slice(10, 15);
             }
           }
-          
-          promptArr = promptArr.slice(0, 5);
-          console.log(`📋 Generated ${promptArr.length} prompts for category ${catDoc.categoryName}`);
-          
-          allPrompts.push(...promptArr.map(promptText => ({ promptText })));
+
+          console.log(`✅ Retrieved ${keywords.length} keywords for ${catDoc.categoryName}:`, keywords);
+          console.log(`✅ Retrieved ${promptArr.length} prompts for ${catDoc.categoryName}:`, promptArr);
           
         } catch (error) {
-          console.error(`❌ Error generating prompts for category ${catDoc.categoryName}:`, error);
+          console.error(`❌ Error generating keywords and prompts for ${catDoc.categoryName}:`, error.message);
+          console.error(`❌ Full error:`, error);
+          console.log(`🔄 Using fallback keywords and prompts for ${catDoc.categoryName}`);
+          // Fallback keywords and prompts
+          keywords = [
+            `${catDoc.categoryName} solutions`,
+            `best ${catDoc.categoryName} services`,
+            `${catDoc.categoryName} comparison`,
+            `${catDoc.categoryName} alternatives`,
+            `${catDoc.categoryName} reviews`
+          ];
+          promptArr = [
+            `What are the best ${catDoc.categoryName} services available?`,
+            `How do I choose between different ${catDoc.categoryName} providers?`,
+            `Which companies offer the most reliable ${catDoc.categoryName}?`,
+            `What should I look for in a ${catDoc.categoryName} service?`,
+            `Are there any affordable ${catDoc.categoryName} options?`
+          ];
         }
+        
+        // Add the generated prompts to the collection
+        promptArr = promptArr.slice(0, 5);
+        console.log(`📋 Generated ${promptArr.length} prompts for category ${catDoc.categoryName}`);
+        
+        allPrompts.push(...promptArr.map(promptText => ({ promptText })));
       }
       
       console.log(`🎉 Generated ${allPrompts.length} total prompts for isolated analysis`);

@@ -95,18 +95,26 @@ exports.analyzeBrand = async (req, res) => {
     const catDocs = await saveCategories(brand, categories);
     console.log("✅ Categories saved:", catDocs.length, "categories");
 
-    // 4. Generate prompts
-    console.log("📝 Step 4: Generating prompts...");
-    const categoryPrompts = await generateAndSavePrompts(openai, catDocs, brand, []);
+    // 4. Extract competitors and brand description FIRST (needed for prompt generation)
+    console.log("🏆 Step 4: Extracting competitors and brand description...");
+    const competitorResult = await extractCompetitorsWithOpenAI(openai, brand);
+    const competitors = competitorResult.competitors;
+    const extractedBrandInfo = competitorResult.brandDescription;
+    console.log("✅ Competitors extracted:", competitors);
+    console.log("📝 Brand description for prompts:", extractedBrandInfo);
+
+    // 5. Generate prompts (now with competitors and brand description)
+    console.log("📝 Step 5: Generating prompts...");
+    const categoryPrompts = await generateAndSavePrompts(openai, catDocs, brand, competitors, extractedBrandInfo);
     console.log("✅ Prompts generated:", categoryPrompts.length, "prompts");
 
-    // 5. Generate AI responses for each prompt
-    console.log("🤖 Step 5: Generating AI responses for each prompt...");
+    // 6. Generate AI responses for each prompt
+    console.log("🤖 Step 6: Generating AI responses for each prompt...");
     const aiResponses = await runPromptsAndSaveResponses(openai, categoryPrompts, brand._id, userId, analysisSessionId);
     console.log("✅ AI responses generated:", aiResponses.length, "responses");
 
-    // 5.5. Extract company mentions from AI responses
-    console.log("🔍 Step 5.5: Extracting company mentions from AI responses...");
+    // 6.5. Extract company mentions from AI responses
+    console.log("🔍 Step 6.5: Extracting company mentions from AI responses...");
     
     // ✅ IMPORTANT: Clear previous mentions for this user before new analysis
     console.log("🧹 Clearing previous mentions for user:", userId);
@@ -150,11 +158,6 @@ exports.analyzeBrand = async (req, res) => {
       console.error("⚠️ Company mention extraction failed:", mentionError.message);
       // Continue without mention extraction - analysis is still valid
     }
-
-    // 6. Extract competitors
-    console.log("🏆 Step 6: Extracting competitors...");
-    const competitors = await extractCompetitorsWithOpenAI(openai, brand);
-    console.log("✅ Competitors extracted:", competitors);
 
     // 7. Calculate share of voice
     console.log("📊 Step 7: Calculating share of voice...");
@@ -206,7 +209,7 @@ exports.analyzeBrand = async (req, res) => {
     await brandAnalysis.save();
     console.log("✅ Analysis results saved to database");
 
-    // 10. Log token usage and complete
+    // 11. Log token usage and complete
     const analysisEndTime = Date.now();
     const totalDuration = Math.round((analysisEndTime - analysisStartTime) / 1000);
     

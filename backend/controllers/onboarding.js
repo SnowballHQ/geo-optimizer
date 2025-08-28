@@ -220,7 +220,8 @@ class OnboardingController {
         const OpenAI = require('openai');
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         
-        extractedCompetitors = await extractCompetitorsWithOpenAI(openai, brand);
+        const result = await extractCompetitorsWithOpenAI(openai, brand);
+        extractedCompetitors = result.competitors || result; // Handle both new object format and legacy array format
       }
 
       // Save competitors to brand profile
@@ -303,12 +304,16 @@ class OnboardingController {
         // Import the existing prompt generation function
         const { generateAndSavePrompts } = require('./brand/prompt');
         
+        // Get brand description from brand profile or generate a fallback
+        const brandDescription = brand.description || brand.overview || `${brand.brandName} operates at ${brand.domain}`;
+        
         // Generate prompts using the existing logic
         prompts = await generateAndSavePrompts(
           openai, 
           categories, 
           brand, 
-          brand.competitors || []
+          brand.competitors || [],
+          brandDescription
         );
       }
 

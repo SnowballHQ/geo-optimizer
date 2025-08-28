@@ -96,8 +96,15 @@ DESCRIPTION: [concise brand description]`;
       console.log(`✅ Perplexity response received for ${domainUrl}`);
       console.log(`📝 Domain info length: ${domainInfo.length} chars`);
       console.log(`📝 Description length: ${description.length} chars`);
+      console.log(`📝 Full response length: ${fullResponse.length} chars`);
       
-      return { domainInfo, description };
+      // Return the full response as one complete piece for comprehensive brand info
+      return { 
+        domainInfo: fullResponse, // Save the complete response as domainInfo
+        description: fullResponse, // Save the complete response as description too
+        fullResponse: fullResponse, // Keep for backward compatibility
+        rawResponse: response.data // Export the complete API response object
+      };
 
     } catch (error) {
       console.error(`❌ Perplexity API error for ${domainUrl}:`, error.message);
@@ -105,7 +112,17 @@ DESCRIPTION: [concise brand description]`;
       // Fallback response
       const fallbackInfo = `Information about ${domainUrl} - a business website offering various services and solutions.`;
       const fallbackDescription = `${domainUrl} is a business website that provides various services and solutions to its customers.`;
-      return { domainInfo: fallbackInfo, description: fallbackDescription };
+      const fallbackFullResponse = `OVERVIEW: ${fallbackInfo}\nDESCRIPTION: ${fallbackDescription}`;
+      return { 
+        domainInfo: fallbackFullResponse, // Save complete fallback response
+        description: fallbackFullResponse, // Save complete fallback response
+        fullResponse: fallbackFullResponse,
+        rawResponse: { 
+          choices: [{ message: { content: fallbackFullResponse } }],
+          usage: { total_tokens: 0 },
+          model: 'fallback'
+        }
+      };
     }
   }
 }
