@@ -381,12 +381,23 @@ const ShareOfVoiceTable = ({
                   {shareData.map((item, index) => (
                     <TableRow key={item.name}>
                       <TableCell className="font-medium text-sm">
-                        {item.name}
-                        {index === 0 && (
-                          <Badge className="ml-2 bg-green-100 text-green-800 border-green-200 text-xs">
-                            Leader
-                          </Badge>
-                        )}
+                        <div 
+                          onClick={() => handleBrandClick(item.name)}
+                          className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded-lg transition-all duration-200 group"
+                          title={`Click to view detailed mentions for ${item.name}`}
+                        >
+                          <span className="group-hover:text-primary transition-colors duration-200">
+                            {item.name}
+                          </span>
+                          {index === 0 && (
+                            <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                              Leader
+                            </Badge>
+                          )}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <MessageSquare className="w-4 h-4 text-gray-400" />
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm">
                         {isUsingFallback ? (
@@ -396,12 +407,18 @@ const ShareOfVoiceTable = ({
                         )}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <div className="flex items-center">
-                          <span className="mr-3">{item.share.toFixed(1)}%</span>
-                          <div className="flex-1 bg-muted rounded-full h-2">
+                        <div 
+                          onClick={() => handleBrandClick(item.name)}
+                          className="flex items-center cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded-lg transition-all duration-200 group"
+                          title={`Click to see ${item.name} mentions (${item.share.toFixed(1)}%)`}
+                        >
+                          <span className="mr-3 group-hover:text-primary transition-colors duration-200 font-medium">
+                            {item.share.toFixed(1)}%
+                          </span>
+                          <div className="flex-1 bg-muted rounded-full h-2 group-hover:bg-gray-300 transition-colors duration-200">
                             <div
                               className={`h-2 rounded-full transition-all duration-300 ${
-                                index === 0 ? 'bg-green-600' : 'bg-primary'
+                                index === 0 ? 'bg-green-600 group-hover:bg-green-700' : 'bg-primary group-hover:bg-primary/80'
                               }`}
                               style={{ width: `${Math.min(item.share, 100)}%` }}
                             ></div>

@@ -652,9 +652,15 @@ Format: Output only a JSON array of 5 strings.`;
       const formattedMentions = mentions.map(mention => ({
         _id: mention._id,
         companyName: mention.companyName,
-        promptText: mention.promptId?.promptText || 'Unknown prompt',
-        responseText: mention.responseId?.responseText || 'No response text',
-        categoryName: mention.promptId?.categoryId?.categoryName || 'Unknown category',
+        promptId: {
+          promptText: mention.promptId?.promptText || 'Unknown prompt'
+        },
+        responseId: {
+          responseText: mention.responseId?.responseText || 'No response text'
+        },
+        categoryId: {
+          categoryName: mention.promptId?.categoryId?.categoryName || 'Unknown category'
+        },
         createdAt: mention.createdAt,
         analysisSessionId: mention.analysisSessionId,
         confidence: mention.confidence || 0
@@ -1100,6 +1106,93 @@ Format: Output only a JSON array of 5 strings.`;
     } catch (error) {
       console.error('Save to history error:', error);
       res.status(500).json({ error: 'Failed to save analysis to history' });
+    }
+  }
+
+  // Get brand mentions for a specific Super User analysis
+  async getAnalysisMentions(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId, brandName } = req.params;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      console.log(`🔍 Super User Analysis: Getting mentions for brand "${brandName}" in analysis ${analysisId}`);
+      
+      // Find the analysis to ensure user has access
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      if (!analysis.analysisResults?.brandId) {
+        return res.status(404).json({ error: 'No brand data available for this analysis' });
+      }
+      
+      // Get mentions for this specific brand and analysis session
+      const CategoryPromptMention = require('../models/CategoryPromptMention');
+      const mentions = await CategoryPromptMention.find({
+        companyName: brandName,
+        brandId: analysis.analysisResults.brandId,
+        analysisSessionId: analysisId // Use analysisId as session ID for Super User analyses
+      })
+      .populate({
+        path: 'promptId',
+        select: 'promptText'
+      })
+      .populate({
+        path: 'responseId', 
+        select: 'responseText createdAt'
+      })
+      .populate({
+        path: 'categoryId',
+        select: 'categoryName'
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+      
+      console.log(`✅ Found ${mentions.length} mentions for brand "${brandName}" in analysis ${analysisId}`);
+      
+      // Format the response to match what the frontend expects
+      const formattedMentions = mentions.map(mention => ({
+        _id: mention._id,
+        companyName: mention.companyName,
+        mentionContext: mention.mentionContext,
+        confidence: mention.confidence,
+        createdAt: mention.createdAt,
+        promptId: {
+          _id: mention.promptId?._id,
+          promptText: mention.promptId?.promptText
+        },
+        responseId: {
+          _id: mention.responseId?._id,
+          responseText: mention.responseId?.responseText,
+          createdAt: mention.responseId?.createdAt
+        },
+        categoryId: {
+          _id: mention.categoryId?._id,
+          categoryName: mention.categoryId?.categoryName
+        }
+      }));
+      
+      res.json({
+        success: true,
+        brandName: brandName,
+        analysisId: analysisId,
+        mentions: formattedMentions,
+        totalMentions: formattedMentions.length
+      });
+      
+    } catch (error) {
+      console.error('Get Super User analysis mentions error:', error);
+      res.status(500).json({ error: 'Failed to get brand mentions' });
     }
   }
 
