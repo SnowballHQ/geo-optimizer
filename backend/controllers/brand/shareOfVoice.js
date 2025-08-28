@@ -56,7 +56,7 @@ async function findLatestAnalysisSession(userId, brandId) {
 //    - Will use existing analysisSessionId to load previous data
 // 3. Each analysis session is completely isolated - no data mixing between sessions
 
-exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, categoryId, analysisSessionId) {
+exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, categoryId, analysisSessionId, preserveOldRecords = false) {
   try {
     // ✅ VALIDATION: Check if brand object has required fields
     console.log(`🔍 Brand object validation:`, {
@@ -372,14 +372,18 @@ exports.calculateShareOfVoice = async function(brand, competitors, aiResponses, 
         analysisDate: new Date()
       };
       
-      // Clean approach: Delete existing SOV records and create fresh one
-      // This ensures frontend always gets the latest, most accurate data
-      console.log("🗑️ Removing old SOV records for brand to ensure clean data...");
-      const deleteResult = await BrandShareOfVoice.deleteMany({ 
-        brandId: brand._id,
-        userId: brand.userId 
-      });
-      console.log(`✅ Deleted ${deleteResult.deletedCount} old SOV records`);
+      // Clean approach: Delete existing SOV records and create fresh one (unless preserving for isolation)
+      if (!preserveOldRecords) {
+        // This ensures frontend always gets the latest, most accurate data
+        console.log("🗑️ Removing old SOV records for brand to ensure clean data...");
+        const deleteResult = await BrandShareOfVoice.deleteMany({ 
+          brandId: brand._id,
+          userId: brand.userId 
+        });
+        console.log(`✅ Deleted ${deleteResult.deletedCount} old SOV records`);
+      } else {
+        console.log("🔒 Preserving old SOV records for Super User analysis isolation");
+      }
       
       // Create fresh SOV record with latest data
       const savedShareOfVoice = await BrandShareOfVoice.create({

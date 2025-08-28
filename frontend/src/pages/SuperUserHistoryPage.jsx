@@ -20,7 +20,7 @@ const SuperUserHistoryPage = () => {
       setLoading(true);
       const token = localStorage.getItem('auth');
       
-      const response = await fetch('/api/v1/brand/super-user/history', {
+      const response = await fetch('/api/v1/super-user/analysis/history', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -35,7 +35,7 @@ const SuperUserHistoryPage = () => {
       console.log('📚 Super User Analysis History:', data);
       
       if (data.success) {
-        setAnalysisHistory(data.history);
+        setAnalysisHistory(data.analyses);
       } else {
         throw new Error(data.error || 'Failed to fetch analysis history');
       }
@@ -105,9 +105,9 @@ const SuperUserHistoryPage = () => {
     }
   };
 
-  const viewAnalysis = (brandId) => {
-    // Navigate to super user analysis page with specific brand ID
-    navigate(`/super-user-analysis/${brandId}`);
+  const viewAnalysis = (analysisId) => {
+    // Navigate to super user analysis page with specific analysis ID
+    navigate(`/super-user-analysis/view/${analysisId}`);
   };
 
   const formatDate = (dateString) => {
@@ -225,9 +225,10 @@ const SuperUserHistoryPage = () => {
                     </thead>
                     <tbody>
                       {analysisHistory.map((analysis) => (
-                        <tr key={analysis.brandId} className="border-b border-gray-100 hover:bg-[#f8f9ff]">
+                        <tr key={analysis.analysisId} className="border-b border-gray-100 hover:bg-[#f8f9ff]">
                           <td className="py-3 px-4">
                             <div className="font-semibold text-[#4a4a6a]">{analysis.brandName}</div>
+                            <div className="text-xs text-gray-500">{analysis.analysisId}</div>
                           </td>
                           <td className="py-3 px-4">
                             <code className="bg-gray-100 px-2 py-1 rounded text-sm">{analysis.domain}</code>
@@ -235,7 +236,15 @@ const SuperUserHistoryPage = () => {
                           <td className="py-3 px-4">
                             <div className="text-sm text-[#4a4a6a] flex items-center">
                               <Calendar className="w-4 h-4 mr-1" />
-                              {formatDate(analysis.analysisDate)}
+                              {formatDate(analysis.createdAt)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Status: <span className={`font-medium ${
+                                analysis.status === 'completed' ? 'text-green-600' : 
+                                analysis.status === 'failed' ? 'text-red-600' : 'text-yellow-600'
+                              }`}>
+                                {analysis.status}
+                              </span>
                             </div>
                           </td>
                           <td className="py-3 px-4 text-center">
@@ -255,12 +264,12 @@ const SuperUserHistoryPage = () => {
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
-                              {analysis.totalMentions}
+                              {analysis.totalMentions || 0}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
-                              {analysis.competitorCount}
+                              {analysis.competitorsCount || 0}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-center">
@@ -268,25 +277,28 @@ const SuperUserHistoryPage = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => viewAnalysis(analysis.brandId)}
+                                onClick={() => viewAnalysis(analysis.analysisId)}
                                 className="border-[#b0b0d8] text-[#4a4a6a] hover:bg-[#d5d6eb]"
                                 title="View Analysis"
+                                disabled={analysis.status !== 'completed'}
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => downloadPDF(analysis.brandId, analysis.brandName)}
-                                disabled={downloadingPdfs.has(analysis.brandId)}
-                                className="bg-green-600 hover:bg-green-700 text-white border-0"
-                                title="Download PDF Report"
-                              >
-                                {downloadingPdfs.has(analysis.brandId) ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                ) : (
-                                  <Download className="w-4 h-4" />
-                                )}
-                              </Button>
+                              {analysis.brandId && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => downloadPDF(analysis.brandId, analysis.brandName)}
+                                  disabled={downloadingPdfs.has(analysis.brandId) || analysis.status !== 'completed'}
+                                  className="bg-green-600 hover:bg-green-700 text-white border-0"
+                                  title="Download PDF Report"
+                                >
+                                  {downloadingPdfs.has(analysis.brandId) ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  ) : (
+                                    <Download className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -330,7 +342,7 @@ const SuperUserHistoryPage = () => {
                   <CardDescription className="text-sm text-[#4a4a6a]">Latest Analysis</CardDescription>
                   <div className="text-sm font-medium text-[#4a4a6a]">
                     {analysisHistory.length > 0 
-                      ? formatDate(analysisHistory[0].analysisDate)
+                      ? formatDate(analysisHistory[0].createdAt)
                       : 'None'
                     }
                   </div>
@@ -344,7 +356,7 @@ const SuperUserHistoryPage = () => {
                   <div className="text-2xl font-bold text-[#4a4a6a]">
                     {analysisHistory.length > 0 
                       ? Math.round(
-                          analysisHistory.reduce((sum, a) => sum + (a.competitorCount || 0), 0) / 
+                          analysisHistory.reduce((sum, a) => sum + (a.competitorsCount || 0), 0) / 
                           analysisHistory.length
                         )
                       : 0}

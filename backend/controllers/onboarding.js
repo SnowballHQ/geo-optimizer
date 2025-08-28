@@ -62,51 +62,87 @@ class OnboardingController {
   async step1DomainAnalysis(req, res) {
     try {
       const userId = req.user.id;
-      const { domain } = req.body;
+      const { domain, superUserMode = false, sessionId } = req.body;
       
       if (!domain) {
         return res.status(400).json({ error: 'Domain is required' });
       }
 
-      console.log(`🔍 Step 1: Domain analysis for ${domain}`);
-
-      // Get domain information from Perplexity
-      const domainInfo = await perplexityService.getDomainInfo(domain);
-      
-      // Create or update brand profile
-      const brand = await BrandProfile.findOneAndUpdate(
-        { ownerUserId: userId.toString() },
-        { 
+      if (superUserMode) {
+        console.log(`🔥 Super User Step 1: Domain analysis for ${domain} (Session: ${sessionId})`);
+        
+        // For Super User mode, verify user has super user privileges
+        const isSuperUser = req.user.role === 'superuser';
+        if (!isSuperUser) {
+          return res.status(403).json({ error: 'Access denied. Super user privileges required.' });
+        }
+        
+        // Get domain information from Perplexity
+        const domainInfo = await perplexityService.getDomainInfo(domain);
+        
+        // Create temporary isolated brand profile for Super User analysis
+        const brand = new BrandProfile({
+          ownerUserId: userId.toString(),
           domain,
           brandName: domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
           brandInformation: domainInfo.description || '',
-          updatedAt: new Date()
-        },
-        { upsert: true, new: true }
-      );
-
-      // Save progress
-      await OnboardingProgress.findOneAndUpdate(
-        { userId },
-        { 
+          isAdminAnalysis: true, // Mark as Super User analysis
+          analysisSessionId: sessionId // Add session ID for isolation
+        });
+        
+        await brand.save();
+        
+        console.log(`✅ Super User temporary brand profile created: ${brand._id}`);
+        
+        return res.json({
+          success: true,
+          brand,
+          domainInfo,
           currentStep: 1,
-          'stepData.step1': {
-            domain,
-            brandName: brand.brandName,
-            description: domainInfo.description || '',
-            completed: true
-          },
-          $addToSet: { completedSteps: 1 }
-        },
-        { upsert: true }
-      );
+          superUserMode: true,
+          sessionId: sessionId
+        });
+      } else {
+        console.log(`🔍 Step 1: Domain analysis for ${domain}`);
 
-      res.json({
-        success: true,
-        brand,
-        domainInfo,
-        currentStep: 1
-      });
+        // Get domain information from Perplexity
+        const domainInfo = await perplexityService.getDomainInfo(domain);
+        
+        // Create or update brand profile (normal user flow)
+        const brand = await BrandProfile.findOneAndUpdate(
+          { ownerUserId: userId.toString() },
+          { 
+            domain,
+            brandName: domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
+            brandInformation: domainInfo.description || '',
+            updatedAt: new Date()
+          },
+          { upsert: true, new: true }
+        );
+        
+        // Save progress for normal users
+        await OnboardingProgress.findOneAndUpdate(
+          { userId },
+          { 
+            currentStep: 1,
+            'stepData.step1': {
+              domain,
+              brandName: brand.brandName,
+              description: domainInfo.description || '',
+              completed: true
+            },
+            $addToSet: { completedSteps: 1 }
+          },
+          { upsert: true }
+        );
+
+        return res.json({
+          success: true,
+          brand,
+          domainInfo,
+          currentStep: 1
+        });
+      }
 
     } catch (error) {
       console.error('Step 1 error:', error);

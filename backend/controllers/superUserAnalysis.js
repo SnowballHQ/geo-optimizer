@@ -1,0 +1,1162 @@
+const SuperUserAnalysis = require("../models/SuperUserAnalysis");
+const BrandProfile = require("../models/BrandProfile");
+const BrandCategory = require("../models/BrandCategory");
+const CategorySearchPrompt = require("../models/CategorySearchPrompt");
+const PromptAIResponse = require("../models/PromptAIResponse");
+const { extractCategories, saveCategories } = require("./brand/category");
+const { extractCompetitorsWithOpenAI } = require("./brand/extractCompetitors");
+const PerplexityService = require("../utils/perplexityService");
+const TokenCostLogger = require("../utils/tokenCostLogger");
+const { generateAndSavePrompts } = require("./brand/prompt");
+const { runPromptsAndSaveResponses } = require("./brand/aiResponse");
+const { calculateShareOfVoice } = require("./brand/shareOfVoice");
+
+// Initialize services
+const perplexityService = new PerplexityService();
+const tokenLogger = new TokenCostLogger();
+
+class SuperUserAnalysisController {
+  
+  // Create new isolated super user analysis
+  async createAnalysis(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      const { domain, brandName, brandInformation = '', step } = req.body;
+      
+      if (!domain) {
+        return res.status(400).json({ error: 'Domain is required' });
+      }
+      
+      console.log(`🔥 Super User Analysis: Creating new isolated analysis for ${domain}`);
+      
+      // Get domain information from Perplexity for step 1
+      let domainInfo = { description: brandInformation };
+      if (step === 1) {
+        try {
+          domainInfo = await perplexityService.getDomainInfo(domain);
+        } catch (error) {
+          console.warn('Could not fetch domain info, using provided info:', error.message);
+        }
+      }
+      
+      // Create new isolated super user analysis
+      const analysis = new SuperUserAnalysis({
+        superUserId: userId,
+        domain: domain,
+        brandName: brandName || domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
+        brandInformation: domainInfo.description || brandInformation,
+        status: 'in_progress',
+        currentStep: step || 1,
+        step1Data: {
+          domain: domain,
+          brandName: brandName || domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
+          description: domainInfo.description || brandInformation,
+          completed: true
+        }
+      });
+      
+      await analysis.save();
+      
+      console.log(`✅ Super User Analysis: Created isolated analysis ${analysis.analysisId}`);
+      
+      res.json({
+        success: true,
+        analysisId: analysis.analysisId,
+        domain: analysis.domain,
+        brandName: analysis.brandName,
+        currentStep: analysis.currentStep
+      });
+      
+    } catch (error) {
+      console.error('Create super user analysis error:', error);
+      res.status(500).json({ error: 'Failed to create analysis' });
+    }
+  }
+  
+  // Update analysis with step data
+  async updateAnalysis(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      const { analysisId, step, stepData } = req.body;
+      
+      if (!analysisId || !step || !stepData) {
+        return res.status(400).json({ error: 'Analysis ID, step, and step data are required' });
+      }
+      
+      console.log(`🔥 Super User Analysis: Updating step ${step} for analysis ${analysisId}`);
+      
+      // Find the analysis belonging to this super user
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      // Update the appropriate step data
+      switch (step) {
+        case 2:
+          // Process categories
+          try {
+            const categories = stepData.categories || [];
+            analysis.step2Data = {
+              categories: categories,
+              completed: true
+            };
+            analysis.currentStep = Math.max(analysis.currentStep, 2);
+            
+            console.log(`✅ Super User Analysis: Categories saved for ${analysisId}:`, categories);
+          } catch (error) {
+            console.error('Error processing categories:', error);
+            throw new Error('Failed to process categories');
+          }
+          break;
+          
+        case 3:
+          // Process competitors
+          try {
+            const competitors = stepData.competitors || [];
+            analysis.step3Data = {
+              competitors: competitors,
+              completed: true
+            };
+            analysis.currentStep = Math.max(analysis.currentStep, 3);
+            
+            console.log(`✅ Super User Analysis: Competitors saved for ${analysisId}:`, competitors);
+          } catch (error) {
+            console.error('Error processing competitors:', error);
+            throw new Error('Failed to process competitors');
+          }
+          break;
+          
+        default:
+          return res.status(400).json({ error: 'Invalid step number' });
+      }
+      
+      await analysis.save();
+      
+      res.json({
+        success: true,
+        analysisId: analysis.analysisId,
+        currentStep: analysis.currentStep,
+        stepData: stepData
+      });
+      
+    } catch (error) {
+      console.error('Update super user analysis error:', error);
+      res.status(500).json({ error: error.message || 'Failed to update analysis' });
+    }
+  }
+  
+  // Complete analysis (Step 4 and final processing)
+  async completeAnalysis(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      const { analysisId, step4Data } = req.body;
+      
+      if (!analysisId || !step4Data) {
+        return res.status(400).json({ error: 'Analysis ID and step 4 data are required' });
+      }
+      
+      console.log(`🔥 Super User Analysis: Completing analysis ${analysisId}`);
+      
+      // Find the analysis
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      // Save step 4 data - convert string prompts to objects if needed
+      const formattedPrompts = (step4Data.prompts || []).map(prompt => {
+        // If it's already an object with promptText, keep as is
+        if (typeof prompt === 'object' && prompt.promptText) {
+          return prompt;
+        }
+        // If it's a string, convert to object format
+        return { promptText: prompt };
+      });
+      
+      analysis.step4Data = {
+        prompts: formattedPrompts,
+        completed: true
+      };
+      analysis.currentStep = 4;
+      
+      // Create a brand profile for this isolated analysis
+      console.log(`🚀 Super User Analysis: Creating brand profile for ${analysis.domain}`);
+      
+      const brandProfile = new BrandProfile({
+        ownerUserId: userId,
+        brandName: analysis.brandName,
+        domain: analysis.domain,
+        brandInformation: analysis.brandInformation,
+        competitors: analysis.step3Data?.competitors || [],
+        isAdminAnalysis: true // Mark as super user analysis
+      });
+      
+      await brandProfile.save();
+      
+      // Save categories to database
+      if (analysis.step2Data?.categories?.length > 0) {
+        await saveCategories(brandProfile._id, analysis.step2Data.categories);
+      }
+      
+      // Save category prompts
+      if (step4Data.prompts?.length > 0) {
+        for (const categoryPrompt of step4Data.prompts) {
+          const category = await BrandCategory.findOne({
+            brandId: brandProfile._id,
+            name: categoryPrompt.categoryName
+          });
+          
+          if (category && categoryPrompt.prompts?.length > 0) {
+            for (const prompt of categoryPrompt.prompts) {
+              await CategorySearchPrompt.findOneAndUpdate(
+                { categoryId: category._id, prompt: prompt },
+                { 
+                  categoryId: category._id, 
+                  prompt: prompt,
+                  createdBy: 'super-user',
+                  isActive: true
+                },
+                { upsert: true }
+              );
+            }
+          }
+        }
+      }
+      
+      // Run isolated brand analysis using only the categories from this analysis
+      console.log(`🚀 Super User Analysis: Running isolated brand analysis for ${analysis.domain}`);
+      
+      // Get the categories that were just created for this isolated analysis
+      const isolatedCategories = await BrandCategory.find({ 
+        brandId: brandProfile._id 
+      });
+      
+      console.log(`📊 Found ${isolatedCategories.length} isolated categories for analysis`);
+      
+      // Use the prompts from Step 4 (the ones that were generated and possibly edited in the UI)
+      const step4Prompts = step4Data.prompts || [];
+      
+      if (step4Prompts.length === 0) {
+        throw new Error('No prompts available for analysis. Please generate prompts in Step 4 first.');
+      }
+      
+      console.log(`🎯 Using ${step4Prompts.length} prompts from Step 4 UI (including any edits)`);
+      
+      // Create CategorySearchPrompt documents for the prompts from Step 4
+      const promptDocuments = [];
+      for (let i = 0; i < step4Prompts.length; i++) {
+        const promptText = step4Prompts[i];
+        
+        // Create a category document (we'll distribute prompts across categories)
+        const categoryIndex = i % isolatedCategories.length;
+        const category = isolatedCategories[categoryIndex];
+        
+        const promptDoc = await CategorySearchPrompt.create({ 
+          categoryId: category._id, 
+          brandId: brandProfile._id,
+          promptText: promptText,
+          createdBy: 'super-user-ui',
+          isActive: true
+        });
+        
+        promptDocuments.push({
+          promptDoc: promptDoc,
+          catDoc: category
+        });
+        
+        console.log(`💾 Saved prompt ${i + 1}: ${promptText.substring(0, 60)}...`);
+      }
+      
+      // Run AI responses using the prompts from Step 4 UI
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const aiResponses = await runPromptsAndSaveResponses(openai, promptDocuments, brandProfile._id, userId, analysis.analysisId);
+      
+      // Extract brand and competitor mentions from AI responses
+      console.log('🔍 Super User Analysis: Extracting brand and competitor mentions...');
+      const MentionExtractor = require('./brand/mentionExtractor');
+      const mentionExtractor = new MentionExtractor();
+
+      for (const response of aiResponses) {
+        try {
+          await mentionExtractor.extractMentionsFromResponse(
+            response.aiDoc.responseText,
+            response.aiDoc.promptId,
+            response.catDoc._id,
+            brandProfile._id,
+            userId,
+            response.aiDoc._id,
+            analysis.analysisId
+          );
+          console.log(`✅ Mentions extracted for response: ${response.aiDoc._id}`);
+        } catch (error) {
+          console.error(`❌ Error extracting mentions for response ${response.aiDoc._id}:`, error);
+          // Continue with other responses even if one fails
+        }
+      }
+      
+      // Calculate Share of Voice for isolated analysis
+      // The aiResponses variable already contains the generated responses
+      
+      // Get competitors from step 3 data
+      const competitors = analysis.step3Data?.competitors || [];
+      
+      // Pass the correct parameters to calculateShareOfVoice
+      // For Super User analyses, we want to preserve isolation - don't delete old records
+      const aiResponseDocs = aiResponses.map(response => response.aiDoc);
+      const sovResult = await calculateShareOfVoice(
+        brandProfile, 
+        competitors, 
+        aiResponseDocs, 
+        null, // categoryId - null for all categories
+        analysis.analysisId, // analysisSessionId
+        true // preserveOldRecords - for Super User isolation
+      );
+      
+      const analysisResult = {
+        shareOfVoice: sovResult.shareOfVoice || {},
+        mentionCounts: sovResult.mentionCounts || {},
+        totalMentions: sovResult.totalMentions || 0,
+        brandShare: sovResult.brandShare || 0,
+        aiVisibilityScore: sovResult.aiVisibilityScore || 0,
+        analysisSteps: {
+          categoriesProcessed: isolatedCategories.length,
+          promptsGenerated: true,
+          aiResponsesGenerated: true,
+          sovCalculated: true
+        }
+      };
+      
+      // Update analysis with results
+      analysis.analysisResults = {
+        brandId: brandProfile._id,
+        categories: analysis.step2Data?.categories?.map(cat => ({ name: cat, prompts: [] })) || [],
+        competitors: analysis.step3Data?.competitors || [],
+        shareOfVoice: analysisResult.shareOfVoice || {},
+        mentionCounts: analysisResult.mentionCounts || {},
+        totalMentions: analysisResult.totalMentions || 0,
+        brandShare: analysisResult.brandShare || 0,
+        aiVisibilityScore: analysisResult.aiVisibilityScore || 0,
+        analysisSteps: analysisResult.analysisSteps || {}
+      };
+      
+      analysis.status = 'completed';
+      await analysis.save();
+      
+      console.log(`🎉 Super User Analysis: Completed analysis ${analysisId}`);
+      
+      res.json({
+        success: true,
+        analysisId: analysis.analysisId,
+        analysisResults: analysis.analysisResults,
+        status: analysis.status
+      });
+      
+    } catch (error) {
+      console.error('Complete super user analysis error:', error);
+      
+      // Update analysis status to failed
+      try {
+        await SuperUserAnalysis.findOneAndUpdate(
+          { analysisId: req.body.analysisId, superUserId: req.user.id },
+          { status: 'failed' }
+        );
+      } catch (updateError) {
+        console.error('Failed to update analysis status:', updateError);
+      }
+      
+      res.status(500).json({ error: error.message || 'Failed to complete analysis' });
+    }
+  }
+  
+  // Get super user analysis history
+  async getAnalysisHistory(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      console.log(`🔍 Super User Analysis: Getting history for user ${userId}`);
+      
+      const analyses = await SuperUserAnalysis.find({
+        superUserId: userId
+      })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select('analysisId domain brandName status createdAt completedAt analysisResults');
+      
+      const analysisHistory = analyses.map(analysis => ({
+        analysisId: analysis.analysisId,
+        domain: analysis.domain,
+        brandName: analysis.brandName,
+        status: analysis.status,
+        createdAt: analysis.createdAt,
+        completedAt: analysis.completedAt,
+        brandId: analysis.analysisResults?.brandId,
+        aiVisibilityScore: analysis.analysisResults?.aiVisibilityScore || 0,
+        brandShare: analysis.analysisResults?.brandShare || 0,
+        totalMentions: analysis.analysisResults?.totalMentions || 0,
+        competitorsCount: analysis.analysisResults?.competitors?.length || 0
+      }));
+      
+      res.json({
+        success: true,
+        analyses: analysisHistory,
+        totalCount: analyses.length
+      });
+      
+    } catch (error) {
+      console.error('Get analysis history error:', error);
+      res.status(500).json({ error: 'Failed to get analysis history' });
+    }
+  }
+  
+  // Get specific analysis details
+  async getAnalysis(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId } = req.params;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      console.log(`🔍 Super User Analysis: Getting details for ${analysisId}`);
+      
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      res.json({
+        success: true,
+        analysis: {
+          analysisId: analysis.analysisId,
+          domain: analysis.domain,
+          brandName: analysis.brandName,
+          status: analysis.status,
+          createdAt: analysis.createdAt,
+          completedAt: analysis.completedAt,
+          currentStep: analysis.currentStep,
+          step1Data: analysis.step1Data,
+          step2Data: analysis.step2Data,
+          step3Data: analysis.step3Data,
+          step4Data: analysis.step4Data,
+          analysisResults: analysis.analysisResults
+        }
+      });
+      
+    } catch (error) {
+      console.error('Get analysis details error:', error);
+      res.status(500).json({ error: 'Failed to get analysis details' });
+    }
+  }
+  
+  // Generate prompts for Super User isolated analysis
+  async generatePrompts(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      const { analysisId } = req.body;
+      
+      if (!analysisId) {
+        return res.status(400).json({ error: 'Analysis ID is required' });
+      }
+      
+      console.log(`🔥 Super User Analysis: Generating prompts for analysis ${analysisId}`);
+      
+      // Find the analysis
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      // Check if we have the required data
+      if (!analysis.step2Data?.categories?.length) {
+        return res.status(400).json({ error: 'Categories are required before generating prompts' });
+      }
+      
+      // Create temporary brand profile for prompt generation
+      const tempBrandProfile = {
+        _id: 'temp_id',
+        brandName: analysis.brandName,
+        domain: analysis.domain,
+        brandInformation: analysis.brandInformation
+      };
+      
+      // Create category documents structure for prompt generation
+      const categoryDocs = analysis.step2Data.categories.map((categoryName, index) => ({
+        _id: `temp_cat_${index}`,
+        categoryName: categoryName,
+        brandId: 'temp_id'
+      }));
+      
+      // Generate prompts using the isolated categories only
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      console.log(`📝 Generating prompts for ${categoryDocs.length} isolated categories:`, analysis.step2Data.categories);
+      
+      const allPrompts = [];
+      for (const catDoc of categoryDocs) {
+        console.log(`📝 Generating prompts for category: ${catDoc.categoryName}`);
+        
+        // Generate prompts for this category (simplified version)
+        const promptGen = `You are helping a digital marketing researcher generate realistic, user-like questions that people typically ask ChatGPT about ${catDoc.categoryName} services.
+
+Generate 5 natural, conversational questions that users typically ask ChatGPT about ${catDoc.categoryName}. These questions should be framed so that responses would naturally mention ${analysis.brandName} and similar companies.
+
+Guidelines:
+- Use natural, conversational phrasing reflecting genuine user curiosity (e.g., "What are the best…", "Which platforms…", "How do I choose…").
+- Cover themes like comparisons, alternatives, recommendations, trending tools, and value-for-money.
+- Do NOT mention the brand name in the questions themselves.
+- Create questions that lead naturally to mentioning brands in answers.
+- Focus on questions that users would actually ask ChatGPT for help with.
+
+Format: Output only a JSON array of 5 strings.`;
+
+        try {
+          const promptResp = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: promptGen }],
+            max_tokens: 300,
+          });
+          
+          const promptContent = promptResp.choices[0].message.content;
+          console.log("OpenAI prompt response:", promptContent);
+          
+          let promptArr = [];
+          try {
+            promptArr = JSON.parse(promptContent);
+          } catch (parseError) {
+            console.log("⚠️ JSON parsing failed for prompts, extracting with regex");
+            const quotedStrings = promptContent.match(/"([^"]+)"/g);
+            if (quotedStrings) {
+              promptArr = quotedStrings.map(s => s.replace(/"/g, ""));
+            }
+          }
+          
+          promptArr = promptArr.slice(0, 5);
+          console.log(`📋 Generated ${promptArr.length} prompts for category ${catDoc.categoryName}`);
+          
+          allPrompts.push(...promptArr.map(promptText => ({ promptText })));
+          
+        } catch (error) {
+          console.error(`❌ Error generating prompts for category ${catDoc.categoryName}:`, error);
+        }
+      }
+      
+      console.log(`🎉 Generated ${allPrompts.length} total prompts for isolated analysis`);
+      
+      res.json({
+        success: true,
+        prompts: allPrompts,
+        categoriesCount: categoryDocs.length,
+        promptsCount: allPrompts.length
+      });
+      
+    } catch (error) {
+      console.error('Generate prompts error:', error);
+      res.status(500).json({ error: 'Failed to generate prompts' });
+    }
+  }
+
+  // Get brand mentions for a specific Super User analysis
+  async getAnalysisMentions(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId, brandName } = req.params;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      console.log(`🔍 Super User Analysis: Getting mentions for brand "${brandName}" in analysis ${analysisId}`);
+      
+      // Find the analysis
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      if (!analysis.analysisResults?.brandId) {
+        return res.status(404).json({ error: 'No brand data available for this analysis' });
+      }
+      
+      // Get brand mentions for this specific analysis using the analysisSessionId
+      const CategoryPromptMention = require('../models/CategoryPromptMention');
+      const mentions = await CategoryPromptMention.find({
+        brandId: analysis.analysisResults.brandId,
+        analysisSessionId: analysis.analysisId,
+        companyName: new RegExp(brandName, 'i') // Case insensitive search
+      }).populate({
+        path: 'promptId',
+        populate: {
+          path: 'categoryId'
+        }
+      }).populate('responseId').sort({ createdAt: -1 });
+      
+      console.log(`✅ Found ${mentions.length} mentions for brand "${brandName}" in analysis ${analysisId}`);
+      
+      // Format mentions for frontend consumption
+      const formattedMentions = mentions.map(mention => ({
+        _id: mention._id,
+        companyName: mention.companyName,
+        promptText: mention.promptId?.promptText || 'Unknown prompt',
+        responseText: mention.responseId?.responseText || 'No response text',
+        categoryName: mention.promptId?.categoryId?.categoryName || 'Unknown category',
+        createdAt: mention.createdAt,
+        analysisSessionId: mention.analysisSessionId,
+        confidence: mention.confidence || 0
+      }));
+      
+      res.json({
+        success: true,
+        mentions: formattedMentions,
+        totalMentions: formattedMentions.length,
+        brandName: brandName,
+        analysisId: analysisId
+      });
+      
+    } catch (error) {
+      console.error('Get analysis mentions error:', error);
+      res.status(500).json({ error: 'Failed to get analysis mentions' });
+    }
+  }
+
+  // Get AI responses for a specific Super User analysis
+  async getAnalysisResponses(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId } = req.params;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      console.log(`🔍 Super User Analysis: Getting AI responses for analysis ${analysisId}`);
+      
+      // Find the analysis
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      if (!analysis.analysisResults?.brandId) {
+        return res.status(404).json({ error: 'No brand data available for this analysis' });
+      }
+      
+      // Get AI responses for this specific analysis using the analysisSessionId
+      const responses = await PromptAIResponse.find({
+        brandId: analysis.analysisResults.brandId,
+        analysisSessionId: analysis.analysisId
+      }).populate({
+        path: 'promptId',
+        populate: {
+          path: 'categoryId'
+        }
+      }).sort({ createdAt: -1 });
+      
+      console.log(`✅ Found ${responses.length} AI responses for analysis ${analysisId}`);
+      
+      // Format responses for frontend consumption
+      const formattedResponses = responses.map(response => ({
+        _id: response._id,
+        promptText: response.promptId?.promptText || 'Unknown prompt',
+        responseText: response.responseText,
+        categoryName: response.promptId?.categoryId?.categoryName || 'Unknown category',
+        createdAt: response.createdAt,
+        analysisSessionId: response.analysisSessionId
+      }));
+      
+      res.json({
+        success: true,
+        responses: formattedResponses,
+        totalResponses: formattedResponses.length,
+        analysisId: analysisId
+      });
+      
+    } catch (error) {
+      console.error('Get analysis responses error:', error);
+      res.status(500).json({ error: 'Failed to get analysis responses' });
+    }
+  }
+
+  // Download Super User analysis as PDF
+  async downloadAnalysisPDF(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId } = req.params;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      console.log(`📄 Super User Analysis: Downloading PDF for analysis ${analysisId}`);
+      
+      // Find the analysis
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      if (!analysis.analysisResults?.brandId) {
+        return res.status(404).json({ error: 'No analysis results available for PDF generation' });
+      }
+      
+      // Get brand profile
+      const brandProfile = await BrandProfile.findById(analysis.analysisResults.brandId);
+      if (!brandProfile) {
+        return res.status(404).json({ error: 'Brand profile not found' });
+      }
+      
+      // Get categories with prompts and responses for this specific analysis
+      const categories = await BrandCategory.find({ 
+        brandId: analysis.analysisResults.brandId 
+      }).lean();
+      
+      console.log(`📊 Found ${categories.length} categories for PDF`);
+      
+      // Get prompts and responses for each category, filtered by analysisSessionId
+      const populatedCategories = [];
+      for (const category of categories) {
+        console.log(`📝 Fetching prompts for category: ${category.categoryName}`);
+        
+        // Get prompts for this category and analysis
+        const prompts = await CategorySearchPrompt.find({
+          categoryId: category._id,
+          brandId: analysis.analysisResults.brandId
+        }).lean();
+        
+        console.log(`📝 Found ${prompts.length} prompts for ${category.categoryName}`);
+        
+        // Get AI responses for each prompt, filtered by analysisSessionId
+        const promptsWithResponses = [];
+        for (const prompt of prompts) {
+          // Get AI response for this specific analysis
+          const aiResponse = await PromptAIResponse.findOne({
+            promptId: prompt._id,
+            analysisSessionId: analysis.analysisId // Filter by analysis session
+          }).lean();
+          
+          if (aiResponse) {
+            promptsWithResponses.push({
+              ...prompt,
+              aiResponse: aiResponse
+            });
+          }
+        }
+        
+        if (promptsWithResponses.length > 0) {
+          populatedCategories.push({
+            ...category,
+            prompts: promptsWithResponses
+          });
+        }
+      }
+      
+      // Get mentions for this specific analysis
+      const CategoryPromptMention = require('../models/CategoryPromptMention');
+      const mentions = await CategoryPromptMention.find({
+        brandId: analysis.analysisResults.brandId,
+        analysisSessionId: analysis.analysisId
+      }).populate({
+        path: 'promptId',
+        populate: {
+          path: 'categoryId'
+        }
+      }).populate('responseId').lean();
+      
+      console.log(`🔍 Found ${mentions.length} mentions for PDF`);
+      
+      // Group mentions by brand
+      const mentionsByBrand = {};
+      mentions.forEach(mention => {
+        const brandName = mention.companyName;
+        if (!mentionsByBrand[brandName]) {
+          mentionsByBrand[brandName] = [];
+        }
+        mentionsByBrand[brandName].push({
+          promptText: mention.promptId?.promptText || 'Unknown prompt',
+          responseText: mention.responseId?.responseText || 'No response',
+          categoryName: mention.promptId?.categoryId?.categoryName || 'Unknown category',
+          confidence: mention.confidence || 0
+        });
+      });
+      
+      // Prepare comprehensive analysis data for PDF
+      const analysisData = {
+        brandName: analysis.brandName,
+        domain: analysis.domain,
+        description: analysis.brandInformation || analysis.step1Data?.description || `Analysis of ${analysis.brandName}`,
+        analysisDate: analysis.completedAt || analysis.createdAt,
+        shareOfVoice: analysis.analysisResults.shareOfVoice || {},
+        mentionCounts: analysis.analysisResults.mentionCounts || {},
+        totalMentions: analysis.analysisResults.totalMentions || 0,
+        brandShare: analysis.analysisResults.brandShare || 0,
+        aiVisibilityScore: analysis.analysisResults.aiVisibilityScore || 0,
+        competitors: analysis.step3Data?.competitors || [],
+        categories: populatedCategories,
+        mentionsByBrand: mentionsByBrand,
+        analysisSteps: {
+          step1: analysis.step1Data,
+          step2: analysis.step2Data,
+          step3: analysis.step3Data,
+          step4: analysis.step4Data
+        },
+        analysisId: analysis.analysisId,
+        createdAt: analysis.createdAt
+      };
+      
+      console.log(`📊 PDF Data Summary for ${analysis.analysisId}:`, {
+        categories: populatedCategories.length,
+        competitors: analysisData.competitors.length,
+        totalMentions: analysisData.totalMentions,
+        brandShare: analysisData.brandShare,
+        mentionedBrands: Object.keys(mentionsByBrand).length,
+        totalMentionRecords: mentions.length
+      });
+      
+      // Generate PDF using the existing PDF generator
+      const BrandAnalysisPDFGenerator = require('../../services/pdfGenerator');
+      const pdfGenerator = new BrandAnalysisPDFGenerator();
+      const pdfBuffer = await pdfGenerator.generateBrandAnalysisPDF(analysisData);
+      
+      console.log(`✅ PDF generated successfully for analysis ${analysisId}`);
+      
+      // Set response headers for PDF download
+      const filename = `SuperUser_${analysis.domain.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${analysis.analysisId}_${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      // Send PDF buffer
+      res.end(pdfBuffer);
+      
+      console.log(`📄 Super User PDF downloaded: ${filename}`);
+      
+    } catch (error) {
+      console.error('Download Super User analysis PDF error:', error);
+      res.status(500).json({ error: 'Failed to generate PDF' });
+    }
+  }
+
+  // Extract mentions for Super User analysis (Step 5)
+  async extractMentions(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId, brandName } = req.body;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      if (!analysisId || !brandName) {
+        return res.status(400).json({ error: 'Analysis ID and brand name are required' });
+      }
+      
+      console.log(`🔍 Super User Analysis: Extracting mentions for brand "${brandName}" in analysis ${analysisId}`);
+      
+      // Find the analysis
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      if (!analysis.analysisResults?.brandId) {
+        return res.status(404).json({ error: 'No brand data available for this analysis' });
+      }
+      
+      // Extract mentions using existing mention extraction logic
+      const { extractMentionsForBrand } = require('./brand/mentionExtractor');
+      const mentions = await extractMentionsForBrand(
+        analysis.analysisResults.brandId,
+        brandName,
+        analysisId // Pass analysis session ID for isolation
+      );
+      
+      // Update analysis with mentions data
+      analysis.step5Data = {
+        mentions: mentions,
+        totalMentions: mentions.length,
+        completed: true,
+        completedAt: new Date()
+      };
+      
+      await analysis.save();
+      
+      console.log(`✅ Super User Analysis: Extracted ${mentions.length} mentions for analysis ${analysisId}`);
+      
+      res.json({
+        success: true,
+        mentions: mentions,
+        totalMentions: mentions.length,
+        brandName: brandName,
+        analysisId: analysisId,
+        step5Data: analysis.step5Data
+      });
+      
+    } catch (error) {
+      console.error('Extract mentions error:', error);
+      res.status(500).json({ error: 'Failed to extract mentions' });
+    }
+  }
+
+  // Calculate Share of Voice for Super User analysis (Step 6)
+  async calculateSOV(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId, brandName } = req.body;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      if (!analysisId || !brandName) {
+        return res.status(400).json({ error: 'Analysis ID and brand name are required' });
+      }
+      
+      console.log(`📊 Super User Analysis: Calculating SOV for brand "${brandName}" in analysis ${analysisId}`);
+      
+      // Find the analysis
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      if (!analysis.analysisResults?.brandId) {
+        return res.status(404).json({ error: 'No brand data available for this analysis' });
+      }
+      
+      // Calculate SOV using existing logic
+      const sovData = await calculateShareOfVoice(
+        analysis.analysisResults.brandId,
+        brandName,
+        analysisId // Pass analysis session ID for isolation
+      );
+      
+      // Update analysis with SOV data
+      analysis.step6Data = {
+        shareOfVoice: sovData,
+        completed: true,
+        completedAt: new Date()
+      };
+      
+      await analysis.save();
+      
+      console.log(`✅ Super User Analysis: Calculated SOV for analysis ${analysisId}`);
+      
+      res.json({
+        success: true,
+        shareOfVoice: sovData,
+        brandName: brandName,
+        analysisId: analysisId,
+        step6Data: analysis.step6Data
+      });
+      
+    } catch (error) {
+      console.error('Calculate SOV error:', error);
+      res.status(500).json({ error: 'Failed to calculate share of voice' });
+    }
+  }
+
+  // Save Super User analysis to history
+  async saveToHistory(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { sessionId, analysisData } = req.body;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      if (!sessionId || !analysisData) {
+        return res.status(400).json({ error: 'Session ID and analysis data are required' });
+      }
+      
+      console.log(`💾 Super User Analysis: Saving to history - Session: ${sessionId}`);
+      
+      // Create new SuperUserAnalysis record for history
+      const analysis = new SuperUserAnalysis({
+        superUserId: userId,
+        domain: analysisData.domain,
+        brandName: analysisData.brandName,
+        brandInformation: analysisData.brandInformation,
+        status: 'completed',
+        currentStep: 7, // All steps completed
+        step1Data: {
+          ...analysisData.step1Data,
+          completed: true
+        },
+        step2Data: {
+          ...analysisData.step2Data,
+          completed: true
+        },
+        step3Data: {
+          ...analysisData.step3Data,
+          completed: true
+        },
+        step4Data: {
+          ...analysisData.step4Data,
+          completed: true
+        },
+        analysisResults: {
+          brandId: analysisData.brandId,
+          sessionId: sessionId,
+          ...analysisData.analysisResults
+        },
+        completedAt: new Date()
+      });
+      
+      await analysis.save();
+      
+      console.log(`✅ Analysis saved to history with ID: ${analysis.analysisId}`);
+      
+      res.json({
+        success: true,
+        message: 'Analysis saved to history successfully',
+        analysisId: analysis.analysisId,
+        historyRecord: {
+          analysisId: analysis.analysisId,
+          domain: analysis.domain,
+          brandName: analysis.brandName,
+          createdAt: analysis.createdAt,
+          completedAt: analysis.completedAt
+        }
+      });
+      
+    } catch (error) {
+      console.error('Save to history error:', error);
+      res.status(500).json({ error: 'Failed to save analysis to history' });
+    }
+  }
+
+  // Delete analysis (cleanup)
+  async deleteAnalysis(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId } = req.params;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      console.log(`🗑️ Super User Analysis: Deleting analysis ${analysisId}`);
+      
+      const analysis = await SuperUserAnalysis.findOneAndDelete({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      // Cleanup associated brand profile if it's a super user analysis
+      if (analysis.analysisResults?.brandId) {
+        try {
+          const brandProfile = await BrandProfile.findById(analysis.analysisResults.brandId);
+          // Only delete if it's a super user admin analysis and belongs to the same user
+          if (brandProfile && brandProfile.isAdminAnalysis && brandProfile.ownerUserId.toString() === userId.toString()) {
+            await BrandProfile.findByIdAndDelete(analysis.analysisResults.brandId);
+            
+            // Also cleanup related categories and prompts
+            const categories = await BrandCategory.find({ brandId: analysis.analysisResults.brandId });
+            for (const category of categories) {
+              await CategorySearchPrompt.deleteMany({ categoryId: category._id });
+            }
+            await BrandCategory.deleteMany({ brandId: analysis.analysisResults.brandId });
+            
+            console.log(`✅ Cleaned up associated brand profile and data ${analysis.analysisResults.brandId}`);
+          }
+        } catch (cleanupError) {
+          console.warn('Could not cleanup brand profile:', cleanupError.message);
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: 'Analysis deleted successfully'
+      });
+      
+    } catch (error) {
+      console.error('Delete analysis error:', error);
+      res.status(500).json({ error: 'Failed to delete analysis' });
+    }
+  }
+}
+
+module.exports = new SuperUserAnalysisController();

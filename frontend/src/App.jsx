@@ -7,6 +7,7 @@ import OnboardingFlow from "./components/OnboardingFlow";
 import DomainAnalysisDashboard from "./pages/DomainAnalysisDashboard";
 import SuperUserAnalysisPage from "./pages/SuperUserAnalysisPage";
 import SuperUserHistoryPage from "./pages/SuperUserHistoryPage";
+import SuperUserAnalysisViewPage from "./pages/SuperUserAnalysisViewPage";
 import { ToastContainer, toast } from 'react-toastify';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -71,6 +72,10 @@ const router = createBrowserRouter([
       {
         path: "super-user-analysis/:brandId",
         element: <SuperUserAnalysisPage />,
+      },
+      {
+        path: "super-user-analysis/view/:analysisId",
+        element: <SuperUserAnalysisViewPage />,
       }
     ],
   },

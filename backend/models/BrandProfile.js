@@ -20,6 +20,7 @@ const BrandProfileSchema = new mongoose.Schema({
   },
   competitors: [{ type: String }], // Add missing competitors field
   isAdminAnalysis: { type: Boolean, default: false }, // Flag for super user admin analyses
+  analysisSessionId: { type: String }, // Session ID for Super User analysis isolation
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

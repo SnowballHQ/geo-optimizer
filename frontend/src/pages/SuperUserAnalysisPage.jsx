@@ -17,13 +17,13 @@ import {
   Download
 } from 'lucide-react';
 
-import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
+import SuperUserDomainAnalysisFlow from '../components/SuperUserDomainAnalysisFlow';
 import { apiService } from '../utils/api';
 import { getUserName, isSuperuser } from '../utils/auth';
 
 const SuperUserAnalysisPage = () => {
   const navigate = useNavigate();
-  const { brandId } = useParams(); // Get brandId from URL if viewing specific analysis
+  const { brandId, analysisId } = useParams(); // Get brandId or analysisId from URL if viewing specific analysis
   const [userName, setUserName] = useState(getUserName());
   const [analysisHistory, setAnalysisHistory] = useState([]);
   const [viewingAnalysis, setViewingAnalysis] = useState(null);
@@ -39,11 +39,16 @@ const SuperUserAnalysisPage = () => {
     // Load super user analysis history
     loadAnalysisHistory();
 
-    // If brandId is provided, load specific analysis
+    // If brandId is provided, load specific analysis (old route)
     if (brandId) {
       loadSpecificAnalysis(brandId);
     }
-  }, [navigate, brandId]);
+    
+    // If analysisId is provided, load specific super user analysis (new isolated route)
+    if (analysisId) {
+      loadSpecificSuperUserAnalysis(analysisId);
+    }
+  }, [navigate, brandId, analysisId]);
 
   const loadAnalysisHistory = async () => {
     try {
@@ -66,6 +71,21 @@ const SuperUserAnalysisPage = () => {
       }
     } catch (error) {
       console.error('❌ Error loading specific analysis:', error);
+      // If can't load specific analysis, redirect to main super user page
+      navigate('/super-user-analysis');
+    }
+  };
+
+  const loadSpecificSuperUserAnalysis = async (analysisId) => {
+    try {
+      console.log('🔍 Loading specific super user analysis for analysisId:', analysisId);
+      const response = await apiService.get(`/api/v1/super-user/analysis/${analysisId}`);
+      if (response.data.success) {
+        setViewingAnalysis(response.data.analysis);
+        console.log('✅ Loaded super user analysis:', response.data.analysis.domain);
+      }
+    } catch (error) {
+      console.error('❌ Error loading specific super user analysis:', error);
       // If can't load specific analysis, redirect to main super user page
       navigate('/super-user-analysis');
     }
@@ -172,8 +192,11 @@ const SuperUserAnalysisPage = () => {
               {/* Back button */}
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-semibold text-[#4a4a6a]">Viewing Analysis: {viewingAnalysis.brand}</h3>
+                  <h3 className="text-xl font-semibold text-[#4a4a6a]">Viewing Analysis: {viewingAnalysis.brand || viewingAnalysis.brandName}</h3>
                   <p className="text-sm text-[#4a4a6a]">Domain: {viewingAnalysis.domain}</p>
+                  {viewingAnalysis.analysisId && (
+                    <p className="text-xs text-gray-500">Analysis ID: {viewingAnalysis.analysisId}</p>
+                  )}
                 </div>
                 <Button
                   onClick={() => {
@@ -193,19 +216,19 @@ const SuperUserAnalysisPage = () => {
                 <h4 className="text-lg font-semibold mb-4">Analysis Results</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#6658f4]">{Math.round(viewingAnalysis.aiVisibilityScore || 0)}%</div>
+                    <div className="text-2xl font-bold text-[#6658f4]">{Math.round(viewingAnalysis.analysisResults?.aiVisibilityScore || viewingAnalysis.aiVisibilityScore || 0)}%</div>
                     <div className="text-sm text-[#4a4a6a]">AI Visibility</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#6658f4]">{Math.round(viewingAnalysis.brandShare || 0)}%</div>
+                    <div className="text-2xl font-bold text-[#6658f4]">{Math.round(viewingAnalysis.analysisResults?.brandShare || viewingAnalysis.brandShare || 0)}%</div>
                     <div className="text-sm text-[#4a4a6a]">Brand Share</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#6658f4]">{viewingAnalysis.totalMentions || 0}</div>
+                    <div className="text-2xl font-bold text-[#6658f4]">{viewingAnalysis.analysisResults?.totalMentions || viewingAnalysis.totalMentions || 0}</div>
                     <div className="text-sm text-[#4a4a6a]">Total Mentions</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#6658f4]">{viewingAnalysis.competitors?.length || 0}</div>
+                    <div className="text-2xl font-bold text-[#6658f4]">{viewingAnalysis.analysisResults?.competitors?.length || viewingAnalysis.competitors?.length || 0}</div>
                     <div className="text-sm text-[#4a4a6a]">Competitors</div>
                   </div>
                 </div>
@@ -213,8 +236,14 @@ const SuperUserAnalysisPage = () => {
                 {/* PDF Download button */}
                 <div className="mt-6 text-center">
                   <Button
-                    onClick={() => window.open(`/api/v1/brand/${brandId}/download-pdf`, '_blank')}
+                    onClick={() => {
+                      const pdfBrandId = viewingAnalysis.analysisResults?.brandId || brandId;
+                      if (pdfBrandId) {
+                        window.open(`/api/v1/brand/${pdfBrandId}/download-pdf`, '_blank');
+                      }
+                    }}
                     className="bg-green-600 hover:bg-green-700 text-white"
+                    disabled={!viewingAnalysis.analysisResults?.brandId && !brandId}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Download PDF Report
@@ -223,7 +252,7 @@ const SuperUserAnalysisPage = () => {
               </div>
             </div>
           ) : (
-            <SuperUserDomainAnalysis onAnalysisComplete={loadAnalysisHistory} />
+            <SuperUserDomainAnalysisFlow onAnalysisComplete={loadAnalysisHistory} />
           )}
         </main>
       </div>

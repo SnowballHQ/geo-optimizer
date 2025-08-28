@@ -3,7 +3,7 @@ import { apiService } from '../../utils/api';
 import { Button } from '../ui/button';
 import { MessageSquare, Sparkles, Check, Edit2, Save, X } from 'lucide-react';
 
-const Step4Prompts = ({ onComplete, loading, error, progress }) => {
+const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = false, skipApiCall = false }) => {
   const [prompts, setPrompts] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -19,7 +19,20 @@ const Step4Prompts = ({ onComplete, loading, error, progress }) => {
   const handleGeneratePrompts = async () => {
     try {
       setIsGenerating(true);
-      const response = await apiService.step4Prompts({});
+      
+      let response;
+      
+      // For Super User analyses, use the isolated prompt generation endpoint
+      if (isSuperUser && progress?.analysisId) {
+        console.log('🔥 Super User: Using isolated prompt generation endpoint');
+        response = await apiService.post('/api/v1/super-user/analysis/generate-prompts', {
+          analysisId: progress.analysisId
+        });
+      } else {
+        // Regular user flow
+        response = await apiService.step4Prompts({});
+      }
+      
       console.log('📝 Prompts response:', response.data);
       
       if (response.data.success) {
@@ -76,6 +89,20 @@ const Step4Prompts = ({ onComplete, loading, error, progress }) => {
   const handleComplete = async () => {
     try {
       setIsSaving(true);
+      
+      // For Super User isolated analyses, skip the regular API call
+      if (skipApiCall) {
+        console.log('🔥 Super User: Skipping regular step4Prompts API call for isolated analysis');
+        onComplete({
+          step4: {
+            promptsGenerated: prompts.length > 0,
+            prompts: prompts, // Send the edited prompts
+            completed: true
+          }
+        }, 5);
+        return;
+      }
+      
       // Save final prompts to database via API (ensures all edits are saved)
       const response = await apiService.step4Prompts({ prompts });
       if (response.data.success) {
@@ -203,6 +230,24 @@ const Step4Prompts = ({ onComplete, loading, error, progress }) => {
           )}
         </div>
 
+        {/* Super User Preview */}
+        {isSuperUser && (
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 text-xs font-bold">i</span>
+              </div>
+              <h4 className="text-sm font-semibold text-blue-800">What happens next?</h4>
+            </div>
+            <div className="space-y-2 text-sm text-blue-700">
+              <p>• <strong>AI Analysis:</strong> Your prompts will be processed by AI to generate comprehensive responses</p>
+              <p>• <strong>Mentions Extraction:</strong> Brand and competitor mentions will be automatically identified</p>
+              <p>• <strong>Share of Voice:</strong> Market position and visibility scores will be calculated</p>
+              <p>• <strong>Complete Report:</strong> Full analysis results will be available for download and review</p>
+            </div>
+          </div>
+        )}
+
         {/* Complete Button */}
         <div className="flex justify-end">
           <Button
@@ -210,7 +255,7 @@ const Step4Prompts = ({ onComplete, loading, error, progress }) => {
             disabled={loading || isSaving || prompts.length === 0}
             className="bg-primary-500 hover:bg-primary-600 text-white px-6 h-11 min-w-[100px]"
           >
-            {loading || isSaving ? 'Processing...' : 'Complete Setup'}
+            {loading || isSaving ? 'Processing...' : (isSuperUser ? 'Start Complete Analysis' : 'Complete Setup')}
           </Button>
         </div>
       </div>

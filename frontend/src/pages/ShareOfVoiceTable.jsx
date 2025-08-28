@@ -15,7 +15,9 @@ const ShareOfVoiceTable = ({
   brandId,
   brandName,
   calculationMethod: propCalculationMethod,
-  onDataUpdate // Add callback prop for refreshing parent data
+  onDataUpdate, // Add callback prop for refreshing parent data
+  isSuperUser = false,
+  analysisId = null
 }) => {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [mentionData, setMentionData] = useState(null);
@@ -64,28 +66,41 @@ const ShareOfVoiceTable = ({
     setLoadingMentions(true);
     
     try {
-      const apiUrl = `/api/v1/brand/mentions/company/${encodeURIComponent(brandNameToFetch)}?brandId=${brandId}`;
-      console.log("📡 API URL:", apiUrl);
+      let apiUrl, data;
       
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log("📡 Response status:", response.status);
-      console.log("📡 Response ok:", response.ok);
-      console.log("📡 Response headers:", Object.fromEntries(response.headers.entries()));
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log("📡 Response data:", data);
+      if (isSuperUser && analysisId) {
+        // Use Super User specific endpoint
+        apiUrl = `/api/v1/super-user/analysis/${analysisId}/mentions/${encodeURIComponent(brandNameToFetch)}`;
+        console.log("🔥 Super User API URL:", apiUrl);
+        
+        const response = await apiService.get(apiUrl);
+        console.log("📡 Super User Response data:", response.data);
+        data = response.data;
         setMentionData(data.mentions || []);
       } else {
-        const errorText = await response.text();
-        console.error("❌ API Error:", errorText);
-        setMentionData([]);
+        // Use regular brand endpoint
+        apiUrl = `/api/v1/brand/mentions/company/${encodeURIComponent(brandNameToFetch)}?brandId=${brandId}`;
+        console.log("📡 Regular API URL:", apiUrl);
+        
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log("📡 Response status:", response.status);
+        console.log("📡 Response ok:", response.ok);
+
+        if (response.ok) {
+          data = await response.json();
+          console.log("📡 Response data:", data);
+          setMentionData(data.mentions || []);
+        } else {
+          const errorText = await response.text();
+          console.error("❌ API Error:", errorText);
+          setMentionData([]);
+        }
       }
     } catch (error) {
       console.error('❌ Error fetching mention data:', error);

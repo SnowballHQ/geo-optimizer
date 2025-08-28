@@ -25,6 +25,7 @@ const cmsCredentialsRouter = require("./routes/cmsCredentials");
 const shopifyRouter = require("./routes/shopify");
 const onboardingRouter = require("./routes/onboarding");
 const regenerateAnalysisRouter = require("./routes/regenerateAnalysis");
+const superUserAnalysisRouter = require("./routes/superUserAnalysis");
 
 // Initialize auto-publisher
 require('./utils/autoPublisher');
@@ -76,6 +77,7 @@ app.use("/api/v1/cms-credentials", cmsCredentialsRouter);
 app.use("/api/v1/shopify", shopifyRouter);
 app.use("/api/v1/onboarding", onboardingRouter);
 app.use("/api/v1/regenerate", regenerateAnalysisRouter);
+app.use("/api/v1/super-user/analysis", superUserAnalysisRouter);
 
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
