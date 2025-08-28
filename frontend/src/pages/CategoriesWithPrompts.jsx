@@ -6,7 +6,13 @@ import { Button } from '../components/ui/button';
 import { ChevronDown, ChevronRight, MessageSquare, Sparkles, Clock } from 'lucide-react';
 import AddCustomPrompt from '../components/AddCustomPrompt';
 
-const CategoriesWithPrompts = ({ categories, brandId, onSOVUpdate }) => {
+const CategoriesWithPrompts = ({ 
+  categories, 
+  brandId, 
+  onSOVUpdate, 
+  isSuperUser = false, 
+  analysisId = null 
+}) => {
   const [categoryPrompts, setCategoryPrompts] = useState({});
   const [loading, setLoading] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState(null);
@@ -17,6 +23,8 @@ const CategoriesWithPrompts = ({ categories, brandId, onSOVUpdate }) => {
   console.log("CategoriesWithPrompts received props:", {
     categories,
     brandId,
+    isSuperUser,
+    analysisId,
     categoriesLength: categories?.length,
     categoriesType: typeof categories,
     categoriesIsArray: Array.isArray(categories),

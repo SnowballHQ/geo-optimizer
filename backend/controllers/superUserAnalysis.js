@@ -464,6 +464,75 @@ class SuperUserAnalysisController {
         return res.status(404).json({ error: 'Analysis not found or access denied' });
       }
       
+      // If analysis is completed, also get populated categories with prompts and responses
+      let populatedCategories = [];
+      if (analysis.status === 'completed' && analysis.analysisResults?.brandId) {
+        try {
+          // Get categories with prompts and responses for this specific analysis
+          const categories = await BrandCategory.find({ 
+            brandId: analysis.analysisResults.brandId 
+          }).lean();
+          
+          console.log(`📊 Found ${categories.length} categories for analysis ${analysisId}`);
+          
+          // Get prompts and responses for each category, filtered by analysisSessionId
+          for (const category of categories) {
+            console.log(`📝 Fetching prompts for category: ${category.categoryName}`);
+            
+            // Get prompts for this category and analysis
+            const prompts = await CategorySearchPrompt.find({
+              categoryId: category._id,
+              brandId: analysis.analysisResults.brandId
+            }).lean();
+            
+            console.log(`📝 Found ${prompts.length} prompts for ${category.categoryName}`);
+            
+            // Get AI responses for each prompt, filtered by analysisSessionId
+            const promptsWithResponses = [];
+            for (const prompt of prompts) {
+              // First try to get AI response for this specific analysis
+              let aiResponse = await PromptAIResponse.findOne({
+                promptId: prompt._id,
+                analysisSessionId: analysis.analysisId // Filter by analysis session
+              }).lean();
+              
+              // Fallback for older analyses that might not have analysisSessionId
+              if (!aiResponse) {
+                console.log(`⚠️ No response found with analysisSessionId, trying fallback for prompt: ${prompt._id}`);
+                aiResponse = await PromptAIResponse.findOne({
+                  promptId: prompt._id,
+                  brandId: analysis.analysisResults.brandId,
+                  userId: userId
+                }).lean();
+                
+                if (aiResponse) {
+                  console.log(`✅ Found fallback response for prompt: ${prompt._id}`);
+                }
+              }
+              
+              if (aiResponse) {
+                promptsWithResponses.push({
+                  ...prompt,
+                  aiResponse: aiResponse
+                });
+              }
+            }
+            
+            if (promptsWithResponses.length > 0 || prompts.length > 0) {
+              populatedCategories.push({
+                ...category,
+                prompts: promptsWithResponses.length > 0 ? promptsWithResponses : prompts
+              });
+            }
+          }
+          
+          console.log(`✅ Populated ${populatedCategories.length} categories with prompts and responses`);
+        } catch (error) {
+          console.error('Error populating categories:', error);
+          // Don't fail the whole request, just continue without populated data
+        }
+      }
+      
       res.json({
         success: true,
         analysis: {
@@ -478,7 +547,9 @@ class SuperUserAnalysisController {
           step2Data: analysis.step2Data,
           step3Data: analysis.step3Data,
           step4Data: analysis.step4Data,
-          analysisResults: analysis.analysisResults
+          analysisResults: analysis.analysisResults,
+          // Add populated categories if available
+          populatedCategories: populatedCategories
         }
       });
       
@@ -799,11 +870,25 @@ Format: Output only a JSON array of 5 strings.`;
         // Get AI responses for each prompt, filtered by analysisSessionId
         const promptsWithResponses = [];
         for (const prompt of prompts) {
-          // Get AI response for this specific analysis
-          const aiResponse = await PromptAIResponse.findOne({
+          // First try to get AI response for this specific analysis
+          let aiResponse = await PromptAIResponse.findOne({
             promptId: prompt._id,
             analysisSessionId: analysis.analysisId // Filter by analysis session
           }).lean();
+          
+          // Fallback for older analyses that might not have analysisSessionId
+          if (!aiResponse) {
+            console.log(`⚠️ PDF: No response found with analysisSessionId, trying fallback for prompt: ${prompt._id}`);
+            aiResponse = await PromptAIResponse.findOne({
+              promptId: prompt._id,
+              brandId: analysis.analysisResults.brandId,
+              userId: userId
+            }).lean();
+            
+            if (aiResponse) {
+              console.log(`✅ PDF: Found fallback response for prompt: ${prompt._id}`);
+            }
+          }
           
           if (aiResponse) {
             promptsWithResponses.push({
@@ -884,7 +969,7 @@ Format: Output only a JSON array of 5 strings.`;
       });
       
       // Generate PDF using the existing PDF generator
-      const BrandAnalysisPDFGenerator = require('../../services/pdfGenerator');
+      const BrandAnalysisPDFGenerator = require('../services/pdfGenerator');
       const pdfGenerator = new BrandAnalysisPDFGenerator();
       const pdfBuffer = await pdfGenerator.generateBrandAnalysisPDF(analysisData);
       

@@ -73,6 +73,22 @@ const BrandDashboardStep = ({
       if (isSuperUser) {
         // Format super user data for dashboard components
         const analysis = data.analysis;
+        
+        // Use populated categories if available, otherwise create from step2Data
+        let categories = [];
+        if (analysis.populatedCategories && analysis.populatedCategories.length > 0) {
+          console.log('✅ Using populated categories with prompts and responses:', analysis.populatedCategories.length);
+          categories = analysis.populatedCategories;
+        } else if (analysis.step2Data?.categories) {
+          console.log('⚠️ Using step2Data categories (prompts will be loaded separately)');
+          categories = analysis.step2Data.categories.map(cat => ({
+            categoryName: cat,
+            prompts: [] // Will be loaded by CategoriesWithPrompts component
+          }));
+        }
+        
+        console.log('📊 Final categories for dashboard:', categories.length, categories);
+        
         setDashboardData({
           // Brand summary data
           brand: {
@@ -87,11 +103,8 @@ const BrandDashboardStep = ({
           totalMentions: analysis.analysisResults?.totalMentions || 0,
           brandShare: analysis.analysisResults?.brandShare || 0,
           aiVisibilityScore: analysis.analysisResults?.aiVisibilityScore || 0,
-          // Categories and competitors
-          categories: analysis.step2Data?.categories?.map(cat => ({
-            categoryName: cat,
-            prompts: [] // Will be loaded by CategoriesWithPrompts component
-          })) || [],
+          // Categories and competitors - use populated data
+          categories: categories,
           competitors: analysis.step3Data?.competitors || [],
           // Analysis metadata
           analysisId: analysis.analysisId,
