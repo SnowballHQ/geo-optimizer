@@ -908,7 +908,7 @@ Format: Output only a JSON array of 5 strings.`;
       
       // Get mentions for this specific analysis
       const CategoryPromptMention = require('../models/CategoryPromptMention');
-      const mentions = await CategoryPromptMention.find({
+      let mentions = await CategoryPromptMention.find({
         brandId: analysis.analysisResults.brandId,
         analysisSessionId: analysis.analysisId
       }).populate({
@@ -917,6 +917,24 @@ Format: Output only a JSON array of 5 strings.`;
           path: 'categoryId'
         }
       }).populate('responseId').lean();
+      
+      // Fallback for older analyses that might not have analysisSessionId in mentions
+      if (mentions.length === 0) {
+        console.log(`⚠️ PDF: No mentions found with analysisSessionId, trying fallback`);
+        mentions = await CategoryPromptMention.find({
+          brandId: analysis.analysisResults.brandId,
+          userId: userId
+        }).populate({
+          path: 'promptId',
+          populate: {
+            path: 'categoryId'
+          }
+        }).populate('responseId').lean();
+        
+        if (mentions.length > 0) {
+          console.log(`✅ PDF: Found ${mentions.length} fallback mentions`);
+        }
+      }
       
       console.log(`🔍 Found ${mentions.length} mentions for PDF`);
       

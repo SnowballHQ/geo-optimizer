@@ -306,7 +306,7 @@ class BrandAnalysisPDFGenerator {
         this.margin, 140, { width: this.contentWidth });
 
     // Add competitor mention summary with improved design
-    const competitorMentionsY = this.addCompetitorMentionSummary(categories);
+    const competitorMentionsY = this.addCompetitorMentionSummary(analysisData);
 
     let currentY = competitorMentionsY + 10; // Reduced spacing
 
@@ -412,100 +412,131 @@ class BrandAnalysisPDFGenerator {
     });
   }
 
-  addCompetitorMentionSummary(categories) {
-    // Extract all competitor mentions from AI responses
-    const competitorMentions = {};
-    const competitorPrompts = {};
+  addCompetitorMentionSummary(analysisData) {
+    // Use the actual mentionsByBrand data that was already extracted
+    const mentionsByBrand = analysisData.mentionsByBrand || {};
     
-    categories.forEach((category, categoryIndex) => {
-      if (category.prompts) {
-        category.prompts.forEach((prompt, promptIndex) => {
-          if (prompt.aiResponse && prompt.aiResponse.responseText) {
-            const response = prompt.aiResponse.responseText.toLowerCase();
-            
-            // Enhanced competitor patterns to look for
-            const competitorNames = [
-              'salesforce', 'hubspot', 'outreach', 'salesloft', 'groove', 
-              'pipedrive', 'zoho', 'apollo', 'linkedin sales navigator', 'zoominfo',
-              'mailchimp', 'constant contact', 'convertkit', 'activecampaign',
-              'klaviyo', 'drip', 'getresponse', 'aweber', 'infusionsoft',
-              'keap', 'pipedrive', 'freshsales', 'zendesk', 'intercom',
-              'drift', 'calendly', 'acuity', 'calendly', 'typeform',
-              'survey monkey', 'google forms', 'notion', 'airtable', 'trello',
-              'asana', 'monday.com', 'clickup', 'wrike', 'teamgantt'
-            ];
-            
-            competitorNames.forEach(competitor => {
-              if (response.includes(competitor.toLowerCase())) {
-                if (!competitorMentions[competitor]) {
-                  competitorMentions[competitor] = 0;
-                  competitorPrompts[competitor] = [];
-                }
-                competitorMentions[competitor]++;
-                competitorPrompts[competitor].push({
-                  category: category.categoryName,
-                  prompt: prompt.promptText,
-                  categoryIndex: categoryIndex + 1,
-                  promptIndex: promptIndex + 1
-                });
-              }
-            });
-          }
-        });
-      }
-    });
-
-    // Display competitor mentions summary as a table
-    if (Object.keys(competitorMentions).length > 0) {
+    // Display mention summary organized by brand and prompts
+    if (Object.keys(mentionsByBrand).length > 0) {
       this.doc
         .fontSize(16)
         .fillColor(this.colors.text)
-        .text('Competitor Mentions Summary', this.margin, 165);
+        .text('Brand Mentions by Prompt', this.margin, 165);
 
       let summaryY = 190;
       
-      // Create a compact table format
-      Object.entries(competitorMentions).forEach(([competitor, count]) => {
-        // Check if we need space for this competitor section
+      // Sort brands by number of mentions (descending)
+      const sortedBrands = Object.entries(mentionsByBrand)
+        .sort(([,a], [,b]) => b.length - a.length);
+      
+      // Display each brand and its mentions organized by prompts
+      sortedBrands.forEach(([brandName, mentions]) => {
+        // Check if we need space for this brand section
         if (summaryY > 650) {
           this.doc.addPage();
           summaryY = 80;
         }
 
-        // Competitor header box
+        // Brand header box
         this.doc
-          .rect(this.margin, summaryY, this.contentWidth, 20)
+          .rect(this.margin, summaryY, this.contentWidth, 25)
           .fillAndStroke(this.colors.surface, this.colors.primary);
 
         this.doc
-          .fontSize(12)
+          .fontSize(14)
           .fillColor(this.colors.primary)
-          .text(`${competitor.toUpperCase()} (${count} mentions)`, this.margin + 10, summaryY + 6);
+          .text(`${brandName.toUpperCase()} (${mentions.length} mentions)`, this.margin + 10, summaryY + 8);
         
-        summaryY += 25;
+        summaryY += 30;
         
-        // List prompts in compact format - just show category and prompt number
-        competitorPrompts[competitor].forEach((promptInfo, index) => {
-          const shortText = `Category ${promptInfo.categoryIndex}, Prompt ${promptInfo.promptIndex}: "${promptInfo.prompt.substring(0, 80)}..."`;
+        // Group mentions by unique prompts to avoid duplicates
+        const promptGroups = {};
+        mentions.forEach((mention) => {
+          const promptText = mention.promptText || 'Unknown prompt';
+          const key = promptText.substring(0, 100); // Use first 100 chars as key
           
+          if (!promptGroups[key]) {
+            promptGroups[key] = {
+              promptText: promptText,
+              categoryName: mention.categoryName || 'Unknown category',
+              responses: []
+            };
+          }
+          
+          if (mention.responseText) {
+            promptGroups[key].responses.push(mention.responseText);
+          }
+        });
+        
+        // Display each unique prompt and its details
+        Object.values(promptGroups).forEach((group, index) => {
+          // Check for page break
+          if (summaryY > 680) {
+            this.doc.addPage();
+            summaryY = 80;
+          }
+          
+          // Prompt header
           this.doc
-            .fontSize(9)
+            .fontSize(11)
+            .fillColor(this.colors.text)
+            .text(`${index + 1}. Category: ${group.categoryName}`, this.margin + 15, summaryY);
+          
+          summaryY += 15;
+          
+          // Prompt text (truncated)
+          const promptPreview = group.promptText.length > 120 
+            ? group.promptText.substring(0, 120) + '...'
+            : group.promptText;
+            
+          this.doc
+            .fontSize(10)
             .fillColor(this.colors.textLight)
-            .text(`• ${shortText}`, this.margin + 15, summaryY, {
-              width: this.contentWidth - 30,
+            .text(`Prompt: "${promptPreview}"`, this.margin + 20, summaryY, {
+              width: this.contentWidth - 40,
               lineGap: 1
             });
           
-          summaryY += 14; // Tight spacing for compact layout
+          summaryY += 25;
+          
+          // Response preview (first response if available)
+          if (group.responses.length > 0) {
+            const responsePreview = group.responses[0].length > 150 
+              ? group.responses[0].substring(0, 150) + '...'
+              : group.responses[0];
+              
+            this.doc
+              .fontSize(9)
+              .fillColor(this.colors.textMuted)
+              .text(`Response: "${responsePreview}"`, this.margin + 20, summaryY, {
+                width: this.contentWidth - 40,
+                lineGap: 1
+              });
+              
+            summaryY += 20;
+          }
+          
+          summaryY += 8; // Space between prompts
         });
         
-        summaryY += 10; // Small space between competitors
+        summaryY += 15; // Space between brands
       });
       
       return summaryY + 15; // Return the Y position for continuing content
+    } else {
+      // No mentions found
+      this.doc
+        .fontSize(16)
+        .fillColor(this.colors.text)
+        .text('Brand Mentions by Prompt', this.margin, 165);
+        
+      this.doc
+        .fontSize(12)
+        .fillColor(this.colors.textMuted)
+        .text('No brand mentions found in this analysis.', this.margin, 190);
+      
+      return 220; // Return default Y position if no mentions
     }
-    
-    return 190; // Return default Y position if no competitors
   }
 
   addSectionTitle(title) {
