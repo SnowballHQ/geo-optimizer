@@ -70,9 +70,14 @@ const SuperUserAnalysisViewPage = () => {
       const token = localStorage.getItem('auth') || localStorage.getItem('token');
       
       // Use apiService to ensure correct base URL handling
+      const pdfEndpoint = `/api/v1/super-user/analysis/${analysisData.analysisId}/download-pdf`;
+      console.log('📄 PDF Endpoint:', pdfEndpoint);
+      console.log('📄 Analysis ID:', analysisData.analysisId);
       console.log('📄 Using apiService base URL for PDF download');
+      console.log('📄 Current window location:', window.location.origin);
+      console.log('📄 Expected full URL would be: ' + (import.meta.env.VITE_API_URL || 'https://geo-optimizer.onrender.com') + pdfEndpoint);
       
-      const response = await apiService.get(`/api/v1/super-user/analysis/${analysisData.analysisId}/download-pdf`, {
+      const response = await apiService.get(pdfEndpoint, {
         responseType: 'blob', // Important: Tell axios to expect a blob response
         headers: {
           'Accept': 'application/pdf',
@@ -129,7 +134,25 @@ const SuperUserAnalysisViewPage = () => {
       
     } catch (error) {
       console.error('❌ Super User PDF download error:', error);
-      toast.error(`Failed to download PDF report: ${error.message}`);
+      
+      // Additional debugging for 404 errors
+      if (error.response?.status === 404) {
+        console.error('❌ 404 Error Details:');
+        console.error('   - Endpoint:', pdfEndpoint);
+        console.error('   - Analysis ID:', analysisData.analysisId);
+        console.error('   - Full URL would be: [BASE_URL]' + pdfEndpoint);
+        
+        // Try to test if the analysis exists
+        try {
+          console.log('🔍 Testing if analysis exists...');
+          const testResponse = await apiService.get(`/api/v1/super-user/analysis/${analysisData.analysisId}`);
+          console.log('✅ Analysis exists:', testResponse.status === 200);
+        } catch (testError) {
+          console.error('❌ Analysis does not exist:', testError.response?.status);
+        }
+      }
+      
+      toast.error(`Failed to download PDF report: ${error.message} (${error.response?.status || 'Network Error'})`);
     } finally {
       setDownloadingPdf(false);
     }

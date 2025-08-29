@@ -1,11 +1,18 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://geo-optimizer.onrender.com';
+// API Configuration - Fix deployment URL mismatch
+let API_BASE_URL = import.meta.env.VITE_API_URL || 'https://geo-optimizer.onrender.com';
+
+// Fix common deployment URL issues
+if (API_BASE_URL.includes('geo-optimizer-land.onrender.com')) {
+  console.warn('⚠️ Fixing incorrect API URL from geo-optimizer-land to geo-optimizer');
+  API_BASE_URL = 'https://geo-optimizer.onrender.com';
+}
 
 console.log('API Base URL:', API_BASE_URL);
 console.log('Environment:', import.meta.env.MODE);
+console.log('VITE_API_URL from env:', import.meta.env.VITE_API_URL);
 
 // Create axios instance with default configuration
 const api = axios.create({
