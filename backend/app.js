@@ -41,31 +41,65 @@ const allowedOrigins = [
   'https://snowball-land.onrender.com',
   'https://geo-optimizer-land.onrender.com',
   'https://geo-optimizer.onrender.com', // Backend domain for CORS
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_URL,
+  // Add explicit environment variable for production frontend URL
+  process.env.FRONTEND_DOMAIN
 ].filter(Boolean);
+
+console.log('🔧 CORS Configuration loaded with origins:', allowedOrigins);
+console.log('🔧 Environment variables:', {
+  NODE_ENV: process.env.NODE_ENV,
+  FRONTEND_URL: process.env.FRONTEND_URL,
+  FRONTEND_DOMAIN: process.env.FRONTEND_DOMAIN
+});
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    console.log('🔍 CORS Request from origin:', origin);
+    console.log('🔍 Allowed origins:', allowedOrigins);
     
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('✅ CORS: Origin allowed');
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Production fallback: allow onrender.com domains
+      const isOnRender = origin.includes('.onrender.com');
+      if (isOnRender && (origin.includes('geo-optimizer') || origin.includes('snowball'))) {
+        console.log('✅ CORS: Onrender domain allowed as fallback:', origin);
+        callback(null, true);
+      } else {
+        console.error('❌ CORS: Origin not allowed:', origin);
+        console.error('❌ Allowed origins are:', allowedOrigins);
+        callback(new Error('Not allowed by CORS'));
+      }
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 }));
+
+// Handle preflight requests explicitly
+app.options('*', (req, res) => {
+  console.log('🔍 Handling preflight OPTIONS request from:', req.get('Origin'));
+  res.status(200).send();
+});
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'Snowball API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    allowedOrigins: allowedOrigins
   });
 });
 
