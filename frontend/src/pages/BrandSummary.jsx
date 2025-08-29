@@ -1,9 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Building2, Globe, FileText } from 'lucide-react';
+import { Building2, Globe, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 
 const BrandSummary = ({ brandData }) => {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+
+  // Function to truncate text after approximately 3-4 lines (150-200 characters)
+  const truncateText = (text, maxLength = 180) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  };
+
+  // Function to check if text needs truncation
+  const needsTruncation = (text, maxLength = 180) => {
+    return text.length > maxLength;
+  };
+
   if (!brandData) {
     return (
       <Card className="h-full flex flex-col">
@@ -57,9 +70,29 @@ const BrandSummary = ({ brandData }) => {
               <FileText className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm font-medium text-foreground">Description</p>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {brandData.description}
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {isDescriptionExpanded 
+                  ? brandData.description 
+                  : truncateText(brandData.description)
+                }
+              </p>
+              
+              {/* Read More/Less Button */}
+              {needsTruncation(brandData.description) && (
+                <button
+                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  className="inline-flex items-center space-x-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 rounded-md px-2 py-1 hover:bg-primary/5"
+                >
+                  <span>{isDescriptionExpanded ? 'Read Less' : 'Read More'}</span>
+                  {isDescriptionExpanded ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
