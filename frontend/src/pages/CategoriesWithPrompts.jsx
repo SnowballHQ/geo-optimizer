@@ -21,10 +21,23 @@ const CategoriesWithPrompts = ({
 
   // Helper function to get prompt text safely
   const getPromptText = (prompt) => {
+    console.log('🔍 DEBUG: Full prompt object:', prompt);
+    console.log('🔍 DEBUG: Prompt keys:', Object.keys(prompt || {}));
+    
     const text = prompt.promptText || prompt.question || prompt.text || prompt.prompt || prompt.content;
+    console.log('🔍 DEBUG: Extracted text:', text);
+    console.log('🔍 DEBUG: Individual field values:', {
+      promptText: prompt.promptText,
+      question: prompt.question,
+      text: prompt.text,
+      prompt: prompt.prompt,
+      content: prompt.content
+    });
+    
     if (text && typeof text === 'string' && text.trim()) {
       return text.length > 150 ? text.slice(0, 150) + '...' : text;
     }
+    console.log('❌ DEBUG: No valid text found, using fallback');
     return 'Prompt (' + (prompt._id || 'No ID') + ')';
   };
 

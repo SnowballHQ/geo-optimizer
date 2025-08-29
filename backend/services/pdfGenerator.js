@@ -72,7 +72,7 @@ class BrandAnalysisPDFGenerator {
     // Categories Analysis
     if (analysisData.categories && analysisData.categories.length > 0) {
       this.doc.addPage();
-      this.addCategoriesSection(analysisData.categories);
+      this.addCategoriesSection(analysisData.categories, analysisData);
     }
   }
 
@@ -296,7 +296,7 @@ class BrandAnalysisPDFGenerator {
     });
   }
 
-  addCategoriesSection(categories) {
+  addCategoriesSection(categories, analysisData = null) {
     this.addSectionTitle('Detailed Category Analysis');
     
     this.doc
@@ -305,8 +305,14 @@ class BrandAnalysisPDFGenerator {
       .text(`Analysis across ${categories.length} business categories with AI-generated insights:`, 
         this.margin, 140, { width: this.contentWidth });
 
-    // Add competitor mention summary with improved design
-    const competitorMentionsY = this.addCompetitorMentionSummary(analysisData);
+    // Add competitor mention summary with improved design (if analysisData is available)
+    let competitorMentionsY;
+    if (analysisData) {
+      competitorMentionsY = this.addCompetitorMentionSummary(analysisData);
+    } else {
+      // Skip competitor mention summary if no analysisData
+      competitorMentionsY = 140;
+    }
 
     let currentY = competitorMentionsY + 10; // Reduced spacing
 

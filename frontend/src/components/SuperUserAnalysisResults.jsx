@@ -100,8 +100,12 @@ const SuperUserAnalysisResults = ({
       // Use the actual data structure from the backend instead of creating temporary ones
       console.log('🔍 Using actual backend data structure');
       
-      // Get categories from step data first, then from analysis results
-      const actualCategories = analysisData.step2Data?.categories || analysisData.analysisResults?.categories || [];
+      // PRIORITY: Use populated categories first (these come with prompts and responses already attached)
+      const populatedCategories = analysisData.analysisResults?.populatedCategories;
+      console.log('🔍 DEBUG: Populated categories from backend:', populatedCategories);
+      
+      // Fallback to step data if populated categories not available
+      const actualCategories = populatedCategories || analysisData.step2Data?.categories || analysisData.analysisResults?.categories || [];
       const actualPrompts = analysisData.step4Data?.prompts || analysisData.analysisResults?.prompts || [];
       
       console.log('🔍 Step2Data categories:', analysisData.step2Data?.categories);
@@ -112,49 +116,82 @@ const SuperUserAnalysisResults = ({
       console.log('🔍 Actual categories from backend:', actualCategories);
       console.log('🔍 Actual prompts from backend:', actualPrompts);
       
+      // DEBUG: Log first few prompts in detail
+      if (actualPrompts.length > 0) {
+        console.log('🔍 DEBUG: First 3 prompts detail:', actualPrompts.slice(0, 3));
+        actualPrompts.slice(0, 3).forEach((prompt, index) => {
+          console.log(`🔍 DEBUG: Prompt ${index}:`, {
+            type: typeof prompt,
+            keys: Object.keys(prompt || {}),
+            fullObject: prompt
+          });
+        });
+      }
+      
       // Helper function to generate proper ObjectId-like strings
       const generateObjectId = () => {
         return Math.random().toString(16).substr(2, 24).padEnd(24, '0');
       };
       
       // Create proper category structure using backend data
-      const basicCategories = actualCategories.map((category, index) => {
-        // If category is a string, convert to object format
-        const categoryObj = typeof category === 'string' ? { 
-          _id: generateObjectId(),
-          categoryName: category,
-          name: category
-        } : category;
-        
-        // For Super User analysis, distribute prompts evenly across categories
-        // since we don't have category-specific prompt mapping
-        const totalPrompts = actualPrompts.length || 0;
-        const totalCategories = actualCategories.length || 1;
-        const promptsPerCategory = Math.ceil(totalPrompts / totalCategories);
-        const startIndex = index * promptsPerCategory;
-        const categoryPrompts = actualPrompts.slice(startIndex, startIndex + promptsPerCategory);
-        
-        console.log(`🔍 Category ${categoryObj.categoryName || categoryObj.name}: ${categoryPrompts.length} prompts (${startIndex}-${startIndex + promptsPerCategory})`);
-        
-        return {
-          ...categoryObj,
-          prompts: categoryPrompts.map((prompt, promptIndex) => {
-            // If prompt is a string, create proper object
-            if (typeof prompt === 'string') {
+      let basicCategories;
+      
+      if (populatedCategories && populatedCategories.length > 0) {
+        // Use populated categories directly - these already have prompts with proper structure
+        console.log('✅ Using populated categories with prompts from backend');
+        basicCategories = populatedCategories.map(category => ({
+          ...category,
+          prompts: (category.prompts || []).map(prompt => ({
+            ...prompt,
+            responses: prompt.responses || []
+          }))
+        }));
+      } else {
+        // Fallback: Create categories from step data
+        console.log('📋 Creating categories from step data');
+        basicCategories = actualCategories.map((category, index) => {
+          // If category is a string, convert to object format
+          const categoryObj = typeof category === 'string' ? { 
+            _id: generateObjectId(),
+            categoryName: category,
+            name: category
+          } : category;
+          
+          // For Super User analysis, distribute prompts evenly across categories
+          // since we don't have category-specific prompt mapping
+          const totalPrompts = actualPrompts.length || 0;
+          const totalCategories = actualCategories.length || 1;
+          const promptsPerCategory = Math.ceil(totalPrompts / totalCategories);
+          const startIndex = index * promptsPerCategory;
+          const categoryPrompts = actualPrompts.slice(startIndex, startIndex + promptsPerCategory);
+          
+          console.log(`🔍 Category ${categoryObj.categoryName || categoryObj.name}: ${categoryPrompts.length} prompts (${startIndex}-${startIndex + promptsPerCategory})`);
+          
+          return {
+            ...categoryObj,
+            prompts: categoryPrompts.map((prompt, promptIndex) => {
+              // If prompt is a string, create proper object
+              if (typeof prompt === 'string') {
+                return {
+                  _id: generateObjectId(),
+                  promptText: prompt,
+                  categoryId: categoryObj._id || categoryObj.categoryName,
+                  responses: []
+                };
+              }
               return {
-                _id: generateObjectId(),
-                promptText: prompt,
-                categoryId: categoryObj._id || categoryObj.categoryName,
-                responses: []
+                ...prompt,
+                responses: prompt.responses || []
               };
-            }
-            return {
-              ...prompt,
-              responses: prompt.responses || []
-            };
-          })
-        };
-      });
+            })
+          };
+        });
+      }
+      
+      console.log('🔍 DEBUG: Final basicCategories:', basicCategories);
+      if (basicCategories.length > 0) {
+        console.log('🔍 DEBUG: First category prompts:', basicCategories[0].prompts?.slice(0, 3));
+      }
       
       const basicResults = {
         brand: {
