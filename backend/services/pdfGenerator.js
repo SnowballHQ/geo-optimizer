@@ -1,4 +1,6 @@
 const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
 
 class BrandAnalysisPDFGenerator {
   constructor() {
@@ -74,10 +76,17 @@ class BrandAnalysisPDFGenerator {
       this.doc.addPage();
       this.addCategoriesSection(analysisData.categories, analysisData);
     }
+
+    // Contact Page at the end
+    // this.doc.addPage();
+    // this.addContactPage();
   }
 
   addTitlePage(analysisData) {
     const centerX = this.pageWidth / 2;
+
+    // Add logo at the top
+    // this.addLogo();
 
     // Brand header bar with primary color
     this.doc
@@ -367,10 +376,10 @@ class BrandAnalysisPDFGenerator {
             .fillColor(this.colors.textLight)
             .text(promptText, this.margin + 10, currentY, { 
               width: this.contentWidth - 20,
-              lineGap: 1
+              lineGap: 3
             });
 
-          currentY += promptHeight + 10;
+          currentY += promptHeight + 20; // Increased spacing from 10 to 20
 
           // AI Response
           if (prompt.aiResponse && prompt.aiResponse.responseText) {
@@ -394,16 +403,16 @@ class BrandAnalysisPDFGenerator {
               .fillColor(this.colors.text)
               .text(responseText, this.margin + 10, currentY, { 
                 width: this.contentWidth - 20,
-                lineGap: 1
+                lineGap: 3
               });
 
-            currentY += responseHeight + 15;
+            currentY += responseHeight + 25; // Increased spacing from 15 to 25
           } else {
             this.doc
               .fontSize(10)
               .fillColor(this.colors.textMuted)
               .text('No AI response available.', this.margin + 10, currentY);
-            currentY += 20;
+            currentY += 25; // Increased spacing from 20 to 25
           }
         });
       } else {
@@ -505,22 +514,22 @@ class BrandAnalysisPDFGenerator {
           
           summaryY += 25;
           
-          // Response preview (first response if available)
-          if (group.responses.length > 0) {
-            const responsePreview = group.responses[0].length > 150 
-              ? group.responses[0].substring(0, 150) + '...'
-              : group.responses[0];
+          // // Response preview (first response if available)
+          // if (group.responses.length > 0) {
+          //   const responsePreview = group.responses[0].length > 150 
+          //     ? group.responses[0].substring(0, 150) + '...'
+          //     : group.responses[0];
               
-            this.doc
-              .fontSize(9)
-              .fillColor(this.colors.textMuted)
-              .text(`Response: "${responsePreview}"`, this.margin + 20, summaryY, {
-                width: this.contentWidth - 40,
-                lineGap: 1
-              });
+          //   this.doc
+          //     .fontSize(9)
+          //     .fillColor(this.colors.textMuted)
+          //     .text(`Response: "${responsePreview}"`, this.margin + 20, summaryY, {
+          //       width: this.contentWidth - 40,
+          //       lineGap: 1
+          //     });
               
-            summaryY += 20;
-          }
+          //   summaryY += 20;
+          // }
           
           summaryY += 8; // Space between prompts
         });
@@ -557,6 +566,84 @@ class BrandAnalysisPDFGenerator {
       .fontSize(20)
       .fillColor(this.colors.text)
       .text(title, this.margin, 80);
+  }
+
+  addLogo() {
+    try {
+      // Try to load logo from backend directory
+      const logoPath = path.join(__dirname, '..', 'logo.jpg');
+      
+      if (fs.existsSync(logoPath)) {
+        // Add logo centered at the top
+        const logoWidth = 120;
+        const logoHeight = 40;
+        const logoX = (this.pageWidth - logoWidth) / 2;
+        const logoY = 20;
+        
+        this.doc.image(logoPath, logoX, logoY, {
+          width: logoWidth,
+          height: logoHeight
+        });
+        console.log('✅ Logo loaded successfully');
+        return;
+      }
+      
+      // If logo not found, use text fallback
+      console.log('⚠️ Logo not found, using text fallback');
+      this.addTextLogo();
+      
+    } catch (error) {
+      console.log('❌ Error loading logo:', error.message);
+      this.addTextLogo();
+    }
+  }
+  
+  addTextLogo() {
+    // Simple text fallback for logo
+    this.doc
+      .fontSize(24)
+      .fillColor(this.colors.primary)
+      .text('SNOWBALL', this.margin, 30, {
+        align: 'center'
+      });
+  }
+
+  addContactPage() {
+    // Main "Thank You!" heading - large and purple as shown in image
+    this.doc
+      .fontSize(42)
+      .fillColor(this.colors.primary)
+      .text('Thank You!', this.margin, 150, { 
+        align: 'center',
+        width: this.contentWidth
+      });
+
+    // Contact information below - two pieces on same horizontal line as shown
+    let contactY = 250;
+    
+    // Email address (left side)
+    this.doc
+      .fontSize(16)
+      .fillColor(this.colors.textLight)
+      .text('ashish@snowballai.digital', this.margin, contactY, {
+        align: 'left'
+      });
+
+    // Book a call CTA (right side) - with space between as shown in image
+    this.doc
+      .fontSize(16)
+      .fillColor(this.colors.textLight)
+      .text('Book a call here', this.margin + 300, contactY, {
+        align: 'right'
+      });
+
+    // Add Calendly link below the CTA
+    this.doc
+      .fontSize(12)
+      .fillColor(this.colors.primary)
+      .text('https://calendly.com/team-snowballai/30min', this.margin + 300, contactY + 20, {
+        align: 'right'
+      });
   }
 }
 

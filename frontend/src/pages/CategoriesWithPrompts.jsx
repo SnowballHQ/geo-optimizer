@@ -178,8 +178,11 @@ const CategoriesWithPrompts = ({
   };
 
   const handlePromptClick = async (promptId) => {
+    console.log('🔍 DEBUG: handlePromptClick called for promptId:', promptId);
+    
     // If response is already loaded, toggle it
     if (promptResponses[promptId]) {
+      console.log('🔍 DEBUG: Response already loaded, hiding it');
       setPromptResponses(prev => {
         const newState = { ...prev };
         delete newState[promptId];
@@ -192,35 +195,47 @@ const CategoriesWithPrompts = ({
     let responseContent = '';
     let foundResponse = false;
     
-    // Search through all categories to find the prompt with its response
+    console.log('🔍 DEBUG: Searching for prompt in categories:', categories?.length);
+    
+    // Search through all categories to find the exact prompt with its response
     for (const category of categories) {
       if (category.prompts && Array.isArray(category.prompts)) {
+        console.log(`🔍 DEBUG: Checking category ${category.categoryName} with ${category.prompts.length} prompts`);
+        
         const prompt = category.prompts.find(p => {
-          return p._id === promptId || 
-                 p.id === promptId || 
-                 (p._id && p._id.toString() === promptId.toString());
+          const match = (p._id && p._id.toString() === promptId.toString()) || 
+                       (p.id && p.id.toString() === promptId.toString());
+          console.log(`🔍 DEBUG: Checking prompt ${p._id} against ${promptId}: ${match}`);
+          return match;
         });
         
-        if (prompt && prompt.aiResponse) {
-          if (prompt.aiResponse.responseText) {
-            responseContent = prompt.aiResponse.responseText;
-          } else if (prompt.aiResponse.content) {
-            responseContent = prompt.aiResponse.content;
-          } else if (prompt.aiResponse.message) {
-            responseContent = prompt.aiResponse.message;
-          } else if (typeof prompt.aiResponse === 'string') {
-            responseContent = prompt.aiResponse;
-          } else {
-            responseContent = JSON.stringify(prompt.aiResponse, null, 2);
-          }
+        if (prompt) {
+          console.log('🔍 DEBUG: Found matching prompt:', prompt);
+          console.log('🔍 DEBUG: Prompt has aiResponse:', !!prompt.aiResponse);
           
-          foundResponse = true;
-          break;
+          if (prompt.aiResponse) {
+            if (prompt.aiResponse.responseText) {
+              responseContent = prompt.aiResponse.responseText;
+            } else if (prompt.aiResponse.content) {
+              responseContent = prompt.aiResponse.content;
+            } else if (prompt.aiResponse.message) {
+              responseContent = prompt.aiResponse.message;
+            } else if (typeof prompt.aiResponse === 'string') {
+              responseContent = prompt.aiResponse;
+            } else {
+              responseContent = JSON.stringify(prompt.aiResponse, null, 2);
+            }
+            
+            console.log('✅ DEBUG: Found response content:', responseContent?.substring(0, 100));
+            foundResponse = true;
+            break;
+          }
         }
       }
     }
     
     if (foundResponse && responseContent) {
+      console.log('✅ DEBUG: Using cached response content');
       setPromptResponses(prev => ({
         ...prev,
         [promptId]: responseContent
@@ -228,11 +243,25 @@ const CategoriesWithPrompts = ({
       return;
     }
     
-    // If we don't have the response data, fall back to API call
+    console.log('🔍 DEBUG: No cached response found');
+    
+    // For Super User analyses, we don't need to make API calls since all data should be preloaded
+    if (isSuperUser) {
+      console.log('❌ DEBUG: Super User analysis should have all responses preloaded, showing error');
+      setPromptResponses(prev => ({
+        ...prev,
+        [promptId]: 'Response not available - this should be preloaded for Super User analyses'
+      }));
+      return;
+    }
+    
+    // For regular brand analyses, fall back to API call
     setLoadingResponses(prev => ({ ...prev, [promptId]: true }));
 
     try {
       const response = await apiService.getPromptResponse(promptId);
+      
+      console.log('🔍 DEBUG: API response:', response.data);
       
       // Handle the simplified response structure
       if (response.data && response.data.success && response.data.responseText) {
@@ -248,11 +277,14 @@ const CategoriesWithPrompts = ({
         responseContent = JSON.stringify(responseContent, null, 2);
       }
       
+      console.log('✅ DEBUG: Final API response content:', responseContent?.substring(0, 100));
+      
       setPromptResponses(prev => ({
         ...prev,
         [promptId]: responseContent
       }));
     } catch (error) {
+      console.error('❌ DEBUG: API call failed:', error);
       setPromptResponses(prev => ({
         ...prev,
         [promptId]: 'Error: ' + (error.response?.data?.message || error.message || 'Failed to load response')

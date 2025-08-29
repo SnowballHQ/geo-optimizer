@@ -143,6 +143,8 @@ const SuperUserAnalysisResults = ({
           ...category,
           prompts: (category.prompts || []).map(prompt => ({
             ...prompt,
+            // Ensure we always have proper prompt text from various possible fields
+            promptText: prompt.promptText || prompt.text || prompt.question || prompt.prompt || prompt.content || `Prompt ${prompt._id}`,
             responses: prompt.responses || []
           }))
         }));
@@ -175,12 +177,15 @@ const SuperUserAnalysisResults = ({
                 return {
                   _id: generateObjectId(),
                   promptText: prompt,
+                  text: prompt, // Add text field for compatibility
                   categoryId: categoryObj._id || categoryObj.categoryName,
                   responses: []
                 };
               }
               return {
                 ...prompt,
+                // Ensure we always have proper prompt text from various possible fields
+                promptText: prompt.promptText || prompt.text || prompt.question || prompt.prompt || prompt.content || `Prompt ${prompt._id}`,
                 responses: prompt.responses || []
               };
             })
@@ -225,52 +230,49 @@ const SuperUserAnalysisResults = ({
           if (responsesResponse.data.responses && responsesResponse.data.responses.length > 0) {
             console.log('✅ Found AI responses:', responsesResponse.data.responses.length);
             
-            // Update the categories with actual AI responses
+            // Create a map of all responses for easier lookup by prompt ID
+            const responseMap = {};
+            responsesResponse.data.responses.forEach(resp => {
+              if (resp.promptId && resp.promptId._id) {
+                responseMap[resp.promptId._id] = resp;
+              }
+            });
+            
+            console.log('🔍 DEBUG: Response map created:', Object.keys(responseMap).length, 'responses');
+            console.log('🔍 DEBUG: First few response IDs:', Object.keys(responseMap).slice(0, 5));
+            
+            // Update the categories with actual AI responses using direct ID matching
             const updatedCategories = basicCategories.map(category => ({
               ...category,
               prompts: category.prompts.map(prompt => {
-                // Find responses for this prompt by matching prompt text
-                const promptResponses = responsesResponse.data.responses.filter(resp => {
-                  const respPromptText = resp.promptText || resp.prompt || '';
-                  const promptText = prompt.promptText || '';
-                  
-                  console.log(`🔍 Matching attempt:`, {
-                    promptText: promptText.substring(0, 60),
-                    respPromptText: respPromptText.substring(0, 60)
-                  });
-                  
-                  // Try multiple matching strategies
-                  const exactMatch = respPromptText === promptText;
-                  const containsMatch = respPromptText.toLowerCase().includes(promptText.toLowerCase()) || 
-                                       promptText.toLowerCase().includes(respPromptText.toLowerCase());
-                  const similarMatch = promptText && respPromptText && 
-                                     promptText.toLowerCase().trim() === respPromptText.toLowerCase().trim();
-                  
-                  const isMatch = exactMatch || containsMatch || similarMatch;
-                  
-                  if (isMatch) {
-                    console.log(`✅ Match found! Strategy: ${exactMatch ? 'exact' : containsMatch ? 'contains' : 'similar'}`);
-                  }
-                  
-                  return isMatch;
-                });
+                console.log(`🔍 Looking for response for prompt ID: ${prompt._id}`);
                 
-                // Get the first matching response as the main AI response
-                const aiResponse = promptResponses.length > 0 ? {
-                  _id: promptResponses[0]._id,
-                  responseText: promptResponses[0].responseText,
-                  createdAt: promptResponses[0].createdAt
+                // Try to find response by exact prompt ID match
+                const matchingResponse = responseMap[prompt._id];
+                
+                const aiResponse = matchingResponse ? {
+                  _id: matchingResponse._id,
+                  responseText: matchingResponse.responseText,
+                  createdAt: matchingResponse.createdAt
                 } : null;
                 
-                console.log(`🔍 Prompt "${prompt.promptText?.substring(0, 50)}..." matched with ${promptResponses.length} responses`);
+                console.log(`🔍 Prompt "${prompt._id}" matched:`, !!aiResponse);
                 if (aiResponse) {
-                  console.log(`✅ AI response found for prompt: ${aiResponse.responseText?.substring(0, 100)}...`);
+                  console.log(`✅ AI response found: ${aiResponse.responseText?.substring(0, 100)}...`);
+                }
+                
+                // Extract actual prompt text from the response data if available
+                let actualPromptText = prompt.promptText;
+                if (matchingResponse && matchingResponse.promptText && matchingResponse.promptText !== 'Unknown prompt') {
+                  actualPromptText = matchingResponse.promptText;
                 }
                 
                 return {
                   ...prompt,
+                  // Use the actual prompt text from the response if available
+                  promptText: actualPromptText || prompt.text || prompt.question || prompt.prompt || prompt.content || `Prompt ${prompt._id}`,
                   aiResponse: aiResponse,
-                  responses: promptResponses // Keep both formats for compatibility
+                  responses: matchingResponse ? [matchingResponse] : [] // Keep for compatibility
                 };
               })
             }));
