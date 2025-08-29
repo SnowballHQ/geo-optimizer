@@ -2,7 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // API Configuration - Fix deployment URL mismatch
-let API_BASE_URL = import.meta.env.VITE_API_URL || 'https://geo-optimizer.onrender.com';
+let API_BASE_URL ='https://geo-optimizer.onrender.com';
 
 // Fix common deployment URL issues
 if (API_BASE_URL.includes('geo-optimizer-land.onrender.com')) {
