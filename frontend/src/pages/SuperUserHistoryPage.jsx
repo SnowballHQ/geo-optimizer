@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Download, Eye, Calendar, TrendingUp, Users, Crown, AlertCircle } from 'lucide-react';
+import { apiService } from '../utils/api';
 
 const SuperUserHistoryPage = () => {
   const [analysisHistory, setAnalysisHistory] = useState([]);
@@ -18,30 +19,18 @@ const SuperUserHistoryPage = () => {
   const fetchAnalysisHistory = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('auth');
       
-      const response = await fetch('/api/v1/super-user/analysis/history', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch analysis history');
-      }
-
-      const data = await response.json();
-      console.log('📚 Super User Analysis History:', data);
+      const response = await apiService.get('/api/v1/super-user/analysis/history');
+      console.log('📚 Super User Analysis History:', response.data);
       
-      if (data.success) {
-        setAnalysisHistory(data.analyses);
+      if (response.data.success) {
+        setAnalysisHistory(response.data.analyses);
       } else {
-        throw new Error(data.error || 'Failed to fetch analysis history');
+        throw new Error(response.data.error || 'Failed to fetch analysis history');
       }
     } catch (err) {
       console.error('❌ Error fetching analysis history:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to fetch analysis history');
     } finally {
       setLoading(false);
     }
