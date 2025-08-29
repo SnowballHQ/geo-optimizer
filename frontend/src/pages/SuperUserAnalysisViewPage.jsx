@@ -69,54 +69,35 @@ const SuperUserAnalysisViewPage = () => {
       
       const token = localStorage.getItem('auth') || localStorage.getItem('token');
       
-      // Use apiService for proper base URL handling in deployment
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const fullUrl = `${API_BASE_URL}/api/v1/super-user/analysis/${analysisData.analysisId}/download-pdf`;
+      // Use apiService to ensure correct base URL handling
+      console.log('📄 Using apiService base URL for PDF download');
       
-      console.log('📄 PDF Download URL:', fullUrl);
-      console.log('📄 Using token:', token ? 'Token available' : 'No token');
-      
-      const response = await fetch(fullUrl, {
-        method: 'GET',
+      const response = await apiService.get(`/api/v1/super-user/analysis/${analysisData.analysisId}/download-pdf`, {
+        responseType: 'blob', // Important: Tell axios to expect a blob response
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Accept': 'application/pdf',
         },
-        credentials: 'include' // Include credentials for CORS
+        timeout: 120000 // 2 minute timeout for PDF generation
       });
 
       console.log('📄 PDF Response status:', response.status);
-      console.log('📄 PDF Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('📄 PDF Response headers:', response.headers);
 
-      if (!response.ok) {
-        let errorText;
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            errorText = errorData.error || errorData.message || `HTTP ${response.status}`;
-          } else {
-            errorText = await response.text();
-          }
-        } catch (e) {
-          errorText = `HTTP ${response.status} - ${response.statusText}`;
-        }
-        
-        console.error('PDF download error response:', errorText);
-        throw new Error(`PDF download failed: ${errorText}`);
+      // Check if response is successful
+      if (response.status !== 200) {
+        console.error('PDF download failed with status:', response.status);
+        throw new Error(`PDF download failed: HTTP ${response.status}`);
       }
 
       // Verify response is actually PDF
-      const contentType = response.headers.get('content-type');
+      const contentType = response.headers['content-type'];
       if (!contentType || !contentType.includes('application/pdf')) {
         console.error('❌ Response is not a PDF, content-type:', contentType);
-        const responseText = await response.text();
-        console.error('❌ Response body:', responseText);
         throw new Error('Server response is not a PDF file');
       }
 
       // Get the PDF blob and download it
-      const blob = await response.blob();
+      const blob = response.data; // axios with responseType 'blob' puts data here
       console.log('📄 PDF blob size:', blob.size);
       
       if (blob.size === 0) {
@@ -129,7 +110,7 @@ const SuperUserAnalysisViewPage = () => {
       
       // Get filename from Content-Disposition header or create default
       let filename = `SuperUser_${analysisData.domain?.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${analysisData.analysisId}.pdf`;
-      const contentDisposition = response.headers.get('content-disposition');
+      const contentDisposition = response.headers['content-disposition'];
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
         if (filenameMatch) {
