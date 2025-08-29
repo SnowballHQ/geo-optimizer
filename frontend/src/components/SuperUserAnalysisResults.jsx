@@ -421,6 +421,8 @@ const SuperUserAnalysisResults = ({
           {/* Share of Voice Table */}
           <ShareOfVoiceTable 
             domain={analysisData.domain}
+            brandId={analysisData.analysisResults?.brandId}
+            brandName={analysisData.brandName}
             shareOfVoice={sovData?.data || []}
             mentionCounts={sovData?.mentionCounts}
             totalMentions={sovData?.totalMentions}
@@ -443,6 +445,8 @@ const SuperUserAnalysisResults = ({
             brandId={analysisData.analysisResults.brandId}
             categories={detailedResults.categories}
             prompts={detailedResults.prompts}
+            isSuperUser={true}
+            analysisId={analysisData.analysisId}
           />
 
           {/* Analysis Steps Completed */}
