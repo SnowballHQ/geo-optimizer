@@ -45,22 +45,35 @@ Respond with only the description, no additional formatting.`;
     brandContext = `\nBrand Information: ${brand.brandName} is a business operating at ${brand.domain}`;
   }
   
-  const competitorPrompt = `Based on the following brand information, identify 5 real, direct competitors:
+  const competitorPrompt = `
+Variables to Extract:
+	•	Brand Name: ${brand.brandName}
+	•	Domain: ${brand.domain}
+	•	Brand Context: ${brandContext}
+	•	Target Company Size: find out
+	•	Primary ICP Segment: findout
+	•	Business Model Type: findout (e.g., SaaS, consulting, services, hybrid)
 
-Brand: ${brand.brandName}
-Domain: ${brand.domain}${brandContext}
+Task:
 
-Identify competitors that:
-- Offer similar products/services
-- Target the same market/industry
-- Are real, existing companies (not generic names)
-- Can be found through web search
-- Have significant presence
+Identify 5 real, direct competitors for the given brand, filtered by ICP company size, ICP alignment, and business model type.
 
-Respond with ONLY a JSON array of competitor brand names. Use exact company names as they appear online:
-["Exact Company Name 1", "Exact Company Name 2", "Exact Company Name 3", "Exact Company Name 4", "Exact Company Name 5"]
 
-Do not include explanations or additional text, just the JSON array.`;
+
+Output Requirements:
+
+Analysis Summary:
+
+Target Company Size Category: 
+Primary ICP: 
+Business Model Type: 
+
+
+Final Output:
+
+Respond with only a valid JSON array of the final 5 competitor brand names, using exact company names as they appear online:
+
+["Exact Company Name 1", "Exact Company Name 2", "Exact Company Name 3", "Exact Company Name 4", "Exact Company Name 5"]`;
 
   // Log the complete prompt being sent to OpenAI
   console.log("🔍 Complete OpenAI Prompt for Competitor Extraction:");

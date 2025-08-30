@@ -641,6 +641,7 @@ Brand Context: ${analysis.brandInformation || `${analysis.brandName} operates at
 Popular competitors include: ${competitorList.join(', ')}.
 
  please do the following:
+ 
 STEP 1: Generate 10 long-tail keywords that users might search for when looking for ${catDoc.categoryName} services.
 STEP 2: Based on those keywords, generate 5 natural, conversational questions that users typically ask ChatGPT. The prompts should be super relevant for ${analysis.brandName}, not generic.
 

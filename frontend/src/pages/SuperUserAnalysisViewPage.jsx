@@ -75,7 +75,7 @@ const SuperUserAnalysisViewPage = () => {
       console.log('📄 Analysis ID:', analysisData.analysisId);
       console.log('📄 Using apiService base URL for PDF download');
       console.log('📄 Current window location:', window.location.origin);
-      console.log('📄 Expected full URL would be: ' + (import.meta.env.VITE_API_URL || 'https://geo-optimizer.onrender.com') + pdfEndpoint);
+      console.log('📄 Expected full URL would be: ' + ('https://geo-optimizer.onrender.com') + pdfEndpoint);
       
       const response = await apiService.get(pdfEndpoint, {
         responseType: 'blob', // Important: Tell axios to expect a blob response

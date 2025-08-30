@@ -255,7 +255,7 @@ class BrandAnalysisPDFGenerator {
       if (index === 0) {
         this.doc
           .fillColor(this.colors.warning)
-          .text('★', col4X + 20, currentY + 8);
+          .text('#1', col4X + 20, currentY + 8);
       } else {
         this.doc
           .fillColor(this.colors.textMuted)

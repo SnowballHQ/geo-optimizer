@@ -121,20 +121,20 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
   };
 
   const downloadPDF = async () => {
-    if (!result || !result.brandId) {
+    if (!result || !result.analysisId) {  // ← Change from brandId to analysisId
       toast.error("No analysis data available for PDF generation");
       return;
     }
 
     try {
       setDownloadingPdf(true);
-      console.log(`📄 Super User - Downloading PDF for brand: ${result.brand} (${result.brandId})`);
+      console.log(`📄 Super User - Downloading PDF for analysis: ${result.analysisId}`);
 
-      const token = localStorage.getItem('auth');
-      
-      const response = await fetch(`/api/v1/brand/${result.brandId}/download-pdf`, {
+      // Use the SAME endpoint as Analysis View
+      const response = await fetch(`/api/v1/super-user/analysis/${result.analysisId}/download-pdf`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('auth')}`,
+          'Accept': 'application/pdf'
         }
       });
 
@@ -153,7 +153,7 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
       
       // Get filename from response headers or create one
       const contentDisposition = response.headers.get('content-disposition');
-      let filename = `${result.brand.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis.pdf`;
+      let filename = `SuperUser_${result.brand?.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${result.analysisId}.pdf`;
       
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
