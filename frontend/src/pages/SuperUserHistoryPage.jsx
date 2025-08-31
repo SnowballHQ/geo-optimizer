@@ -41,31 +41,55 @@ const SuperUserHistoryPage = () => {
       setDownloadingPdfs(prev => new Set([...prev, brandId]));
       console.log(`📄 Downloading PDF for brand: ${brandName} (${brandId})`);
 
-      const token = localStorage.getItem('auth');
+      const token = localStorage.getItem('auth') || localStorage.getItem('token');
       
-      const response = await fetch(`/api/v1/brand/${brandId}/download-pdf`, {
+      // Use apiService to ensure correct base URL handling
+      const pdfEndpoint = `/api/v1/brand/${brandId}/download-pdf`;
+      console.log('📄 PDF Endpoint:', pdfEndpoint);
+      console.log('📄 Brand ID:', brandId);
+      console.log('📄 Using apiService base URL for PDF download');
+      console.log('📄 Current window location:', window.location.origin);
+      console.log('📄 Expected full URL would be: ' + ('https://geo-optimizer.onrender.com') + pdfEndpoint);
+      
+      const response = await apiService.get(pdfEndpoint, {
+        responseType: 'blob', // Important: Tell axios to expect a blob response
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Accept': 'application/pdf',
+        },
+        timeout: 120000 // 2 minute timeout for PDF generation
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to download PDF');
+      console.log('📄 PDF Response status:', response.status);
+      console.log('📄 PDF Response headers:', response.headers);
+
+      // Check if response is successful
+      if (response.status !== 200) {
+        console.error('PDF download failed with status:', response.status);
+        throw new Error(`PDF download failed: HTTP ${response.status}`);
       }
 
-      // Create blob from response
-      const blob = await response.blob();
+      // Verify response is actually PDF
+      const contentType = response.headers['content-type'];
+      if (!contentType || !contentType.includes('application/pdf')) {
+        console.error('❌ Response is not a PDF, content-type:', contentType);
+        throw new Error('Server response is not a PDF file');
+      }
+
+      // Get the PDF blob and download it
+      const blob = response.data; // axios with responseType 'blob' puts data here
+      console.log('📄 PDF blob size:', blob.size);
       
-      // Create download link
+      if (blob.size === 0) {
+        throw new Error('Received empty PDF file');
+      }
+      
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
+      const a = document.createElement('a');
+      a.href = url;
       
-      // Get filename from response headers or create one
-      const contentDisposition = response.headers.get('content-disposition');
+      // Get filename from Content-Disposition header or create default
       let filename = `${brandName.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis.pdf`;
-      
+      const contentDisposition = response.headers['content-disposition'];
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
         if (filenameMatch) {
@@ -73,18 +97,25 @@ const SuperUserHistoryPage = () => {
         }
       }
       
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      link.remove();
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
       window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
       
-      console.log(`✅ PDF downloaded: ${filename}`);
-    } catch (err) {
-      console.error('❌ PDF download error:', err);
-      alert(`Failed to download PDF: ${err.message}`);
+      console.log(`✅ PDF downloaded successfully: ${filename}`);
+    } catch (error) {
+      console.error('❌ PDF download error:', error);
+      
+      // Additional debugging for 404 errors
+      if (error.response?.status === 404) {
+        console.error('❌ 404 Error Details:');
+        console.error('   - Endpoint:', `/api/v1/brand/${brandId}/download-pdf`);
+        console.error('   - Brand ID:', brandId);
+        console.error('   - Full URL would be: [BASE_URL]' + `/api/v1/brand/${brandId}/download-pdf`);
+      }
+      
+      alert(`Failed to download PDF: ${error.message} (${error.response?.status || 'Network Error'})`);
     } finally {
       setDownloadingPdfs(prev => {
         const newSet = new Set(prev);
