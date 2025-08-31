@@ -36,17 +36,22 @@ const SuperUserHistoryPage = () => {
     }
   };
 
-  const downloadPDF = async (brandId, brandName) => {
-    try {
-      setDownloadingPdfs(prev => new Set([...prev, brandId]));
-      console.log(`📄 Downloading PDF for brand: ${brandName} (${brandId})`);
+  const downloadPDF = async (analysisId, analysis) => {
+    if (!analysisId) {
+      alert('No analysis data available for PDF download');
+      return;
+    }
 
+    try {
+      setDownloadingPdfs(prev => new Set([...prev, analysisId]));
+      console.log('📄 Downloading Super User PDF for analysis:', analysisId);
+      
       const token = localStorage.getItem('auth') || localStorage.getItem('token');
       
       // Use apiService to ensure correct base URL handling
-      const pdfEndpoint = `/api/v1/brand/${brandId}/download-pdf`;
+      const pdfEndpoint = `/api/v1/super-user/analysis/${analysisId}/download-pdf`;
       console.log('📄 PDF Endpoint:', pdfEndpoint);
-      console.log('📄 Brand ID:', brandId);
+      console.log('📄 Analysis ID:', analysisId);
       console.log('📄 Using apiService base URL for PDF download');
       console.log('📄 Current window location:', window.location.origin);
       console.log('📄 Expected full URL would be: ' + ('https://geo-optimizer.onrender.com') + pdfEndpoint);
@@ -88,7 +93,7 @@ const SuperUserHistoryPage = () => {
       a.href = url;
       
       // Get filename from Content-Disposition header or create default
-      let filename = `${brandName.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis.pdf`;
+      let filename = `SuperUser_${analysis.domain?.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${analysisId}.pdf`;
       const contentDisposition = response.headers['content-disposition'];
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
@@ -103,23 +108,33 @@ const SuperUserHistoryPage = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      console.log(`✅ PDF downloaded successfully: ${filename}`);
+      console.log('✅ Super User PDF downloaded successfully:', filename);
+      
     } catch (error) {
-      console.error('❌ PDF download error:', error);
+      console.error('❌ Super User PDF download error:', error);
       
       // Additional debugging for 404 errors
       if (error.response?.status === 404) {
         console.error('❌ 404 Error Details:');
-        console.error('   - Endpoint:', `/api/v1/brand/${brandId}/download-pdf`);
-        console.error('   - Brand ID:', brandId);
-        console.error('   - Full URL would be: [BASE_URL]' + `/api/v1/brand/${brandId}/download-pdf`);
+        console.error('   - Endpoint:', pdfEndpoint);
+        console.error('   - Analysis ID:', analysisId);
+        console.error('   - Full URL would be: [BASE_URL]' + pdfEndpoint);
+        
+        // Try to test if the analysis exists
+        try {
+          console.log('🔍 Testing if analysis exists...');
+          const testResponse = await apiService.get(`/api/v1/super-user/analysis/${analysisId}`);
+          console.log('✅ Analysis exists:', testResponse.status === 200);
+        } catch (testError) {
+          console.error('❌ Analysis does not exist:', testError.response?.status);
+        }
       }
       
-      alert(`Failed to download PDF: ${error.message} (${error.response?.status || 'Network Error'})`);
+      alert(`Failed to download PDF report: ${error.message} (${error.response?.status || 'Network Error'})`);
     } finally {
       setDownloadingPdfs(prev => {
         const newSet = new Set(prev);
-        newSet.delete(brandId);
+        newSet.delete(analysisId);
         return newSet;
       });
     }
@@ -304,15 +319,15 @@ const SuperUserHistoryPage = () => {
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>
-                              {analysis.brandId && (
+                              {analysis.analysisId && (
                                 <Button
                                   size="sm"
-                                  onClick={() => downloadPDF(analysis.brandId, analysis.brandName)}
-                                  disabled={downloadingPdfs.has(analysis.brandId) || analysis.status !== 'completed'}
+                                  onClick={() => downloadPDF(analysis.analysisId, analysis)}
+                                  disabled={downloadingPdfs.has(analysis.analysisId) || analysis.status !== 'completed'}
                                   className="bg-green-600 hover:bg-green-700 text-white border-0"
                                   title="Download PDF Report"
                                 >
-                                  {downloadingPdfs.has(analysis.brandId) ? (
+                                  {downloadingPdfs.has(analysis.analysisId) ? (
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                   ) : (
                                     <Download className="w-4 h-4" />

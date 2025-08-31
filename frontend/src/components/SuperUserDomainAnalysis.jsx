@@ -128,33 +128,55 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
 
     try {
       setDownloadingPdf(true);
-      console.log(`📄 Super User - Downloading PDF for analysis: ${result.analysisId}`);
-
-      // Use the SAME endpoint as Analysis View
-      const response = await fetch(`/api/v1/super-user/analysis/${result.analysisId}/download-pdf`, {
+      console.log('📄 Downloading Super User PDF for analysis:', result.analysisId);
+      
+      const token = localStorage.getItem('auth') || localStorage.getItem('token');
+      
+      // Use apiService to ensure correct base URL handling
+      const pdfEndpoint = `/api/v1/super-user/analysis/${result.analysisId}/download-pdf`;
+      console.log('📄 PDF Endpoint:', pdfEndpoint);
+      console.log('📄 Analysis ID:', result.analysisId);
+      console.log('📄 Using apiService base URL for PDF download');
+      
+      const response = await apiService.get(pdfEndpoint, {
+        responseType: 'blob', // Important: Tell axios to expect a blob response
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth')}`,
-          'Accept': 'application/pdf'
-        }
+          'Accept': 'application/pdf',
+        },
+        timeout: 120000 // 2 minute timeout for PDF generation
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to download PDF');
+      console.log('📄 PDF Response status:', response.status);
+      console.log('📄 PDF Response headers:', response.headers);
+
+      // Check if response is successful
+      if (response.status !== 200) {
+        console.error('PDF download failed with status:', response.status);
+        throw new Error(`PDF download failed: HTTP ${response.status}`);
       }
 
-      // Create blob from response
-      const blob = await response.blob();
+      // Verify response is actually PDF
+      const contentType = response.headers['content-type'];
+      if (!contentType || !contentType.includes('application/pdf')) {
+        console.error('❌ Response is not a PDF, content-type:', contentType);
+        throw new Error('Server response is not a PDF file');
+      }
+
+      // Get the PDF blob and download it
+      const blob = response.data; // axios with responseType 'blob' puts data here
+      console.log('📄 PDF blob size:', blob.size);
       
-      // Create download link
+      if (blob.size === 0) {
+        throw new Error('Received empty PDF file');
+      }
+      
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
+      const a = document.createElement('a');
+      a.href = url;
       
-      // Get filename from response headers or create one
-      const contentDisposition = response.headers.get('content-disposition');
+      // Get filename from Content-Disposition header or create default
       let filename = `SuperUser_${result.brand?.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${result.analysisId}.pdf`;
-      
+      const contentDisposition = response.headers['content-disposition'];
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
         if (filenameMatch) {
@@ -162,19 +184,36 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
         }
       }
       
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      link.remove();
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
       window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
       
-      console.log(`✅ Super User - PDF downloaded: ${filename}`);
-      toast.success(`PDF report downloaded successfully!`);
-    } catch (err) {
-      console.error('❌ Super User - PDF download error:', err);
-      toast.error(`Failed to download PDF: ${err.message}`);
+      console.log('✅ Super User PDF downloaded successfully:', filename);
+      toast.success(`PDF report downloaded successfully! (${filename})`);
+      
+    } catch (error) {
+      console.error('❌ Super User PDF download error:', error);
+      
+      // Additional debugging for 404 errors
+      if (error.response?.status === 404) {
+        console.error('❌ 404 Error Details:');
+        console.error('   - Endpoint:', pdfEndpoint);
+        console.error('   - Analysis ID:', result.analysisId);
+        console.error('   - Full URL would be: [BASE_URL]' + pdfEndpoint);
+        
+        // Try to test if the analysis exists
+        try {
+          console.log('🔍 Testing if analysis exists...');
+          const testResponse = await apiService.get(`/api/v1/super-user/analysis/${result.analysisId}`);
+          console.log('✅ Analysis exists:', testResponse.status === 200);
+        } catch (testError) {
+          console.error('❌ Analysis does not exist:', testError.response?.status);
+        }
+      }
+      
+      toast.error(`Failed to download PDF report: ${error.message} (${error.response?.status || 'Network Error'})`);
     } finally {
       setDownloadingPdf(false);
     }
