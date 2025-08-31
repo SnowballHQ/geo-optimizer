@@ -86,6 +86,9 @@ const AddCustomPrompt = ({ categories, onPromptAdded }) => {
           
           // Notify parent component to refresh data
           onPromptAdded(generateResponse.data);
+          
+          // Auto-reload Brand Dashboard if user is on dashboard page
+          apiService.triggerBrandDashboardReload();
         } else {
           setError('Failed to generate response');
         }

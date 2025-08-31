@@ -155,6 +155,9 @@ const ShareOfVoiceTable = ({
         onDataUpdate();
       }
       
+      // Auto-reload Brand Dashboard if user is on dashboard page
+      apiService.triggerBrandDashboardReload();
+      
     } catch (error) {
       console.error('❌ Error adding competitor:', error);
       
@@ -206,6 +209,9 @@ const ShareOfVoiceTable = ({
         console.log('🔄 Triggering parent data refresh after deletion...');
         onDataUpdate();
       }
+      
+      // Auto-reload Brand Dashboard if user is on dashboard page
+      apiService.triggerBrandDashboardReload();
       
     } catch (error) {
       console.error('❌ Error deleting competitor:', error);

@@ -10,6 +10,7 @@ const CategoriesWithPrompts = ({
   categories, 
   brandId, 
   onSOVUpdate, 
+  onDataUpdate,
   isSuperUser = false, 
   analysisId = null 
 }) => {
@@ -283,6 +284,11 @@ const CategoriesWithPrompts = ({
         ...prev,
         [promptId]: responseContent
       }));
+      
+      // Auto-reload Brand Dashboard if user is on dashboard page (for new response generation)
+      if (!foundResponse) {
+        apiService.triggerBrandDashboardReload();
+      }
     } catch (error) {
       console.error('❌ DEBUG: API call failed:', error);
       setPromptResponses(prev => ({
@@ -297,9 +303,18 @@ const CategoriesWithPrompts = ({
   const handleCustomPromptAdded = (responseData) => {
     fetchCategoryPrompts();
     
+    // Call parent's data update function to refresh entire dashboard
+    if (onDataUpdate && typeof onDataUpdate === 'function') {
+      onDataUpdate();
+    }
+    
+    // Keep SOV update for backward compatibility
     if (onSOVUpdate && typeof onSOVUpdate === 'function') {
       onSOVUpdate();
     }
+    
+    // Auto-reload Brand Dashboard if user is on dashboard page
+    apiService.triggerBrandDashboardReload();
   };
 
   if (!categories || categories.length === 0) {

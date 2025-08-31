@@ -246,6 +246,59 @@ export const apiService = {
   saveBrandSettings: (data) => api.post('/api/v1/brand-settings', data),
   refreshBrandVoice: () => api.post('/api/v1/brand-settings/refresh'),
   
+  // Auto-reload Brand Dashboard helper
+  triggerBrandDashboardReload: () => {
+    console.log('🔄 AUTO-RELOAD: Checking if Brand Dashboard reload is needed');
+    
+    // Check if user is currently on Brand Dashboard related pages
+    const currentPath = window.location.pathname;
+    const isDashboardPage = currentPath.includes('/domain-analysis') || 
+                           currentPath.includes('/brand-dashboard');
+    
+    if (isDashboardPage) {
+      console.log('✅ AUTO-RELOAD: User is on Brand Dashboard, triggering reload');
+      
+      // Show a brief loading indication
+      const reloadMessage = document.createElement('div');
+      reloadMessage.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4CAF50;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 6px;
+        z-index: 9999;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease-out;
+      `;
+      reloadMessage.innerHTML = '🔄 Updating Brand Dashboard...';
+      document.body.appendChild(reloadMessage);
+      
+      // Add CSS animation
+      if (!document.getElementById('auto-reload-styles')) {
+        const style = document.createElement('style');
+        style.id = 'auto-reload-styles';
+        style.textContent = `
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      // Add a small delay to ensure backend processing is complete
+      setTimeout(() => {
+        // Force navigate to Brand Dashboard to reload all data
+        window.location.href = '/domain-analysis';
+      }, 1500);
+    } else {
+      console.log('ℹ️ AUTO-RELOAD: User not on Brand Dashboard, skipping reload');
+    }
+  },
+  
   // Removed unused legacy endpoints
 };
 

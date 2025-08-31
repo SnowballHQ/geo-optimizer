@@ -309,6 +309,7 @@ const BrandDashboardStep = ({
               brandId={dashboardData.brand?.id || brandId}
               isSuperUser={isSuperUser}
               analysisId={analysisId}
+              onDataUpdate={handleDataUpdate}
             />
           )}
 
