@@ -1033,6 +1033,42 @@ Return ONLY a JSON object with this exact format:
       
       console.log(`🔍 Found ${mentions.length} mentions for PDF`);
       
+      // ✅ PDF SOV FIX: Get fresh SOV data for PDF generation (same as dashboard fix)
+      try {
+        console.log(`🔄 PDF: Fetching fresh SOV data for PDF generation of analysis ${analysisId}`);
+        
+        const BrandShareOfVoice = require('../models/BrandShareOfVoice');
+        const latestSOV = await BrandShareOfVoice.findOne({
+          brandId: analysis.analysisResults.brandId,
+          userId: userId.toString()
+        }).sort({ createdAt: -1 });
+
+        if (latestSOV) {
+          console.log(`✅ PDF: Found fresh SOV data, updating analysis data for PDF`);
+          console.log(`📊 PDF Fresh SOV data:`, {
+            shareOfVoice: Object.keys(latestSOV.shareOfVoice || {}),
+            mentionCounts: Object.keys(latestSOV.mentionCounts || {}),
+            totalMentions: latestSOV.totalMentions,
+            competitors: latestSOV.competitors?.length || 0
+          });
+          
+          // Override cached analysisResults with fresh SOV data for PDF
+          analysis.analysisResults.shareOfVoice = latestSOV.shareOfVoice;
+          analysis.analysisResults.mentionCounts = latestSOV.mentionCounts;
+          analysis.analysisResults.totalMentions = latestSOV.totalMentions;
+          analysis.analysisResults.brandShare = latestSOV.brandShare;
+          analysis.analysisResults.aiVisibilityScore = latestSOV.aiVisibilityScore;
+          analysis.analysisResults.competitors = latestSOV.competitors;
+          
+          console.log(`✅ PDF: SOV data updated for PDF generation`);
+        } else {
+          console.log(`⚠️ PDF: No fresh SOV data found, using cached data for PDF`);
+        }
+      } catch (pdfSovError) {
+        console.error('❌ PDF: Error fetching fresh SOV data for PDF:', pdfSovError);
+        console.log('⚠️ PDF: Continuing with cached analysisResults for PDF generation');
+      }
+      
       // Group mentions by brand
       const mentionsByBrand = {};
       mentions.forEach(mention => {
@@ -1059,7 +1095,7 @@ Return ONLY a JSON object with this exact format:
         totalMentions: analysis.analysisResults.totalMentions || 0,
         brandShare: analysis.analysisResults.brandShare || 0,
         aiVisibilityScore: analysis.analysisResults.aiVisibilityScore || 0,
-        competitors: analysis.step3Data?.competitors || [],
+        competitors: analysis.analysisResults.competitors || analysis.step3Data?.competitors || [],
         categories: populatedCategories,
         mentionsByBrand: mentionsByBrand,
         analysisSteps: {
