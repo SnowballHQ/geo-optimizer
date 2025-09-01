@@ -45,34 +45,58 @@ Respond with only the description, no additional formatting.`;
     brandContext = `\nBrand Information: ${brand.brandName} is a business operating at ${brand.domain}`;
   }
   
-  const competitorPrompt = `
-Variables to Extract:
-	•	Brand Name: ${brand.brandName}
-	•	Domain: ${brand.domain}
-	•	Brand Context: ${brandContext}
-	•	Target Company Size: find out
-	•	Primary ICP Segment: findout
-	•	Business Model Type: findout (e.g., SaaS, consulting, services, hybrid)
-
-Task:
-
-Identify 5 real, direct competitors for the given brand, filtered by ICP company size, ICP alignment, and business model type.
+  const competitorPrompt = `Task: Identify 5 real, direct competitors for a given brand.
+Brand: ${brand.brandName} 
+Domain: ${brand.domain}
+Context: ${brandContext}
+Instruction:
+Based on the provided brand information, evaluate potential competitors across all the following variables:
 
 
-
-Output Requirements:
-
-Analysis Summary:
-
-Target Company Size Category: 
-Primary ICP: 
-Business Model Type: 
+Geographic and Market Scope
 
 
-Final Output:
+Target Customer Segments (demographics, psychographics, needs, behavior)
 
-Respond with only a valid JSON array of the final 5 competitor brand names, using exact company names as they appear online:
 
+Product and Service Offerings
+
+
+Market Positioning Variables (price, value, brand identity, quality)
+
+
+Business Models & Pricing Strategies
+
+
+Distribution and Channel Strategy
+
+
+Marketing and Communication Approaches
+
+
+Financial Performance Metrics (market share, revenue growth, margins)
+
+
+Innovation and Development Capabilities
+
+
+Operational Excellence Variables
+
+
+Dynamic and Contextual Variables (market trends, regulation, technology shifts)
+
+
+Strategic Intent and Future Direction
+
+
+Step 1: From this analysis, identify 10 competitors based on overlap across these variables.
+
+
+Step 2: From that list, select the 5 brands with the most significant direct competitive overlap (similar products/services, customer segments, markets, and positioning).
+
+
+Output Format:
+ Respond with only a valid JSON array of the final 5 competitor brand names, using exact company names as they appear online:
 ["Exact Company Name 1", "Exact Company Name 2", "Exact Company Name 3", "Exact Company Name 4", "Exact Company Name 5"]`;
 
   // Log the complete prompt being sent to OpenAI

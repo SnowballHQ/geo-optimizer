@@ -229,36 +229,124 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
   // Function to refresh SOV data after competitor addition or custom prompt addition
   const refreshSOVData = async () => {
     if (!result || !result.brandId) {
-      console.log('❌ No brandId available for SOV refresh');
+      console.log('❌ No brandId available for dashboard refresh');
       return;
     }
     
     try {
-      console.log('🔄 Super User - Refreshing SOV data for brandId:', result.brandId);
-      
-      // Add a small delay to ensure backend processing is complete
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Refetch the brand analysis to get updated SOV data
-      const analysisResponse = await apiService.getBrandAnalysis(result.brandId);
-      console.log('✅ Super User - SOV data refreshed:', {
-        shareOfVoice: analysisResponse.data.shareOfVoice,
-        mentionCounts: analysisResponse.data.mentionCounts,
-        totalMentions: analysisResponse.data.totalMentions,
-        competitors: analysisResponse.data.competitors?.length || 0
+      console.log('🔄 Super User - Refreshing all dashboard data for brandId:', result.brandId);
+      console.log('🔍 Super User - Current result object keys:', Object.keys(result));
+      console.log('🔍 Super User - Has analysisId:', !!result.analysisId);
+      console.log('🔍 Super User - analysisId value:', result.analysisId);
+      console.log('🔍 Super User - BEFORE REFRESH - Current SOV data:', {
+        shareOfVoice: result.shareOfVoice,
+        mentionCounts: result.mentionCounts,
+        competitors: result.competitors,
+        shareOfVoiceKeys: Object.keys(result.shareOfVoice || {}),
+        mentionCountsKeys: Object.keys(result.mentionCounts || {})
       });
       
-      // Update the result with new SOV data and any updated fields
-      setResult(prevResult => ({
-        ...prevResult,
-        shareOfVoice: analysisResponse.data.shareOfVoice,
-        mentionCounts: analysisResponse.data.mentionCounts,
-        totalMentions: analysisResponse.data.totalMentions,
-        brandShare: analysisResponse.data.brandShare,
-        aiVisibilityScore: analysisResponse.data.aiVisibilityScore,
-        competitors: analysisResponse.data.competitors, // Update competitors list
-        categories: analysisResponse.data.categories || prevResult.categories // Update categories if available
-      }));
+      // Add a longer delay to ensure backend processing and sync is complete
+      console.log('⏳ Super User - Waiting for backend sync to complete...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // For Super User analyses, use the Super User endpoint instead of regular brand analysis
+      let analysisResponse;
+      if (result.analysisId) {
+        console.log('🔄 Super User - Using Super User analysis endpoint:', result.analysisId);
+        analysisResponse = await apiService.get(`/api/v1/super-user/analysis/${result.analysisId}`);
+      } else {
+        console.log('🔄 Super User - Fallback to brand analysis endpoint:', result.brandId);
+        analysisResponse = await apiService.getBrandAnalysis(result.brandId);
+      }
+      // Extract data from the appropriate response structure
+      console.log('🔍 Super User - Full analysis response:', JSON.stringify(analysisResponse.data, null, 2));
+      
+      let responseData;
+      if (result.analysisId && analysisResponse.data.analysis) {
+        // Super User analysis response structure
+        console.log('🔍 Super User - Using Super User response structure');
+        console.log('🔍 Super User - analysisResults:', analysisResponse.data.analysis.analysisResults);
+        console.log('🔍 Super User - step3Data competitors:', analysisResponse.data.analysis.step3Data?.competitors);
+        
+        responseData = {
+          ...analysisResponse.data.analysis.analysisResults,
+          competitors: analysisResponse.data.analysis.analysisResults?.competitors || analysisResponse.data.analysis.step3Data?.competitors,
+          categories: analysisResponse.data.populatedCategories || analysisResponse.data.analysis.analysisResults?.categories
+        };
+        
+        // Fallback: If Super User response doesn't have SOV data, try regular endpoint
+        if (!responseData.shareOfVoice && !responseData.mentionCounts) {
+          console.log('⚠️ Super User - No SOV data in Super User response, falling back to brand analysis');
+          const fallbackResponse = await apiService.getBrandAnalysis(result.brandId);
+          responseData = {
+            ...responseData,
+            shareOfVoice: fallbackResponse.data.shareOfVoice,
+            mentionCounts: fallbackResponse.data.mentionCounts,
+            totalMentions: fallbackResponse.data.totalMentions,
+            brandShare: fallbackResponse.data.brandShare,
+            aiVisibilityScore: fallbackResponse.data.aiVisibilityScore
+          };
+          console.log('✅ Super User - Merged data from fallback response');
+        }
+      } else {
+        // Regular brand analysis response structure
+        console.log('🔍 Super User - Using regular brand response structure');
+        responseData = analysisResponse.data || {};
+      }
+      
+      console.log('🔍 Super User - Final responseData:', {
+        shareOfVoice: responseData.shareOfVoice,
+        mentionCounts: responseData.mentionCounts,
+        competitors: responseData.competitors,
+        totalMentions: responseData.totalMentions
+      });
+      
+      console.log('✅ Super User - Dashboard data refreshed:', {
+        shareOfVoice: responseData.shareOfVoice,
+        mentionCounts: responseData.mentionCounts,
+        totalMentions: responseData.totalMentions,
+        competitors: responseData.competitors?.length || 0,
+        categories: responseData.categories?.length || 0,
+        customPrompts: responseData.categories?.reduce((total, cat) => 
+          total + (cat.prompts?.length || 0), 0) || 0
+      });
+      
+      // Update the result with all new data, preserving existing fields that might not be in the response
+      setResult(prevResult => {
+        
+        const updatedResult = {
+          ...prevResult,
+          // Update SOV data with safety checks
+          shareOfVoice: responseData.shareOfVoice || prevResult.shareOfVoice,
+          mentionCounts: responseData.mentionCounts || prevResult.mentionCounts,
+          totalMentions: responseData.totalMentions ?? prevResult.totalMentions,
+          brandShare: responseData.brandShare ?? prevResult.brandShare,
+          aiVisibilityScore: responseData.aiVisibilityScore ?? prevResult.aiVisibilityScore,
+          // Update competitors list with safety checks
+          competitors: Array.isArray(responseData.competitors) ? responseData.competitors : prevResult.competitors,
+          // Update categories with all custom prompts with safety checks
+          categories: Array.isArray(responseData.categories) ? responseData.categories : prevResult.categories
+        };
+        
+        console.log('🔄 Super User - State updated with refreshed data:', {
+          previousCategories: prevResult.categories?.length || 0,
+          newCategories: updatedResult.categories?.length || 0,
+          previousCompetitors: prevResult.competitors?.length || 0,
+          newCompetitors: updatedResult.competitors?.length || 0,
+          hasSOVData: !!updatedResult.shareOfVoice,
+          hasMentionCounts: !!updatedResult.mentionCounts
+        });
+        
+        console.log('🔍 Super User - Updated result object:', {
+          shareOfVoice: updatedResult.shareOfVoice,
+          mentionCounts: updatedResult.mentionCounts,
+          competitors: updatedResult.competitors,
+          totalMentions: updatedResult.totalMentions
+        });
+        
+        return updatedResult;
+      });
       
       console.log('✅ Super User - SOV table data updated successfully');
       toast.success('Data refreshed successfully!');
@@ -466,6 +554,7 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
                 categories={result.categories} 
                 brandId={result.brandId} 
                 onSOVUpdate={refreshSOVData}
+                onDataUpdate={refreshSOVData}
               />
             </div>
           )}

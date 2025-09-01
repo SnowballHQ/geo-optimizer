@@ -300,21 +300,30 @@ const CategoriesWithPrompts = ({
     }
   };
 
-  const handleCustomPromptAdded = (responseData) => {
-    fetchCategoryPrompts();
+  const handleCustomPromptAdded = async (responseData) => {
+    console.log('🔄 CategoriesWithPrompts - Custom prompt added, refreshing data:', responseData);
     
-    // Call parent's data update function to refresh entire dashboard
+    // First, refresh local category prompts
+    await fetchCategoryPrompts();
+    
+    // Call parent's data update function to refresh entire dashboard (primary callback)
     if (onDataUpdate && typeof onDataUpdate === 'function') {
-      onDataUpdate();
+      console.log('🔄 CategoriesWithPrompts - Calling onDataUpdate callback');
+      await onDataUpdate();
     }
     
-    // Keep SOV update for backward compatibility
+    // Keep SOV update for backward compatibility (secondary callback)
     if (onSOVUpdate && typeof onSOVUpdate === 'function') {
-      onSOVUpdate();
+      console.log('🔄 CategoriesWithPrompts - Calling onSOVUpdate callback');
+      await onSOVUpdate();
     }
     
     // Auto-reload Brand Dashboard if user is on dashboard page
-    apiService.triggerBrandDashboardReload();
+    if (apiService.triggerBrandDashboardReload) {
+      apiService.triggerBrandDashboardReload();
+    }
+    
+    console.log('✅ CategoriesWithPrompts - All refresh callbacks completed');
   };
 
   if (!categories || categories.length === 0) {

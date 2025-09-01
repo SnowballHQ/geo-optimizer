@@ -228,6 +228,72 @@ exports.analyzeBrand = async (req, res) => {
     const totalAnalysisTime = Date.now() - analysisStartTime;
     console.log(`⏱️ Total analysis time: ${totalAnalysisTime}ms`);
 
+    // For Super User analyses, also create/update SuperUserAnalysis record and return the correct analysisId
+    let finalAnalysisId = brandAnalysis._id;
+    if (isAdminAnalysis) {
+      try {
+        console.log('🔄 Super User Analysis: Creating/updating SuperUserAnalysis record...');
+        const SuperUserAnalysis = require("../../models/SuperUserAnalysis");
+        
+        // Check if there's already a SuperUserAnalysis with this session ID
+        let superUserAnalysis = await SuperUserAnalysis.findOne({
+          analysisId: analysisSessionId,
+          superUserId: userId
+        });
+        
+        if (!superUserAnalysis) {
+          // Create new SuperUserAnalysis record
+          superUserAnalysis = new SuperUserAnalysis({
+            superUserId: userId,
+            analysisId: analysisSessionId,
+            domain: domain,
+            brandName: brand.brandName,
+            brandInformation: brandDescription,
+            status: 'completed',
+            currentStep: 6,
+            step1Data: { domain, brandName: brand.brandName, description: brandDescription, completed: true },
+            step2Data: { categories: catDocs.map(cat => cat.categoryName), completed: true },
+            step3Data: { competitors, completed: true },
+            step4Data: { prompts: categoryPrompts.map(p => ({ text: p.promptText, categoryId: p.categoryId })), completed: true },
+            analysisResults: {
+              brandId: brand._id,
+              categories: catDocs.map(cat => ({ name: cat.categoryName, prompts: [] })),
+              competitors,
+              shareOfVoice: sovResult.shareOfVoice,
+              mentionCounts: sovResult.mentionCounts,
+              totalMentions: sovResult.totalMentions,
+              brandShare: sovResult.brandShare,
+              aiVisibilityScore: sovResult.aiVisibilityScore
+            },
+            completedAt: new Date()
+          });
+          await superUserAnalysis.save();
+          console.log('✅ Super User Analysis: Created new SuperUserAnalysis record:', superUserAnalysis.analysisId);
+        } else {
+          // Update existing SuperUserAnalysis record
+          superUserAnalysis.analysisResults = {
+            brandId: brand._id,
+            categories: catDocs.map(cat => ({ name: cat.categoryName, prompts: [] })),
+            competitors,
+            shareOfVoice: sovResult.shareOfVoice,
+            mentionCounts: sovResult.mentionCounts,
+            totalMentions: sovResult.totalMentions,
+            brandShare: sovResult.brandShare,
+            aiVisibilityScore: sovResult.aiVisibilityScore
+          };
+          superUserAnalysis.status = 'completed';
+          superUserAnalysis.completedAt = new Date();
+          await superUserAnalysis.save();
+          console.log('✅ Super User Analysis: Updated existing SuperUserAnalysis record:', superUserAnalysis.analysisId);
+        }
+        
+        finalAnalysisId = superUserAnalysis.analysisId;
+      } catch (superUserError) {
+        console.error('⚠️ Super User Analysis: Error creating/updating SuperUserAnalysis record:', superUserError);
+        // Continue with regular analysis ID if SuperUserAnalysis creation fails
+      }
+    }
+
     // Prepare response with domain status information
     const responseData = {
       success: true,
@@ -236,7 +302,7 @@ exports.analyzeBrand = async (req, res) => {
       domain: brand.domain,
       description: brandDescription,
       brandId: brand._id,
-      analysisId: brandAnalysis._id,
+      analysisId: finalAnalysisId, // Use SuperUserAnalysis.analysisId for super user analyses
       categories: catDocs, // Send full category objects to frontend
       competitors,
       shareOfVoice: sovResult.shareOfVoice,

@@ -308,13 +308,34 @@ class OnboardingController {
         const brandDescription = brand.description || brand.overview || `${brand.brandName} operates at ${brand.domain}`;
         
         // Generate prompts using the existing logic
+        console.log(`🔄 Onboarding Step 4: Generating prompts for ${categories.length} categories`);
+        console.log(`🏢 Brand: ${brand.brandName} (${brand._id})`);
+        console.log(`📂 Categories:`, categories.map(c => `${c.categoryName} (${c._id})`));
+        
         prompts = await generateAndSavePrompts(
           openai, 
           categories, 
           brand, 
-          brand.competitors || [],
-          brandDescription
+          brand.competitors || []
+          // Note: brandDescription parameter removed as function signature only takes 4 params
         );
+        
+        console.log(`✅ Onboarding Step 4: Generated ${prompts.length} prompts`);
+        
+        // Validate prompts array structure
+        if (!Array.isArray(prompts)) {
+          console.error('❌ Prompts is not an array:', typeof prompts);
+          throw new Error('Invalid prompts data structure returned from generateAndSavePrompts');
+        }
+        
+        console.log(`🔍 Prompt structure validation:`, prompts.map((p, index) => ({
+          index,
+          hasPromptDoc: !!p?.promptDoc,
+          hasCatDoc: !!p?.catDoc,
+          promptId: p?.promptDoc?._id,
+          categoryId: p?.catDoc?._id,
+          categoryName: p?.catDoc?.categoryName
+        })));
       }
 
       // Save progress
@@ -333,11 +354,36 @@ class OnboardingController {
       );
 
       // Extract prompt data for response (existing function returns {promptDoc, catDoc} structure)
-      const promptData = prompts.map(p => ({
-        id: p.promptDoc._id,
-        promptText: p.promptDoc.promptText,
-        categoryName: p.catDoc.categoryName
-      }));
+      console.log(`🔍 Processing ${prompts.length} prompts for response`);
+      
+      const promptData = prompts
+        .filter(p => {
+          // Handle null/undefined prompts
+          if (!p) {
+            console.warn('⚠️ Skipping null/undefined prompt');
+            return false;
+          }
+          
+          // Validate that both promptDoc and catDoc exist
+          if (!p.promptDoc || !p.catDoc) {
+            console.warn('⚠️ Skipping prompt with missing data:', {
+              hasPromptDoc: !!p.promptDoc,
+              hasCatDoc: !!p.catDoc,
+              promptId: p.promptDoc?._id,
+              categoryId: p.catDoc?._id,
+              categoryName: p.catDoc?.categoryName
+            });
+            return false;
+          }
+          return true;
+        })
+        .map(p => ({
+          id: p.promptDoc._id,
+          promptText: p.promptDoc.promptText,
+          categoryName: p.catDoc.categoryName || 'Unknown Category'
+        }));
+        
+      console.log(`✅ Successfully processed ${promptData.length} valid prompts`);
 
       res.json({
         success: true,

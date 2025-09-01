@@ -142,11 +142,29 @@ Format: Output only a JSON array of 5 strings.`;
           brandId: brand._id,
           promptText 
         });
-        prompts.push({ promptDoc, catDoc });
-        console.log("✅ CategorySearchPrompt created:", promptDoc._id);
+        // Validate data before pushing to ensure structure integrity
+        if (promptDoc && catDoc) {
+          prompts.push({ promptDoc, catDoc });
+          console.log("✅ CategorySearchPrompt created:", promptDoc._id, "for category:", catDoc.categoryName);
+        } else {
+          console.error("❌ Invalid data structure:", { 
+            hasPromptDoc: !!promptDoc, 
+            hasCatDoc: !!catDoc,
+            promptId: promptDoc?._id,
+            categoryId: catDoc?._id 
+          });
+        }
       }
     } catch (error) {
       console.error(`❌ Error generating prompts for category ${catDoc.categoryName}:`, error);
+      console.error(`❌ Full error details:`, {
+        message: error.message,
+        stack: error.stack,
+        categoryId: catDoc._id,
+        categoryName: catDoc.categoryName,
+        brandId: brand._id
+      });
+      // Continue with next category instead of failing completely
     }
   }
   console.log(`🎉 Prompt generation complete. Created ${prompts.length} prompts total.`);

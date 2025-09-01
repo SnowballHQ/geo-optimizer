@@ -873,6 +873,27 @@ exports.addCompetitor = async (req, res) => {
       console.log(`✅ SOV recalculated successfully`);
       console.log(`📊 SOV results:`, sovResult);
 
+      // 7. Sync competitor addition across SuperUserAnalysis snapshots
+      console.log(`🔄 Syncing competitor addition across SuperUserAnalysis snapshots...`);
+      try {
+        const SuperUserAnalysisSync = require("../utils/superUserAnalysisSync");
+        const syncResult = await SuperUserAnalysisSync.syncCompetitorAddition(
+          brand._id, 
+          brand.competitors, 
+          sanitizedName
+        );
+        
+        if (syncResult.success) {
+          console.log(`✅ SuperUserAnalysis sync completed: ${syncResult.updatedCount} records updated, ${syncResult.skippedCount} skipped`);
+        } else {
+          console.error(`⚠️ SuperUserAnalysis sync failed:`, syncResult.error);
+          // Don't fail the whole operation, just log the warning
+        }
+      } catch (syncError) {
+        console.error(`⚠️ Error syncing SuperUserAnalysis:`, syncError);
+        // Don't fail the whole operation, just log the warning
+      }
+
       // Return success response with updated data
       res.json({
         success: true,
@@ -1023,6 +1044,27 @@ exports.deleteCompetitor = async (req, res) => {
       
       console.log(`✅ SOV recalculated successfully after competitor deletion`);
       console.log(`📊 SOV results:`, sovResult);
+
+      // 7. Sync competitor deletion across SuperUserAnalysis snapshots
+      console.log(`🔄 Syncing competitor deletion across SuperUserAnalysis snapshots...`);
+      try {
+        const SuperUserAnalysisSync = require("../utils/superUserAnalysisSync");
+        const syncResult = await SuperUserAnalysisSync.syncCompetitorDeletion(
+          brand._id, 
+          brand.competitors, 
+          sanitizedName
+        );
+        
+        if (syncResult.success) {
+          console.log(`✅ SuperUserAnalysis sync completed: ${syncResult.updatedCount} records updated, ${syncResult.skippedCount} skipped`);
+        } else {
+          console.error(`⚠️ SuperUserAnalysis sync failed:`, syncResult.error);
+          // Don't fail the whole operation, just log the warning
+        }
+      } catch (syncError) {
+        console.error(`⚠️ Error syncing SuperUserAnalysis:`, syncError);
+        // Don't fail the whole operation, just log the warning
+      }
 
       // Return success response with updated data
       res.json({

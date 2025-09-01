@@ -151,8 +151,8 @@ const ShareOfVoiceTable = ({
       
       // Trigger parent data refresh if callback provided
       if (onDataUpdate && typeof onDataUpdate === 'function') {
-        console.log('🔄 Triggering parent data refresh...');
-        onDataUpdate();
+        console.log('🔄 ShareOfVoiceTable - Triggering parent data refresh after competitor addition...');
+        await onDataUpdate();
       }
       
       // Auto-reload Brand Dashboard if user is on dashboard page
@@ -206,8 +206,8 @@ const ShareOfVoiceTable = ({
       
       // Trigger parent data refresh if callback provided
       if (onDataUpdate && typeof onDataUpdate === 'function') {
-        console.log('🔄 Triggering parent data refresh after deletion...');
-        onDataUpdate();
+        console.log('🔄 ShareOfVoiceTable - Triggering parent data refresh after competitor deletion...');
+        await onDataUpdate();
       }
       
       // Auto-reload Brand Dashboard if user is on dashboard page
