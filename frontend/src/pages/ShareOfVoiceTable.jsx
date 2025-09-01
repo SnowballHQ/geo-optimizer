@@ -155,8 +155,10 @@ const ShareOfVoiceTable = ({
         await onDataUpdate();
       }
       
-      // Auto-reload Brand Dashboard if user is on dashboard page
-      apiService.triggerBrandDashboardReload();
+      // Auto-reload Brand Dashboard if user is on dashboard page (skip for Super User)
+      if (!isSuperUser) {
+        apiService.triggerBrandDashboardReload();
+      }
       
     } catch (error) {
       console.error('❌ Error adding competitor:', error);
@@ -210,8 +212,10 @@ const ShareOfVoiceTable = ({
         await onDataUpdate();
       }
       
-      // Auto-reload Brand Dashboard if user is on dashboard page
-      apiService.triggerBrandDashboardReload();
+      // Auto-reload Brand Dashboard if user is on dashboard page (skip for Super User)
+      if (!isSuperUser) {
+        apiService.triggerBrandDashboardReload();
+      }
       
     } catch (error) {
       console.error('❌ Error deleting competitor:', error);

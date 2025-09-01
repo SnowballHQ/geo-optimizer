@@ -468,6 +468,37 @@ class SuperUserAnalysisController {
       let populatedCategories = [];
       if (analysis.status === 'completed' && analysis.analysisResults?.brandId) {
         try {
+          // ✅ SUPER USER SOV FIX: Get fresh SOV data from database instead of cached analysisResults
+          console.log(`🔄 Super User Analysis: Fetching fresh SOV data for analysis ${analysisId}`);
+          
+          const BrandShareOfVoice = require('../models/BrandShareOfVoice');
+          const latestSOV = await BrandShareOfVoice.findOne({
+            brandId: analysis.analysisResults.brandId,
+            userId: userId.toString()
+          }).sort({ createdAt: -1 });
+          
+          if (latestSOV) {
+            console.log(`✅ Super User Analysis: Found fresh SOV data, updating analysisResults`);
+            console.log(`📊 Fresh SOV data:`, {
+              shareOfVoice: Object.keys(latestSOV.shareOfVoice || {}),
+              mentionCounts: Object.keys(latestSOV.mentionCounts || {}),
+              totalMentions: latestSOV.totalMentions,
+              competitors: latestSOV.competitors?.length || 0
+            });
+            
+            // Override cached analysisResults with fresh SOV data
+            analysis.analysisResults.shareOfVoice = latestSOV.shareOfVoice;
+            analysis.analysisResults.mentionCounts = latestSOV.mentionCounts;
+            analysis.analysisResults.totalMentions = latestSOV.totalMentions;
+            analysis.analysisResults.brandShare = latestSOV.brandShare;
+            analysis.analysisResults.aiVisibilityScore = latestSOV.aiVisibilityScore;
+            analysis.analysisResults.competitors = latestSOV.competitors;
+            
+            console.log(`✅ Super User Analysis: SOV data updated in analysisResults`);
+          } else {
+            console.log(`⚠️ Super User Analysis: No fresh SOV data found, using cached data`);
+          }
+          
           // Get categories with prompts and responses for this specific analysis
           const categories = await BrandCategory.find({ 
             brandId: analysis.analysisResults.brandId 
@@ -528,8 +559,9 @@ class SuperUserAnalysisController {
           
           console.log(`✅ Populated ${populatedCategories.length} categories with prompts and responses`);
         } catch (error) {
-          console.error('Error populating categories:', error);
-          // Don't fail the whole request, just continue without populated data
+          console.error('❌ Super User Analysis: Error fetching fresh data:', error);
+          // Don't fail the whole request, just continue with cached data
+          console.log('⚠️ Super User Analysis: Continuing with cached analysisResults due to error');
         }
       }
       
