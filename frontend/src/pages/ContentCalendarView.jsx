@@ -9,7 +9,7 @@ import RichTextEditor from '../components/RichTextEditor';
 
 import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
-import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, Upload, X, Eye } from 'lucide-react';
+import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, Upload, X, Eye, RefreshCw } from 'lucide-react';
 
 const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }) => {
   const navigate = useNavigate();
@@ -37,6 +37,10 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
   const [existingCalendarCount, setExistingCalendarCount] = useState(0);
   const [showRichTextEditor, setShowRichTextEditor] = useState(false);
   const [richTextContent, setRichTextContent] = useState('');
+  const [userBrandProfile, setUserBrandProfile] = useState(null);
+  const [brandCategories, setBrandCategories] = useState([]);
+  const [isAutoCreatingCalendar, setIsAutoCreatingCalendar] = useState(false);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [contentTemplates] = useState([
     {
       id: 'blog-post',
@@ -144,6 +148,145 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
       alert('Failed to generate content calendar. Please try again.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Fetch user's brand profile and categories for enhanced content generation
+  const fetchUserBrandData = async () => {
+    try {
+      // Fetch user brands
+      const brandsResponse = await apiService.getUserBrands();
+      if (brandsResponse.data.brands && brandsResponse.data.brands.length > 0) {
+        const firstBrand = brandsResponse.data.brands[0];
+        setUserBrandProfile(firstBrand);
+        
+        // Fetch brand categories
+        try {
+          const categoriesResponse = await apiService.getUserCategories();
+          if (categoriesResponse.data.categories) {
+            setBrandCategories(categoriesResponse.data.categories);
+          }
+        } catch (categoriesError) {
+          console.log('No categories found for user:', categoriesError.message);
+          setBrandCategories([]);
+        }
+        
+        return firstBrand;
+      }
+    } catch (error) {
+      console.error('Error fetching user brand data:', error);
+    }
+    return null;
+  };
+
+  // Load existing content calendar for users
+  const loadExistingCalendar = async (companyName) => {
+    try {
+      const response = await apiService.getContentCalendar({ companyName });
+      
+      if (response.data.data && response.data.data.length > 0) {
+        const existingEntries = response.data.data;
+        setContentPlan(existingEntries);
+        setExistingCalendarFound(true);
+        setExistingCalendarCount(existingEntries.length);
+        
+        // Log status breakdown
+        const statusCounts = existingEntries.reduce((acc, item) => {
+          acc[item.status] = (acc[item.status] || 0) + 1;
+          return acc;
+        }, {});
+        
+        console.log(`📅 Loaded existing calendar: ${existingEntries.length} entries`, statusCounts);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.log('No existing calendar found:', error.message);
+      return false;
+    }
+  };
+
+  // Automatically load or create content calendar for users
+  const handleAutoCreateCalendar = async () => {
+    if (isAutoCreatingCalendar || hasAttemptedLoad) return;
+    
+    setIsAutoCreatingCalendar(true);
+    setHasAttemptedLoad(true);
+    
+    try {
+      // Fetch user's brand data
+      const brandProfile = await fetchUserBrandData();
+      
+      if (!brandProfile) {
+        console.log('No brand profile found for user');
+        setIsAutoCreatingCalendar(false);
+        return;
+      }
+      
+      // Use brand name as company name
+      const brandCompanyName = brandProfile.name || brandProfile.domain;
+      setCompanyName(brandCompanyName);
+      
+      // First, always try to load existing calendar
+      const existingLoaded = await loadExistingCalendar(brandCompanyName);
+      
+      if (existingLoaded) {
+        console.log('✅ Existing calendar loaded, no need to create new one');
+        setIsAutoCreatingCalendar(false);
+        return;
+      }
+      
+      // Only create new calendar if none exists
+      console.log('🆕 No existing calendar found, creating new one...');
+      
+      // Generate new calendar with enhanced brand context
+      const response = await apiService.generateContentCalendar({ 
+        companyName: brandCompanyName,
+        brandProfile: userBrandProfile,
+        brandCategories: brandCategories
+      });
+      
+      const newContentPlan = response.data.data;
+      setContentPlan(newContentPlan);
+      
+      // Save to database
+      const formattedContentPlan = newContentPlan.map(item => ({
+        ...item,
+        status: 'draft',
+        keywords: Array.isArray(item.keywords) ? item.keywords : 
+                 (typeof item.keywords === 'string' ? item.keywords.split(',').map(k => k.trim()) : [])
+      }));
+      
+      await apiService.approveContentCalendar({ 
+        companyName: brandCompanyName,
+        contentPlan: formattedContentPlan
+      });
+      
+      console.log('✅ New calendar created and saved successfully');
+    } catch (error) {
+      console.error('❌ Error in auto-create calendar:', error);
+    } finally {
+      setIsAutoCreatingCalendar(false);
+    }
+  };
+
+  // Manual refresh function for reloading calendar data
+  const handleRefreshCalendar = async () => {
+    if (!companyName) return;
+    
+    try {
+      console.log('🔄 Refreshing calendar data...');
+      const refreshed = await loadExistingCalendar(companyName);
+      
+      if (refreshed) {
+        alert('Calendar refreshed successfully!');
+      } else {
+        alert('No calendar data found to refresh.');
+      }
+    } catch (error) {
+      console.error('Error refreshing calendar:', error);
+      alert('Failed to refresh calendar. Please try again.');
     }
   };
 
@@ -386,6 +529,27 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
     }
   }, [companyName]);
 
+  // Auto-load calendar for normal users with brand profiles
+  useEffect(() => {
+    const initializeCalendarForUser = async () => {
+      // Only initialize if:
+      // 1. Component is rendered inline (from dashboard)
+      // 2. No content plan exists yet
+      // 3. Not already processing
+      // 4. Haven't attempted load yet
+      if (inline && !contentPlan && !isAutoCreatingCalendar && !isGenerating && !hasAttemptedLoad) {
+        console.log('🔄 Initializing content calendar for user...');
+        // Small delay to ensure UI is ready
+        setTimeout(() => {
+          handleAutoCreateCalendar();
+        }, 500);
+      }
+    };
+
+    // Only run once when component mounts inline
+    initializeCalendarForUser();
+  }, [inline, contentPlan, hasAttemptedLoad]); // Track hasAttemptedLoad to prevent re-runs
+
   const checkExistingCalendar = async () => {
     try {
       const response = await apiService.getContentCalendar({ companyName });
@@ -587,6 +751,34 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
 
 
   if (!contentPlan) {
+    // Show loading state when auto-creating calendar for normal users
+    if (isAutoCreatingCalendar) {
+      return (
+        <div className="max-w-2xl mx-auto">
+          <Card className="border border-[#ffffff] bg-white">
+            <CardHeader>
+              <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                <CalendarIcon className="w-6 h-6 text-[#7c77ff]" />
+                <span>Content Calendar</span>
+              </CardTitle>
+              <CardDescription className="text-[#4a4a6a]">
+                Setting up your personalized content calendar...
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#7765e3] mx-auto mb-4"></div>
+                  <p className="text-lg font-medium text-[#4a4a6a]">Creating Your Content Calendar...</p>
+                  <p className="text-sm text-[#6b7280] mt-2">Using your brand profile to generate personalized content</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-2xl mx-auto">
         <Card className="border border-[#ffffff] bg-white">
@@ -756,8 +948,18 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
           <Button
             variant="outline"
             size="sm"
+            onClick={handleRefreshCalendar}
+            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4] ml-2"
+            title="Refresh calendar data"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => navigate('/editor/new')}
-            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4] ml-4"
+            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4] ml-2"
           >
             <Plus className="w-4 h-4 mr-1" />
             New Post

@@ -11,7 +11,7 @@ router.get("/analysis/:brandId", auth, brandController.getBrandAnalysis);
 
 // User data endpoints with proper ownership validation
 router.get("/user/brands", auth, brandController.getUserBrands);
-router.get("/user/categories", auth, brandController.getCategoryPrompts);
+router.get("/user/categories", auth, brandController.getUserCategories);
 
 // Category prompts endpoint
 router.get("/categories/:categoryId/prompts", auth, brandController.getCategoryPrompts);

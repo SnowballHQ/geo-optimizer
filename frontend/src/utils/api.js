@@ -131,6 +131,10 @@ export const apiService = {
     console.log('Getting user brands');
     return api.get('/api/v1/brand/user/brands');
   },
+  getUserCategories: () => {
+    console.log('Getting user categories');
+    return api.get('/api/v1/brand/user/categories');
+  },
   
   // Categories and Prompts
   getCategoryPrompts: (categoryId) => api.get(`/api/v1/brand/categories/${categoryId}/prompts`),

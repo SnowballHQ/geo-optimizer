@@ -10,15 +10,15 @@ const openai = new OpenAI({
 class ContentCalendarController {
   async generateCalendar(req, res) {
     try {
-      const { companyName } = req.body;
+      const { companyName, brandProfile, brandCategories } = req.body;
       const userId = req.user.id;
 
       if (!companyName) {
         return res.status(400).json({ error: 'Company name is required' });
       }
 
-      // Generate 30-day content plan using OpenAI
-      const contentPlan = await this.generateContentPlan(companyName, userId, req);
+      // Generate 30-day content plan using OpenAI with enhanced brand context
+      const contentPlan = await this.generateContentPlan(companyName, userId, req, brandProfile, brandCategories);
       
       // Format dates for the next 30 days
       const formattedPlan = await this.formatContentPlan(contentPlan, companyName, userId);
@@ -26,7 +26,7 @@ class ContentCalendarController {
       res.json({
         success: true,
         data: formattedPlan,
-        message: 'Content calendar generated successfully'
+        message: 'Content calendar generated successfully with brand context'
       });
 
     } catch (error) {
@@ -47,9 +47,38 @@ class ContentCalendarController {
         return res.status(400).json({ error: 'Invalid request data' });
       }
 
+      // Check if entries already exist for this user and company to prevent duplicates
+      const existingEntries = await ContentCalendar.find({ userId, companyName });
+      
+      if (existingEntries.length > 0) {
+        console.log(`⚠️ Calendar entries already exist for user ${userId} and company ${companyName}: ${existingEntries.length} entries`);
+        
+        // Return existing entries instead of creating duplicates
+        return res.json({
+          success: true,
+          data: existingEntries,
+          message: `Content calendar already exists with ${existingEntries.length} entries - loaded existing calendar`,
+          isExisting: true
+        });
+      }
+
       // Save approved content plan to database
       const savedEntries = [];
       for (const item of contentPlan) {
+        // Additional check per entry to prevent race conditions
+        const duplicateCheck = await ContentCalendar.findOne({
+          userId,
+          companyName,
+          date: new Date(item.date),
+          title: item.title
+        });
+
+        if (duplicateCheck) {
+          console.log(`⚠️ Duplicate entry found for ${item.title} on ${item.date}, skipping`);
+          savedEntries.push(duplicateCheck);
+          continue;
+        }
+
         const calendarEntry = new ContentCalendar({
           userId,
           companyName,
@@ -58,7 +87,7 @@ class ContentCalendarController {
           description: item.description,
           keywords: item.keywords,
           targetAudience: item.targetAudience,
-          status: 'approved',
+          status: item.status || 'draft',
           cmsPlatform: item.cmsPlatform || 'wordpress'
         });
 
@@ -165,22 +194,60 @@ class ContentCalendarController {
     }
   }
 
-  async generateContentPlan(companyName, userId, req) {
+  async generateContentPlan(companyName, userId, req, brandProfile = null, brandCategories = []) {
     const startTime = Date.now();
     
-    const prompt = `can you give 30 days content calender for ${companyName}  
-    
-    Return the response as a JSON array with 30 objects, each containing:
-    {
-      "title": "Blog post title",
-      "description": "Detailed description",
-      "keywords": "keyword1, keyword2, keyword3",
-      "targetAudience": "Target audience description"
-    };}`;
+    // Build enhanced brand context
+    let brandContext = '';
+    if (brandProfile) {
+      brandContext += `
+Brand Information:
+- Company: ${companyName}
+- Domain: ${brandProfile.domain || 'Not specified'}
+- Brand Description: ${brandProfile.brandInformation || 'Not specified'}
+- Brand Tone: ${brandProfile.brandTonality || 'Professional and engaging'}
+
+`;
+    }
+
+    if (brandCategories && brandCategories.length > 0) {
+      brandContext += `Brand Categories:
+`;
+      brandCategories.forEach(category => {
+        brandContext += `- ${category.categoryName}
+`;
+      });
+      brandContext += `
+`;
+    }
+
+    const prompt = `You are an expert content strategist creating a personalized 30-day content calendar.
+
+${brandContext}Company: ${companyName}
+
+Create a 30-day content calendar that:
+1. Aligns with the brand's tone and messaging style
+2. Incorporates relevant industry topics based on brand categories
+3. Targets the appropriate audience for this brand
+4. Uses SEO-friendly titles and keywords
+5. Provides diverse content types and topics
+6. Maintains consistency with the brand's voice
+
+Return the response as a JSON array with 30 objects, each containing:
+{
+  "title": "SEO-optimized blog post title",
+  "description": "Detailed description that matches brand tone",
+  "keywords": "keyword1, keyword2, keyword3",
+  "targetAudience": "Specific target audience description"
+}
+
+Focus on creating content that would be valuable for ${companyName}'s audience and reflects their brand identity.`;
 
     // Prepare request payload for logging
     const requestPayload = {
       companyName,
+      brandProfile: brandProfile ? 'Included' : 'Not provided',
+      brandCategories: brandCategories.length,
       prompt,
       model: "gpt-3.5-turbo",
       temperature: 0.4,
@@ -245,7 +312,7 @@ class ContentCalendarController {
         
         // Fallback: generate a basic plan
         console.log(`🔄 Using fallback content plan`);
-        return this.generateFallbackPlan(companyName);
+        return this.generateFallbackPlan(companyName, brandProfile);
       }
     } catch (error) {
       const responseTime = Date.now() - startTime;
@@ -253,12 +320,13 @@ class ContentCalendarController {
       
       // Fallback: generate a basic plan
       console.log(`🔄 Using fallback content plan due to API error`);
-      return this.generateFallbackPlan(companyName);
+      return this.generateFallbackPlan(companyName, brandProfile);
     }
   }
 
-  generateFallbackPlan(companyName) {
-    const fallbackTitles = [
+  generateFallbackPlan(companyName, brandProfile = null) {
+    // Enhance fallback titles based on brand context if available
+    const baseFallbackTitles = [
       "10 Ways to Improve Your Business Strategy",
       "The Future of Digital Marketing",
       "Building Strong Customer Relationships",
@@ -291,11 +359,19 @@ class ContentCalendarController {
       "Business Model Innovation"
     ];
 
-    return fallbackTitles.map((title, index) => ({
+    // Customize description and keywords based on brand context
+    const brandTone = brandProfile?.brandTonality || 'Professional and informative';
+    const brandDescription = brandProfile?.brandInformation || 'business operations';
+    
+    return baseFallbackTitles.map((title, index) => ({
       title,
-      description: `This comprehensive guide explores ${title.toLowerCase()} and provides actionable insights for ${companyName} and similar businesses looking to improve their operations and achieve sustainable growth.`,
-      keywords: "business strategy, growth, optimization, best practices",
-      targetAudience: "Business owners, managers, and professionals seeking to improve their business performance"
+      description: `This comprehensive guide explores ${title.toLowerCase()} and provides actionable insights for ${companyName}. Written in a ${brandTone.toLowerCase()} style, this content focuses on ${brandDescription} and delivers valuable information to help your business achieve sustainable growth.`,
+      keywords: brandProfile?.domain ? 
+        `${brandProfile.domain.split('.')[0]}, business strategy, growth, optimization, best practices` : 
+        "business strategy, growth, optimization, best practices",
+      targetAudience: brandProfile?.brandInformation ? 
+        `${companyName} customers and prospects interested in ${brandDescription}` :
+        "Business owners, managers, and professionals seeking to improve their business performance"
     }));
   }
 

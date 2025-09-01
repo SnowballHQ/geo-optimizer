@@ -300,20 +300,18 @@ const Dashboard = () => {
              </button>
            )}
 
-          {/* Content Calendar - only for superusers */}
-          {isUserSuperuser && (
-            <button
-              onClick={() => { setActiveSection('dashboard'); setActiveTool('content-calendar'); }}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeSection === 'content-calendar' || activeTool === 'content-calendar'
-                  ? 'nav-active'
-                  : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              <span>Content Calendar</span>
-            </button>
-          )}
+          {/* Content Calendar - visible to all users */}
+          <button
+            onClick={() => { setActiveSection('dashboard'); setActiveTool('content-calendar'); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeSection === 'content-calendar' || activeTool === 'content-calendar'
+                ? 'nav-active'
+                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Content Calendar</span>
+          </button>
 
           {/* Shopify Integration - only for superusers */}
           {isUserSuperuser && (
@@ -455,32 +453,30 @@ const Dashboard = () => {
                       </CardContent>
                     </Card>
 
-                                         {/* Content Calendar Card - Only for superusers */}
-                     {isUserSuperuser && (
-                       <Card 
-                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
-                         onClick={() => setActiveTool('content-calendar')}
-                       >
-                         <CardContent className="p-6">
-                           <div className="flex items-center space-x-4 mb-4">
-                             <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                               <Calendar className="w-6 h-6 text-white" />
-                             </div>
-                             <div>
-                               <h3 className="text-lg font-semibold text-[#000000]">
-                                 Content Calendar
-                               </h3>
-                               <p className="text-sm text-[#4a4a6a]">
-                                 AI-powered content planning
-                               </p>
-                             </div>
+                                         {/* Content Calendar Card - Available for all users */}
+                     <Card 
+                       className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
+                       onClick={() => setActiveTool('content-calendar')}
+                     >
+                       <CardContent className="p-6">
+                         <div className="flex items-center space-x-4 mb-4">
+                           <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
+                             <Calendar className="w-6 h-6 text-white" />
                            </div>
-                           <p className="text-sm text-[#4a4a6a]">
-                             Generate 30-day content plans and auto-publish to your CMS platforms.
-                           </p>
-                         </CardContent>
-                       </Card>
-                     )}
+                           <div>
+                             <h3 className="text-lg font-semibold text-[#000000]">
+                               Content Calendar
+                             </h3>
+                             <p className="text-sm text-[#4a4a6a]">
+                               AI-powered content planning
+                             </p>
+                           </div>
+                         </div>
+                         <p className="text-sm text-[#4a4a6a]">
+                           Generate 30-day content plans and auto-publish to your CMS platforms.
+                         </p>
+                       </CardContent>
+                     </Card>
 
                      {/* Shopify Integration Card - Only for superusers */}
                      {isUserSuperuser && (

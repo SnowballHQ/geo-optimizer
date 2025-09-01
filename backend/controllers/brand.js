@@ -344,6 +344,8 @@ exports.getUserBrands = async (req, res) => {
         id: brand._id,
         name: brand.brandName,
         domain: brand.domain,
+        brandInformation: brand.brandInformation,
+        brandTonality: brand.brandTonality,
         createdAt: brand.createdAt
       }))
     });
@@ -365,10 +367,8 @@ exports.getUserCategories = async (req, res) => {
       success: true,
       categories: categories.map(category => ({
         id: category._id,
-        name: category.categoryName,
-        brandId: category.brandId._id,
-        brandName: category.brandId.brandName,
-        domain: category.brandId.domain,
+        categoryName: category.categoryName,
+        aiSummary: category.aiSummary,
         createdAt: category.createdAt
       }))
     });
@@ -377,6 +377,7 @@ exports.getUserCategories = async (req, res) => {
     res.status(500).json({ msg: "Failed to fetch user categories", error: error.message });
   }
 };
+
 
 // Get prompts for a specific category
 exports.getCategoryPrompts = async (req, res) => {
