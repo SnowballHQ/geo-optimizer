@@ -40,7 +40,9 @@ const allowedOrigins = [
   'https://snowball-frontend.onrender.com',
   'https://snowball-land.onrender.com',
   'https://geo-optimizer-land.onrender.com',
-  'https://geo-optimizer.onrender.com', // Backend domain for CORS
+  'https://geo-optimizer.onrender.com',
+  'https://geo-optimizer-w7k1.onrender.com',
+  'https://geo-optimizer-land-zu45.onrender.com', // Backend domain for CORS
   process.env.FRONTEND_URL,
   // Add explicit environment variable for production frontend URL
   process.env.FRONTEND_DOMAIN
