@@ -45,17 +45,24 @@ class SuperUserAnalysisController {
         }
       }
       
+      // Helper function to extract clean brand name
+      const extractBrandName = (input) => {
+        if (!input) return '';
+        const cleaned = input.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
+        return cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+      };
+
       // Create new isolated super user analysis
       const analysis = new SuperUserAnalysis({
         superUserId: userId,
         domain: domain,
-        brandName: brandName || domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
+        brandName: extractBrandName(brandName || domain),
         brandInformation: domainInfo.description || brandInformation,
         status: 'in_progress',
         currentStep: step || 1,
         step1Data: {
           domain: domain,
-          brandName: brandName || domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
+          brandName: extractBrandName(brandName || domain),
           description: domainInfo.description || brandInformation,
           completed: true
         }
