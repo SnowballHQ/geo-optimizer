@@ -242,7 +242,7 @@ const Dashboard = () => {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
-          {/* Show Dashboard only for superusers */}
+          {/* Show Dashboard only for superusers
           {isUserSuperuser && (
             <button
               onClick={() => { setActiveSection('dashboard'); setActiveTool(null); }}
@@ -255,7 +255,7 @@ const Dashboard = () => {
               <BarChart3 className="w-4 h-4" />
               <span>Dashboard</span>
             </button>
-          )}
+          )} */}
 
           {/* Blog Analysis - visible to all users */}
           <button
@@ -270,7 +270,7 @@ const Dashboard = () => {
             <span>Blog Analysis</span>
           </button>
 
-          {/* Domain Analysis - only for superusers */}
+          {/* Domain Analysis - only for superusers
           {isUserSuperuser && (
             <button
               onClick={() => { setActiveSection('dashboard'); setActiveTool('domain'); }}
@@ -283,7 +283,7 @@ const Dashboard = () => {
               <Globe className="w-4 h-4" />
               <span>Domain Analysis</span>
             </button>
-          )}
+          )} */}
 
                      {/* Brand Dashboard - visible to all users with brands */}
            {userBrands.length > 0 && (
@@ -315,7 +315,7 @@ const Dashboard = () => {
             </button>
           )}
 
-          {/* Shopify Integration - only for superusers */}
+          {/* Shopify Integration - only for superusers
           {isUserSuperuser && (
             <button
               onClick={() => navigate('/shopify-integration')}
@@ -324,9 +324,9 @@ const Dashboard = () => {
               <Building2 className="w-4 h-4" />
               <span>Shopify Integration</span>
             </button>
-          )}
+          )} */}
 
-          {/* History - only for superusers */}
+          {/* History - only for superusers
           {isUserSuperuser && (
             <button
               onClick={() => navigate('/history')}
@@ -335,9 +335,9 @@ const Dashboard = () => {
               <Activity className="w-4 h-4" />
               <span>History</span>
             </button>
-          )}
+          )} */}
 
-          {/* Settings - only for superusers */}
+          {/* Settings - only for superusers
           {isUserSuperuser && (
             <button
               onClick={() => setActiveSection('settings')}
@@ -350,7 +350,7 @@ const Dashboard = () => {
               <Settings className="w-4 h-4" />
               <span>Settings</span>
             </button>
-          )}
+          )} */}
 
 
 
@@ -403,7 +403,7 @@ const Dashboard = () => {
                 <>
                   {/* Action Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Domain Analysis Card - Only for superusers */}
+                    {/* Domain Analysis Card - Only for superusers
                     {isUserSuperuser && (
                       <Card 
                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out"
@@ -428,7 +428,7 @@ const Dashboard = () => {
                           </p>
                         </CardContent>
                       </Card>
-                    )}
+                    )} */}
 
                     {/* Blog Analysis Card */}
                     <Card 
@@ -482,7 +482,7 @@ const Dashboard = () => {
                        </Card>
                      )}
 
-                     {/* Shopify Integration Card - Only for superusers */}
+                     {/* Shopify Integration Card - Only for superusers
                      {isUserSuperuser && (
                        <Card 
                          className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
@@ -507,7 +507,7 @@ const Dashboard = () => {
                            </p>
                          </CardContent>
                        </Card>
-                     )}
+                     )} */}
 
                                          {/* Brand Dashboard Card - Available for all users with brands */}
                      {userBrands.length > 0 && (
