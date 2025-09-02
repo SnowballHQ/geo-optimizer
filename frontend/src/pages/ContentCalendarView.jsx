@@ -6,6 +6,7 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
 import RichTextEditor from '../components/RichTextEditor';
+import InlineRichTextEditor from '../components/InlineRichTextEditor';
 
 import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
@@ -333,6 +334,15 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
           outline: response.data.data.outline
         }));
         
+        // Update the content plan to reflect the new outline
+        setContentPlan(prevPlan => 
+          prevPlan.map(item => 
+            item._id === selectedContent._id 
+              ? { ...item, outline: response.data.data.outline }
+              : item
+          )
+        );
+        
         const brandContextInfo = response.data.brandContext === 'Applied' 
           ? ' with your brand voice and style applied! 🎯'
           : ' (brand settings not found - using default style)';
@@ -384,6 +394,15 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
         
         // Populate rich text editor with generated content
         setContentRichText(generatedContent);
+        
+        // Update the content plan to reflect the new blog content
+        setContentPlan(prevPlan => 
+          prevPlan.map(item => 
+            item._id === selectedContent._id 
+              ? { ...item, content: generatedContent }
+              : item
+          )
+        );
         
         const brandContextInfo = response.data.brandContext === 'Applied' 
           ? ' with your brand voice and style applied! 🎯'
@@ -448,7 +467,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
     setContentRichText('');
   };
 
-  // Rich text editor handlers for content editor
+  // Rich text editor handlers for content editor (legacy modal - now using inline editor)
   const handleContentRichTextSave = (content) => {
     setContentRichText(content);
     setEditorFormData(prev => ({
@@ -1119,7 +1138,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
           <Card className="border border-[#b0b0d8] bg-white">
             <CardHeader>
               <CardTitle className="text-[#4a4a6a] flex items-center justify-between">
-                Generate Content Outline
+                Content Outline Editor
                 <Button
                   onClick={handleGenerateInlineOutline}
                   disabled={isGeneratingOutline || !editorFormData.title.trim()}
@@ -1133,22 +1152,28 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
                   ) : editorFormData.outline ? '🔄 Regenerate Outline' : '✨ Generate Outline'}
                 </Button>
               </CardTitle>
-              <CardDescription>AI-generated content structure and outline</CardDescription>
+              <CardDescription>AI-generated content structure and outline - directly editable</CardDescription>
             </CardHeader>
             <CardContent>
-              {editorFormData.outline ? (
-                <div className="bg-gray-50 rounded-md p-4 max-h-64 overflow-y-auto">
-                  <div 
-                    dangerouslySetInnerHTML={{ __html: editorFormData.outline }} 
-                    className="prose prose-sm max-w-none text-sm"
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+                    Content Outline
+                  </label>
+                  <Textarea
+                    value={editorFormData.outline || ''}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, outline: e.target.value }))}
+                    className="border-[#b0b0d8] focus:border-[#6658f4] min-h-[200px] font-mono text-sm"
+                    placeholder="Click 'Generate Outline' to create an AI-powered content structure, or type your own outline here..."
                   />
                 </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No outline generated yet.</p>
-                  <p className="text-sm mt-1">Fill in the content details above, then click "Generate Outline" to create the content structure.</p>
-                </div>
-              )}
+                {!editorFormData.outline && (
+                  <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-md">
+                    <p className="text-sm">No outline generated yet.</p>
+                    <p className="text-xs mt-1">Fill in the content details above, then click "Generate Outline" to create the content structure.</p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -1157,46 +1182,43 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
             <CardHeader>
               <CardTitle className="text-[#4a4a6a] flex items-center justify-between">
                 Blog Content Editor
-                <div className="flex space-x-2">
-                  <Button
-                    onClick={handleGenerateInlineBlog}
-                    disabled={isGeneratingBlog || !editorFormData.outline}
-                    className="bg-[#7765e3] hover:bg-[#6658f4] text-white text-sm px-4 py-2"
-                  >
-                    {isGeneratingBlog ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Creating...
-                      </>
-                    ) : '📝 Generate Blog'}
-                  </Button>
-                  {contentRichText && (
-                    <Button
-                      onClick={openContentRichTextEditor}
-                      className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2"
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit Content
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  onClick={handleGenerateInlineBlog}
+                  disabled={isGeneratingBlog || !editorFormData.outline}
+                  className="bg-[#7765e3] hover:bg-[#6658f4] text-white text-sm px-4 py-2"
+                >
+                  {isGeneratingBlog ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : '📝 Generate Blog'}
+                </Button>
               </CardTitle>
-              <CardDescription>AI-generated blog content that you can edit and customize</CardDescription>
+              <CardDescription>AI-generated blog content that you can edit and customize directly in the editor below</CardDescription>
             </CardHeader>
             <CardContent>
-              {contentRichText ? (
-                <div className="bg-gray-50 rounded-md p-4 max-h-96 overflow-y-auto">
-                  <div 
-                    dangerouslySetInnerHTML={{ __html: contentRichText }} 
-                    className="prose prose-sm max-w-none"
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+                    Blog Content
+                  </label>
+                  <InlineRichTextEditor
+                    content={contentRichText || editorFormData.content || ''}
+                    onChange={(htmlContent) => {
+                      setContentRichText(htmlContent);
+                      setEditorFormData(prev => ({ ...prev, content: htmlContent }));
+                    }}
+                    placeholder="Click 'Generate Blog' to create AI-powered content, or start writing your blog post here..."
                   />
                 </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <p>No blog content generated yet.</p>
-                  <p className="text-sm mt-1">Generate an outline first, then click "Generate Blog" to create the full content.</p>
-                </div>
-              )}
+                {!contentRichText && !editorFormData.content && (
+                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
+                    <p className="text-sm">No blog content generated yet.</p>
+                    <p className="text-xs mt-1">Generate an outline first, then click "Generate Blog" to create the full content.</p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
