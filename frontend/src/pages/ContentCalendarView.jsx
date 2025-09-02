@@ -9,7 +9,7 @@ import RichTextEditor from '../components/RichTextEditor';
 
 import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
-import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, Upload, X, Eye, RefreshCw } from 'lucide-react';
+import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, Upload, X, Eye, RefreshCw, ArrowLeft } from 'lucide-react';
 
 const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }) => {
   const navigate = useNavigate();
@@ -41,6 +41,23 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
   const [brandCategories, setBrandCategories] = useState([]);
   const [isAutoCreatingCalendar, setIsAutoCreatingCalendar] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+  
+  // Inline editor states
+  const [activeEditorTool, setActiveEditorTool] = useState(null); // 'content-editor' or null
+  const [selectedContent, setSelectedContent] = useState(null);
+  const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
+  const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
+  const [editorFormData, setEditorFormData] = useState({
+    title: '',
+    description: '',
+    keywords: '',
+    targetAudience: '',
+    content: '',
+    outline: '',
+    status: 'draft'
+  });
+  const [showContentRichTextEditor, setShowContentRichTextEditor] = useState(false);
+  const [contentRichText, setContentRichText] = useState('');
   const [contentTemplates] = useState([
     {
       id: 'blog-post',
@@ -290,6 +307,165 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
     }
   };
 
+  // Inline editor functions
+  const handleGenerateInlineOutline = async () => {
+    if (!selectedContent || !editorFormData.title.trim()) {
+      alert('Please enter a title first!');
+      return;
+    }
+
+    try {
+      setIsGeneratingOutline(true);
+      
+      const outlineData = {
+        title: editorFormData.title,
+        description: editorFormData.description,
+        keywords: editorFormData.keywords,
+        targetAudience: editorFormData.targetAudience
+      };
+
+      console.log('Generating inline outline:', outlineData);
+      const response = await apiService.generateContentOutline(selectedContent._id, outlineData);
+      
+      if (response.data && response.data.success && response.data.data && response.data.data.outline) {
+        setEditorFormData(prev => ({
+          ...prev,
+          outline: response.data.data.outline
+        }));
+        
+        const brandContextInfo = response.data.brandContext === 'Applied' 
+          ? ' with your brand voice and style applied! 🎯'
+          : ' (brand settings not found - using default style)';
+        
+        alert(`Content outline generated successfully${brandContextInfo}`);
+      } else {
+        alert('Failed to generate outline. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error generating outline:', error);
+      alert(`Error generating outline: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsGeneratingOutline(false);
+    }
+  };
+
+  const handleGenerateInlineBlog = async () => {
+    if (!selectedContent || !editorFormData.outline) {
+      alert('Please generate an outline first!');
+      return;
+    }
+
+    if (!editorFormData.title.trim()) {
+      alert('Please enter a title first!');
+      return;
+    }
+
+    try {
+      setIsGeneratingBlog(true);
+      
+      const blogData = {
+        title: editorFormData.title,
+        description: editorFormData.description,
+        keywords: editorFormData.keywords,
+        targetAudience: editorFormData.targetAudience,
+        outline: editorFormData.outline
+      };
+
+      console.log('Generating inline blog:', blogData);
+      const response = await apiService.createBlogFromOutline(selectedContent._id, blogData);
+      
+      if (response.data && response.data.success && response.data.data && response.data.data.blogContent) {
+        const generatedContent = response.data.data.blogContent;
+        
+        setEditorFormData(prev => ({
+          ...prev,
+          content: generatedContent
+        }));
+        
+        // Populate rich text editor with generated content
+        setContentRichText(generatedContent);
+        
+        const brandContextInfo = response.data.brandContext === 'Applied' 
+          ? ' with your brand voice and style applied! 🎯'
+          : ' (brand settings not found - using default style)';
+        
+        alert(`Blog content generated successfully${brandContextInfo}`);
+      } else {
+        alert('Failed to generate blog content. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error generating blog:', error);
+      alert(`Error generating blog: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsGeneratingBlog(false);
+    }
+  };
+
+  const handleSaveInlineContent = async () => {
+    if (!selectedContent) return;
+
+    try {
+      const updateData = {
+        title: editorFormData.title,
+        description: editorFormData.description,
+        keywords: editorFormData.keywords.split(',').map(k => k.trim()),
+        targetAudience: editorFormData.targetAudience,
+        content: editorFormData.content,
+        outline: editorFormData.outline,
+        status: editorFormData.status
+      };
+
+      await apiService.updateContentCalendarEntry(selectedContent._id, updateData);
+      
+      // Update the content plan with new data
+      setContentPlan(prevPlan => 
+        prevPlan.map(item => 
+          item._id === selectedContent._id 
+            ? { ...item, ...updateData }
+            : item
+        )
+      );
+      
+      alert('Content saved successfully!');
+    } catch (error) {
+      console.error('Error saving content:', error);
+      alert('Failed to save content. Please try again.');
+    }
+  };
+
+  const handleCloseInlineEditor = () => {
+    setActiveEditorTool(null);
+    setSelectedContent(null);
+    setEditorFormData({
+      title: '',
+      description: '',
+      keywords: '',
+      targetAudience: '',
+      content: '',
+      outline: '',
+      status: 'draft'
+    });
+    setContentRichText('');
+  };
+
+  // Rich text editor handlers for content editor
+  const handleContentRichTextSave = (content) => {
+    setContentRichText(content);
+    setEditorFormData(prev => ({
+      ...prev,
+      content: content
+    }));
+    setShowContentRichTextEditor(false);
+  };
+
+  const handleContentRichTextCancel = () => {
+    setShowContentRichTextEditor(false);
+  };
+
+  const openContentRichTextEditor = () => {
+    setShowContentRichTextEditor(true);
+  };
+
   const handleLoadExistingCalendar = async () => {
     if (!companyName.trim()) return;
     
@@ -356,13 +532,19 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
   };
 
   const handleCardClick = (content) => {
-    // When clicking on a calendar card, navigate to the dedicated editor page
-    if (content._id) {
-      navigate(`/editor/${content._id}`);
-    } else {
-      // If no ID (new content), open the modal for now
-      handleEditContent(content);
-    }
+    // Open inline content editor within dashboard layout
+    setSelectedContent(content);
+    setEditorFormData({
+      title: content.title || '',
+      description: content.description || '',
+      keywords: Array.isArray(content.keywords) ? content.keywords.join(', ') : content.keywords || '',
+      targetAudience: content.targetAudience || '',
+      content: content.content || '',
+      outline: content.outline || '',
+      status: content.status || 'draft'
+    });
+    setContentRichText(content.content || '');
+    setActiveEditorTool('content-editor');
   };
 
   const handleTemplateSelect = (template) => {
@@ -481,7 +663,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
 
   // Handle body scroll when modal is open
   useEffect(() => {
-    if (showCmsSetup || showContentEditor || showContentViewer || showTemplates || showMediaUpload || showRichTextEditor) {
+    if (showCmsSetup || showContentEditor || showContentViewer || showTemplates || showMediaUpload || showRichTextEditor || showContentRichTextEditor) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -490,7 +672,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [showCmsSetup, showContentEditor, showContentViewer, showTemplates, showMediaUpload, showRichTextEditor]);
+  }, [showCmsSetup, showContentEditor, showContentViewer, showTemplates, showMediaUpload, showRichTextEditor, showContentRichTextEditor]);
 
   // Auto-load existing content calendar when component is rendered inline
   useEffect(() => {
@@ -837,6 +1019,214 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
               </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Render inline content editor if active
+  if (activeEditorTool === 'content-editor') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold text-[#4a4a6a]">Content Editor</h2>
+            <p className="text-[#4a4a6a]">Edit and generate content for your calendar</p>
+          </div>
+          <Button variant="outline" onClick={handleCloseInlineEditor} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Calendar
+          </Button>
+        </div>
+        
+        <div className="space-y-8">
+          {/* Content Details Section - Row Layout */}
+          <Card className="border border-[#b0b0d8] bg-white">
+            <CardHeader>
+              <CardTitle className="text-[#4a4a6a]">Content Details</CardTitle>
+              <CardDescription>Edit the basic information for this content</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+                    Title
+                  </label>
+                  <Input
+                    type="text"
+                    value={editorFormData.title}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, title: e.target.value }))}
+                    className="border-[#b0b0d8] focus:border-[#6658f4]"
+                    placeholder="Enter blog title..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+                    Keywords
+                  </label>
+                  <Input
+                    type="text"
+                    value={editorFormData.keywords}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, keywords: e.target.value }))}
+                    className="border-[#b0b0d8] focus:border-[#6658f4]"
+                    placeholder="keyword1, keyword2, keyword3..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+                    Target Audience
+                  </label>
+                  <Input
+                    type="text"
+                    value={editorFormData.targetAudience}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
+                    className="border-[#b0b0d8] focus:border-[#6658f4]"
+                    placeholder="Who is this content for?"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+                  Description
+                </label>
+                <Textarea
+                  value={editorFormData.description}
+                  onChange={(e) => setEditorFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="border-[#b0b0d8] focus:border-[#6658f4] min-h-[100px]"
+                  placeholder="Brief description of the content..."
+                />
+              </div>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={editorFormData.status}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="approved">Approved</option>
+                    <option value="published">Published</option>
+                  </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Outline Generation Section */}
+          <Card className="border border-[#b0b0d8] bg-white">
+            <CardHeader>
+              <CardTitle className="text-[#4a4a6a] flex items-center justify-between">
+                Generate Content Outline
+                <Button
+                  onClick={handleGenerateInlineOutline}
+                  disabled={isGeneratingOutline || !editorFormData.title.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
+                >
+                  {isGeneratingOutline ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating...
+                    </>
+                  ) : editorFormData.outline ? '🔄 Regenerate Outline' : '✨ Generate Outline'}
+                </Button>
+              </CardTitle>
+              <CardDescription>AI-generated content structure and outline</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {editorFormData.outline ? (
+                <div className="bg-gray-50 rounded-md p-4 max-h-64 overflow-y-auto">
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: editorFormData.outline }} 
+                    className="prose prose-sm max-w-none text-sm"
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No outline generated yet.</p>
+                  <p className="text-sm mt-1">Fill in the content details above, then click "Generate Outline" to create the content structure.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Blog Content Editor Section */}
+          <Card className="border border-[#b0b0d8] bg-white">
+            <CardHeader>
+              <CardTitle className="text-[#4a4a6a] flex items-center justify-between">
+                Blog Content Editor
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleGenerateInlineBlog}
+                    disabled={isGeneratingBlog || !editorFormData.outline}
+                    className="bg-[#7765e3] hover:bg-[#6658f4] text-white text-sm px-4 py-2"
+                  >
+                    {isGeneratingBlog ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creating...
+                      </>
+                    ) : '📝 Generate Blog'}
+                  </Button>
+                  {contentRichText && (
+                    <Button
+                      onClick={openContentRichTextEditor}
+                      className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Content
+                    </Button>
+                  )}
+                </div>
+              </CardTitle>
+              <CardDescription>AI-generated blog content that you can edit and customize</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {contentRichText ? (
+                <div className="bg-gray-50 rounded-md p-4 max-h-96 overflow-y-auto">
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: contentRichText }} 
+                    className="prose prose-sm max-w-none"
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p>No blog content generated yet.</p>
+                  <p className="text-sm mt-1">Generate an outline first, then click "Generate Blog" to create the full content.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Save Options Section */}
+          <Card className="border border-[#b0b0d8] bg-white">
+            <CardContent className="pt-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="text-lg font-semibold text-[#4a4a6a] mb-2">Save Your Content</h4>
+                  <p className="text-sm text-[#4a4a6a]">Save your outline and blog content to the content calendar</p>
+                </div>
+                <div className="flex space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleCloseInlineEditor}
+                    className="border-gray-300 text-gray-600 hover:border-gray-400"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveInlineContent}
+                    className="bg-[#7765e3] hover:bg-[#6658f4] text-white"
+                  >
+                    💾 Save Content
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -1736,6 +2126,14 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
         onSave={handleRichTextSave}
         onCancel={handleRichTextCancel}
         isOpen={showRichTextEditor}
+      />
+
+      {/* Rich Text Editor for Content Editing */}
+      <RichTextEditor
+        content={contentRichText}
+        onSave={handleContentRichTextSave}
+        onCancel={handleContentRichTextCancel}
+        isOpen={showContentRichTextEditor}
       />
     </div>
   );
