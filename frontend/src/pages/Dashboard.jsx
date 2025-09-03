@@ -8,6 +8,7 @@ import BlogAnalysis from './BlogAnalysis';
 import ContentCalendarView from './ContentCalendarView';
 import BrandSettings from '../components/BrandSettings';
 import ShopifySettings from '../components/ShopifySettings';
+import WebflowSettings from '../components/WebflowSettings';
 import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
 
 import { apiService } from '../utils/api';
@@ -761,6 +762,24 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <ShopifySettings />
+                </CardContent>
+              </Card>
+
+              {/* Webflow Integration */}
+              <Card className="border border-[#b0b0d8] bg-white">
+                <CardHeader>
+                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-[#146ef5] rounded-lg flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">🌐</span>
+                    </div>
+                    <span>Webflow Integration</span>
+                  </CardTitle>
+                  <CardDescription className="text-[#4a4a6a]">
+                    Connect your Webflow site to publish blog content directly from our platform
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <WebflowSettings />
                 </CardContent>
               </Card>
 

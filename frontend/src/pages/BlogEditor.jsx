@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { ShoppingBag, Check, AlertCircle, ExternalLink } from 'lucide-react';
+import { ShoppingBag, Layers, Check, AlertCircle, ExternalLink } from 'lucide-react';
 import { apiService } from '../utils/api';
 import { toast } from 'react-toastify';
 
@@ -25,6 +25,7 @@ const BlogEditor = () => {
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
   const [generatedBlogContent, setGeneratedBlogContent] = useState('');
   const [shopifyConnection, setShopifyConnection] = useState({ status: 'checking', shop: null });
+  const [webflowConnection, setWebflowConnection] = useState({ status: 'checking', userEmail: null });
   const [showPublishOptions, setShowPublishOptions] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -50,9 +51,10 @@ const BlogEditor = () => {
     }
   }, [navigate]);
 
-  // Check Shopify connection status
+  // Check CMS connection status
   useEffect(() => {
     checkShopifyConnection();
+    checkWebflowConnection();
   }, []);
 
   const checkShopifyConnection = async () => {
@@ -82,6 +84,37 @@ const BlogEditor = () => {
       setShopifyConnection({
         status: 'error',
         shop: null
+      });
+    }
+  };
+
+  const checkWebflowConnection = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/webflow/status`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth')}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.status === 'connected') {
+        setWebflowConnection({
+          status: 'connected',
+          userEmail: data.userEmail,
+          connectedAt: data.connectedAt
+        });
+      } else {
+        setWebflowConnection({
+          status: 'disconnected',
+          userEmail: null
+        });
+      }
+    } catch (error) {
+      console.error('Error checking Webflow connection:', error);
+      setWebflowConnection({
+        status: 'error',
+        userEmail: null
       });
     }
   };
@@ -288,32 +321,48 @@ const BlogEditor = () => {
       if (response.data && response.data.success && response.data.data && response.data.data.blogContent) {
         const generatedContent = response.data.data.blogContent;
         
-        // Immediately update all content state variables to ensure instant display
+        console.log('🎯 Blog content generated, updating UI immediately:', {
+          contentLength: generatedContent.length,
+          contentPreview: generatedContent.substring(0, 100) + '...'
+        });
+        
+        // Update formData.content FIRST and PRIMARY - like outline does with formData.outline
+        setFormData(prev => {
+          console.log('📝 Setting formData.content:', { 
+            contentLength: generatedContent.length,
+            hasContent: !!generatedContent
+          });
+          return {
+            ...prev,
+            content: generatedContent,
+            description: generatedContent
+          };
+        });
+        
+        // Update richTextContent as secondary for Rich Text Editor sync
         setRichTextContent(generatedContent);
         
-        // Update formData with generated content
-        setFormData(prev => ({
-          ...prev,
-          content: generatedContent,
-          description: generatedContent // Also update description field
-        }));
-        
-        // Force immediate re-render by updating the post state as well
+        // Update post state for consistency
         setPost(prev => prev ? {
           ...prev,
           content: generatedContent,
           description: generatedContent
         } : null);
         
-        // Also save the content to the database immediately to prevent data loss
-        try {
-          await apiService.updateContentCalendarEntry(postId, {
-            content: generatedContent,
-            description: generatedContent
-          });
-        } catch (saveError) {
-          console.warn('Failed to auto-save generated content:', saveError);
-        }
+        console.log('✅ UI state updated synchronously, content should now be visible');
+        
+        // Save to database AFTER UI update to avoid interference
+        setTimeout(async () => {
+          try {
+            await apiService.updateContentCalendarEntry(postId, {
+              content: generatedContent,
+              description: generatedContent
+            });
+            console.log('💾 Auto-saved generated content to database');
+          } catch (saveError) {
+            console.warn('Failed to auto-save generated content:', saveError);
+          }
+        }, 100);
         
         // Show success message
         const brandContextInfo = response.data.brandContext === 'Applied' 
@@ -415,6 +464,102 @@ const BlogEditor = () => {
       } catch (publishError) {
         console.error('Error publishing to Shopify:', publishError);
         toast.error('Failed to publish to Shopify. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error publishing post:', error);
+      toast.error('Error publishing post. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePublishToWebflow = async () => {
+    try {
+      setSaving(true);
+      
+      // Sync Rich Text Editor content to description field before publishing
+      // Use the actual blog content from rich text editor or formData.content
+      const actualContent = richTextContent || formData.content || formData.description || '';
+      
+      const publishData = {
+        ...formData,
+        description: actualContent,
+        content: actualContent,
+        keywords: formData.keywords.split(',').map(k => k.trim()).filter(k => k),
+        status: 'published',
+        publishedAt: new Date().toISOString()
+      };
+
+      // Check if Webflow is connected
+      if (webflowConnection.status !== 'connected') {
+        toast.error('Please connect your Webflow site first in Settings');
+        setSaving(false);
+        return;
+      }
+
+      // First update the database with published status
+      await apiService.updateContentCalendarEntry(postId, publishData);
+      
+      // Update local state to reflect the changes
+      setFormData(prev => ({
+        ...prev,
+        ...publishData
+      }));
+      
+      setPost(prev => prev ? {
+        ...prev,
+        ...publishData
+      } : null);
+
+      console.log('📤 Publishing to Webflow with content:', {
+        title: publishData.title,
+        actualContentLength: actualContent ? actualContent.length : 0,
+        actualContentPreview: actualContent ? actualContent.substring(0, 200) + '...' : 'NO ACTUAL CONTENT',
+        richTextContentLength: richTextContent ? richTextContent.length : 0,
+        formDataContentLength: formData.content ? formData.content.length : 0,
+        formDataDescriptionLength: formData.description ? formData.description.length : 0
+      });
+
+      // For now, we need to get the site ID from the user
+      // TODO: Add site selection UI or get from user preferences
+      const siteId = prompt('Please enter your Webflow Site ID (you can find this in your Webflow dashboard URL):');
+      
+      if (!siteId) {
+        toast.error('Site ID is required to publish to Webflow');
+        setSaving(false);
+        return;
+      }
+
+      // Now publish to Webflow using our new API
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/webflow/publish`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('auth')}`
+          },
+          body: JSON.stringify({
+            title: publishData.title,
+            content: actualContent,
+            keywords: publishData.keywords,
+            targetAudience: publishData.targetAudience,
+            siteId: siteId
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          toast.success(`Successfully published to Webflow site!`);
+          setShowPublishOptions(false);
+          // Navigate back to calendar
+          navigate('/dashboard', { state: { showContentCalendar: true } });
+        } else {
+          toast.error(`Failed to publish to Webflow: ${result.error}`);
+        }
+      } catch (publishError) {
+        console.error('Error publishing to Webflow:', publishError);
+        toast.error('Failed to publish to Webflow. Please try again.');
       }
     } catch (error) {
       console.error('Error publishing post:', error);
