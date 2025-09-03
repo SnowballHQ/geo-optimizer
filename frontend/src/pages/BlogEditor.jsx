@@ -288,30 +288,47 @@ const BlogEditor = () => {
       if (response.data && response.data.success && response.data.data && response.data.data.blogContent) {
         const generatedContent = response.data.data.blogContent;
         
-        // Set content in Rich Text Editor
+        // Immediately update all content state variables to ensure instant display
         setRichTextContent(generatedContent);
         
-        // Update formData.content and description for database
+        // Update formData with generated content
         setFormData(prev => ({
           ...prev,
           content: generatedContent,
           description: generatedContent // Also update description field
         }));
         
+        // Force immediate re-render by updating the post state as well
+        setPost(prev => prev ? {
+          ...prev,
+          content: generatedContent,
+          description: generatedContent
+        } : null);
+        
+        // Also save the content to the database immediately to prevent data loss
+        try {
+          await apiService.updateContentCalendarEntry(postId, {
+            content: generatedContent,
+            description: generatedContent
+          });
+        } catch (saveError) {
+          console.warn('Failed to auto-save generated content:', saveError);
+        }
+        
         // Show success message
         const brandContextInfo = response.data.brandContext === 'Applied' 
           ? ' with your brand voice and style applied! 🎯'
           : ' (brand settings not found - using default style)';
         
-        alert(`Blog created successfully${brandContextInfo} Content is now in the editor below.`);
+        alert(`Blog created successfully${brandContextInfo} Content is now visible in the editor below.`);
         
-        // Scroll to editor
+        // Scroll to editor after a brief delay to ensure content is rendered
         setTimeout(() => {
           document.getElementById('rich-text-editor')?.scrollIntoView({ 
             behavior: 'smooth',
             block: 'start'
           });
-        }, 500);
+        }, 300);
       } else {
         console.error('Invalid response structure for blog creation:', response);
         alert('Failed to create blog. Please try again.');
@@ -750,26 +767,26 @@ const BlogEditor = () => {
                     Content
                   </label>
                   <div className="border border-gray-300 rounded-md p-4 min-h-[400px] bg-gray-50">
-                    {formData.content ? (
+                    {(formData.content || richTextContent) ? (
                       <div className="prose prose-lg max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: formData.content }} />
+                        <div dangerouslySetInnerHTML={{ __html: formData.content || richTextContent }} />
                       </div>
                     ) : (
                       <div className="text-center py-16 text-gray-500">
                         <p>No content yet.</p>
-                        <p className="text-sm mt-1">Click "Rich Text Editor" to start writing.</p>
+                        <p className="text-sm mt-1">Generate a blog from the outline or click "Rich Text Editor" to start writing.</p>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Content Preview */}
-                {formData.content && (
+                {(formData.content || richTextContent) && (
                   <div className="mt-6">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Content Preview</h3>
                     <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
                       <div className="prose prose-sm max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: formData.content }} />
+                        <div dangerouslySetInnerHTML={{ __html: formData.content || richTextContent }} />
                       </div>
                     </div>
                   </div>

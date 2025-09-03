@@ -88,7 +88,7 @@ class AutoPublisher {
       credentials,
       {
         title: content.title,
-        description: content.description,
+        description: content.content || content.description, // Prioritize full content over description
         keywords: content.keywords,
         targetAudience: content.targetAudience
       }

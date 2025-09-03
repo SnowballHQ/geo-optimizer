@@ -166,7 +166,7 @@ router.post('/:id/publish', async (req, res) => {
     // Prepare content for publishing
     const contentToPublish = {
       title: contentEntry.title,
-      description: contentEntry.description || contentEntry.content,
+      description: contentEntry.content || contentEntry.description, // Prioritize full content over description
       keywords: contentEntry.keywords,
       targetAudience: contentEntry.targetAudience,
       cmsPlatform: cmsCredentials.platform
@@ -176,7 +176,10 @@ router.post('/:id/publish', async (req, res) => {
       title: contentToPublish.title,
       platform: cmsCredentials.platform,
       userId: userId,
-      descriptionLength: contentToPublish.description?.length || 0
+      descriptionLength: contentToPublish.description?.length || 0,
+      hasFullContent: !!contentEntry.content,
+      hasDescription: !!contentEntry.description,
+      usingFullContent: !!(contentEntry.content && contentEntry.content.length > contentEntry.description?.length)
     });
 
     // Publish to CMS using cmsIntegration

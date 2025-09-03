@@ -725,14 +725,14 @@ Requirements:
 - Target the specified audience
 - Include practical examples and actionable insights
 - Write 800-1200 words
-- Format in HTML with proper tags
+- Format in HTML with proper tags (H1, H2, H3, P, UL, LI, etc.)
 - Make it SEO-friendly and engaging
 - Ensure the content flows logically from the outline structure
 - Maintain consistency with the brand's messaging and values
 
 Important: The writing style, tone, and approach should align with the brand's established voice and communication style.
 
-Please provide the complete blog post in HTML format.`;
+CRITICAL: Provide ONLY the article content in HTML format. Do NOT include DOCTYPE, html, head, or body tags. Start directly with the article content using proper HTML tags like <article>, <h1>, <h2>, <p>, etc.`;
 
       console.log('OpenAI prompt for blog creation with brand context:', prompt);
 
@@ -750,7 +750,7 @@ When provided with brand context, ensure that:
 - Content maintains consistency with brand values and messaging
 - The voice remains authentic to the brand's identity
 
-Always respond with properly formatted HTML content that follows the provided outline structure.`
+IMPORTANT: Always respond with ONLY the article content in HTML format. Do NOT include DOCTYPE, html, head, or body tags. Start directly with the article content using proper HTML tags like <article>, <h1>, <h2>, <p>, etc.`
           },
           {
             role: "user",
@@ -761,8 +761,22 @@ Always respond with properly formatted HTML content that follows the provided ou
         temperature: 0.7
       });
 
-      const blogContent = completion.choices[0].message.content;
+      let blogContent = completion.choices[0].message.content;
       console.log('Generated blog content with brand context, length:', blogContent.length);
+      
+      // Clean up any full HTML document structure that might have been generated
+      blogContent = blogContent
+        .replace(/<!DOCTYPE[^>]*>/gi, '')
+        .replace(/<html[^>]*>/gi, '')
+        .replace(/<\/html>/gi, '')
+        .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+        .replace(/<body[^>]*>/gi, '')
+        .replace(/<\/body>/gi, '')
+        .replace(/<meta[^>]*>/gi, '')
+        .replace(/<title[^>]*>[\s\S]*?<\/title>/gi, '')
+        .trim();
+      
+      console.log('Cleaned blog content length:', blogContent.length);
 
       // Update the entry with the generated blog content
       const updatedEntry = await ContentCalendar.findByIdAndUpdate(
