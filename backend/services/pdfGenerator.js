@@ -69,7 +69,7 @@ class BrandAnalysisPDFGenerator {
     this.doc.addPage();
 
     // Competitors Section
-    this.addCompetitorsSection(analysisData);
+    // this.addCompetitorsSection(analysisData);
 
     // Categories Analysis
     if (analysisData.categories && analysisData.categories.length > 0) {
@@ -97,7 +97,7 @@ class BrandAnalysisPDFGenerator {
     this.doc
       .fontSize(36)
       .fillColor(this.colors.text)
-      .text('Brand Analysis Report', this.margin, 120, {
+      .text('AI-SEO Analysis Report', this.margin, 120, {
         align: 'center'
       });
 
@@ -129,7 +129,7 @@ class BrandAnalysisPDFGenerator {
       month: 'long',
       day: 'numeric'
     }), infoY + 25);
-    this.addInfoRow('Report Type:', 'Super User Analysis', infoY + 50);
+    this.addInfoRow('Report Type:', 'AI-SEO Analysis', infoY + 50);
 
     // Footer
     this.doc
@@ -266,44 +266,44 @@ class BrandAnalysisPDFGenerator {
     });
   }
 
-  addCompetitorsSection(analysisData) {
-    this.addSectionTitle('Competitor Analysis');
+  // addCompetitorsSection(analysisData) {
+  //   this.addSectionTitle('Competitor Analysis');
 
-    if (!analysisData.competitors || analysisData.competitors.length === 0) {
-      this.doc
-        .fontSize(12)
-        .fillColor(this.colors.textMuted)
-        .text('No competitors identified in this analysis.', this.margin, 140);
-      return;
-    }
+  //   if (!analysisData.competitors || analysisData.competitors.length === 0) {
+  //     this.doc
+  //       .fontSize(12)
+  //       .fillColor(this.colors.textMuted)
+  //       .text('No competitors identified in this analysis.', this.margin, 140);
+  //     return;
+  //   }
 
-    this.doc
-      .fontSize(14)
-      .fillColor(this.colors.text)
-      .text(`Found ${analysisData.competitors.length} competitors:`, this.margin, 140);
+  //   this.doc
+  //     .fontSize(14)
+  //     .fillColor(this.colors.text)
+  //     .text(`Found ${analysisData.competitors.length} competitors:`, this.margin, 140);
 
-    let currentY = 170;
-    analysisData.competitors.forEach((competitor, index) => {
-      // Competitor box with improved styling
-      this.doc
-        .rect(this.margin, currentY, this.contentWidth, 30)
-        .fillAndStroke(this.colors.surface, this.colors.border);
+  //   let currentY = 170;
+  //   analysisData.competitors.forEach((competitor, index) => {
+  //     // Competitor box with improved styling
+  //     this.doc
+  //       .rect(this.margin, currentY, this.contentWidth, 30)
+  //       .fillAndStroke(this.colors.surface, this.colors.border);
 
-      // Competitor text
-      this.doc
-        .fontSize(12)
-        .fillColor(this.colors.text)
-        .text(`${index + 1}. ${competitor}`, this.margin + 15, currentY + 10);
+  //     // Competitor text
+  //     this.doc
+  //       .fontSize(12)
+  //       .fillColor(this.colors.text)
+  //       .text(`${index + 1}. ${competitor}`, this.margin + 15, currentY + 10);
 
-      currentY += 35;
+  //     currentY += 35;
       
-      // Add page break if needed
-      if (currentY > 700 && index < analysisData.competitors.length - 1) {
-        this.doc.addPage();
-        currentY = 100;
-      }
-    });
-  }
+  //     // Add page break if needed
+  //     if (currentY > 700 && index < analysisData.competitors.length - 1) {
+  //       this.doc.addPage();
+  //       currentY = 100;
+  //     }
+  //   });
+  // }
 
   addCategoriesSection(categories, analysisData = null) {
     this.addSectionTitle('Detailed Category Analysis');

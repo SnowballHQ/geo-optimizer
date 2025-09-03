@@ -292,7 +292,7 @@ const BrandDashboardStep = ({
             />
           )}
 
-          {/* Competitors Analysis */}
+          {/* Competitors Analysis
           {dashboardData?.competitors && dashboardData.competitors.length > 0 && (
             <CompetitorsAnalysis 
               competitors={dashboardData.competitors}
@@ -300,7 +300,7 @@ const BrandDashboardStep = ({
               isSuperUser={isSuperUser}
               analysisId={analysisId}
             />
-          )}
+          )} */}
 
           {/* Categories with Prompts */}
           {dashboardData?.categories && dashboardData.categories.length > 0 && (
