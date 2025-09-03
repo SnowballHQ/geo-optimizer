@@ -2,7 +2,6 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { Dashboard, HomeLayout, Landing, Login, Logout, Register, BlogScoring, DomainAnalysis } from "./pages";
 import History from "./pages/History";
 import BlogEditor from "./pages/BlogEditor";
-import ShopifyIntegration from "./pages/ShopifyIntegration";
 import OnboardingFlow from "./components/OnboardingFlow";
 import DomainAnalysisDashboard from "./pages/DomainAnalysisDashboard";
 import SuperUserAnalysisPage from "./pages/SuperUserAnalysisPage";
@@ -48,10 +47,6 @@ const router = createBrowserRouter([
       {
         path: "editor/:postId",
         element: <BlogEditor />,
-      },
-      {
-        path: "shopify-integration",
-        element: <ShopifyIntegration />,
       },
       {
         path: "onboarding",

@@ -7,6 +7,7 @@ import DomainAnalysis from './DomainAnalysis';
 import BlogAnalysis from './BlogAnalysis';
 import ContentCalendarView from './ContentCalendarView';
 import BrandSettings from '../components/BrandSettings';
+import ShopifySettings from '../components/ShopifySettings';
 import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
 
 import { apiService } from '../utils/api';
@@ -51,6 +52,18 @@ const Dashboard = () => {
       }, 800);
     }
   }, [location.state]);
+
+  // Handle URL parameters for direct navigation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const section = urlParams.get('section');
+    
+    if (section === 'settings') {
+      setActiveSection('settings');
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location.search]);
 
   // Check onboarding status and fetch user's brands
   useEffect(() => {
@@ -335,20 +348,18 @@ const Dashboard = () => {
             </button>
           )} */}
 
-          {/* Settings - only for superusers
-          {isUserSuperuser && (
-            <button
-              onClick={() => setActiveSection('settings')}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeSection === 'settings'
-                  ? 'nav-active'
-                  : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              <span>Settings</span>
-            </button>
-          )} */}
+          {/* Settings - now available for all users */}
+          <button
+            onClick={() => setActiveSection('settings')}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeSection === 'settings'
+                ? 'nav-active'
+                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Settings</span>
+          </button>
 
 
 
@@ -732,6 +743,24 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <BrandSettings />
+                </CardContent>
+              </Card>
+
+              {/* Shopify Integration */}
+              <Card className="border border-[#b0b0d8] bg-white">
+                <CardHeader>
+                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-[#95BF47] rounded-lg flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">🛍️</span>
+                    </div>
+                    <span>Shopify Integration</span>
+                  </CardTitle>
+                  <CardDescription className="text-[#4a4a6a]">
+                    Connect your Shopify store to publish blog content directly from our platform
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ShopifySettings />
                 </CardContent>
               </Card>
 

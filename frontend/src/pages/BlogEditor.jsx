@@ -6,7 +6,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { ShoppingBag, Check, AlertCircle, ExternalLink } from 'lucide-react';
 import { apiService } from '../utils/api';
+import { toast } from 'react-toastify';
 
 const BlogEditor = () => {
   const { postId } = useParams();
@@ -21,6 +24,8 @@ const BlogEditor = () => {
   const [richTextContent, setRichTextContent] = useState('');
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
   const [generatedBlogContent, setGeneratedBlogContent] = useState('');
+  const [shopifyConnection, setShopifyConnection] = useState({ status: 'checking', shop: null });
+  const [showPublishOptions, setShowPublishOptions] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -44,6 +49,42 @@ const BlogEditor = () => {
       navigate('/login');
     }
   }, [navigate]);
+
+  // Check Shopify connection status
+  useEffect(() => {
+    checkShopifyConnection();
+  }, []);
+
+  const checkShopifyConnection = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/shopify/status`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth')}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.status === 'connected') {
+        setShopifyConnection({
+          status: 'connected',
+          shop: data.shop,
+          connectedAt: data.connectedAt
+        });
+      } else {
+        setShopifyConnection({
+          status: 'disconnected',
+          shop: null
+        });
+      }
+    } catch (error) {
+      console.error('Error checking Shopify connection:', error);
+      setShopifyConnection({
+        status: 'error',
+        shop: null
+      });
+    }
+  };
 
   // Fetch blog post data on component mount
   useEffect(() => {
@@ -283,19 +324,29 @@ const BlogEditor = () => {
     }
   };
 
-  const handlePublish = async () => {
+  const handlePublishToShopify = async () => {
     try {
       setSaving(true);
       
       // Sync Rich Text Editor content to description field before publishing
+      // Use the actual blog content from rich text editor or formData.content
+      const actualContent = richTextContent || formData.content || formData.description || '';
+      
       const publishData = {
         ...formData,
-        description: richTextContent || formData.content || formData.description,
-        content: richTextContent || formData.content,
+        description: actualContent,
+        content: actualContent,
         keywords: formData.keywords.split(',').map(k => k.trim()).filter(k => k),
         status: 'published',
         publishedAt: new Date().toISOString()
       };
+
+      // Check if Shopify is connected
+      if (shopifyConnection.status !== 'connected') {
+        toast.error('Please connect your Shopify store first in Settings');
+        setSaving(false);
+        return;
+      }
 
       // First update the database with published status
       await apiService.updateContentCalendarEntry(postId, publishData);
@@ -308,24 +359,86 @@ const BlogEditor = () => {
         status: 'published'
       }));
 
-      // Now actually publish to Shopify
+      // Debug content being sent
+      console.log('🚀 Publishing to Shopify with data:', {
+        title: publishData.title,
+        actualContentLength: actualContent ? actualContent.length : 0,
+        actualContentPreview: actualContent ? actualContent.substring(0, 200) + '...' : 'NO ACTUAL CONTENT',
+        richTextContentLength: richTextContent ? richTextContent.length : 0,
+        formDataContentLength: formData.content ? formData.content.length : 0,
+        formDataDescriptionLength: formData.description ? formData.description.length : 0
+      });
+
+      // Now publish to Shopify using our new API
       try {
-        const publishResponse = await apiService.publishContent(postId);
-        if (publishResponse.data && publishResponse.data.success) {
-          alert('Post published successfully to Shopify!');
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/shopify/publish`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('auth')}`
+          },
+          body: JSON.stringify({
+            title: publishData.title,
+            content: actualContent,
+            keywords: publishData.keywords,
+            targetAudience: publishData.targetAudience
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          toast.success(`Successfully published to ${shopifyConnection.shop}!`);
+          setShowPublishOptions(false);
+          // Navigate back to calendar
+          navigate('/dashboard', { state: { showContentCalendar: true } });
         } else {
-          alert('Post saved but failed to publish to Shopify. Please check your CMS credentials.');
+          toast.error(`Failed to publish to Shopify: ${result.error}`);
         }
       } catch (publishError) {
         console.error('Error publishing to Shopify:', publishError);
-        alert('Post saved but failed to publish to Shopify. Please check your CMS credentials.');
+        toast.error('Failed to publish to Shopify. Please try again.');
       }
-      
-      // Navigate back to calendar
-      navigate('/dashboard', { state: { showContentCalendar: true } });
     } catch (error) {
       console.error('Error publishing post:', error);
-      alert('Error publishing post. Please try again.');
+      toast.error('Error publishing post. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAsDraft = async () => {
+    try {
+      setSaving(true);
+      
+      const draftData = {
+        ...formData,
+        description: richTextContent || formData.content || formData.description,
+        content: richTextContent || formData.content,
+        keywords: formData.keywords.split(',').map(k => k.trim()).filter(k => k),
+        status: 'draft'
+      };
+
+      if (postId === 'new') {
+        const response = await apiService.createContentCalendarEntry(draftData);
+        if (response.data && response.data.data && response.data.data._id) {
+          navigate(`/editor/${response.data.data._id}`);
+        }
+      } else {
+        await apiService.updateContentCalendarEntry(postId, draftData);
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        description: draftData.description,
+        content: draftData.content,
+        status: 'draft'
+      }));
+
+      toast.success('Draft saved successfully!');
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast.error('Error saving draft. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -365,7 +478,7 @@ const BlogEditor = () => {
           
           <div className="flex items-center space-x-3">
             <Button
-              onClick={handleSave}
+              onClick={handleSaveAsDraft}
               disabled={saving}
               className="bg-[#7765e3] hover:bg-[#6658f4] text-white"
             >
@@ -373,13 +486,28 @@ const BlogEditor = () => {
             </Button>
             
             {postId !== 'new' && (
-              <Button
-                onClick={handlePublish}
-                disabled={saving}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {saving ? 'Publishing...' : 'Publish Now'}
-              </Button>
+              <>
+                {shopifyConnection.status === 'connected' ? (
+                  <Button
+                    onClick={handlePublishToShopify}
+                    disabled={saving}
+                    className="bg-[#95BF47] hover:bg-[#7a9c3a] text-white flex items-center space-x-2"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>{saving ? 'Publishing...' : `Publish to ${shopifyConnection.shop?.split('.')[0]}`}</span>
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => navigate('/dashboard?section=settings')}
+                    disabled={saving}
+                    variant="outline"
+                    className="border-[#95BF47] text-[#95BF47] hover:bg-[#95BF47] hover:text-white flex items-center space-x-2"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>Connect Shopify to Publish</span>
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -478,6 +606,60 @@ const BlogEditor = () => {
                 </div>
               </div>
             </div>
+
+            {/* Shopify Connection Status */}
+            <Card className="border-gray-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                  <ShoppingBag className="w-5 h-5 text-[#95BF47]" />
+                  <span>Publishing Destination</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {shopifyConnection.status === 'connected' ? (
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Check className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="font-medium text-green-800">{shopifyConnection.shop}</p>
+                        <p className="text-sm text-green-600">Connected & ready to publish</p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => window.open(`https://${shopifyConnection.shop}/admin/blogs`, '_blank')}
+                      size="sm"
+                      variant="outline"
+                      className="border-green-300 text-green-700 hover:bg-green-100"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View Store
+                    </Button>
+                  </div>
+                ) : shopifyConnection.status === 'disconnected' ? (
+                  <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <AlertCircle className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-700">No store connected</p>
+                        <p className="text-sm text-gray-500">Connect your Shopify store to publish</p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => navigate('/dashboard?section=settings')}
+                      size="sm"
+                      className="bg-[#95BF47] hover:bg-[#7a9c3a] text-white"
+                    >
+                      Connect Store
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <p className="text-sm text-blue-600">Checking connection status...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
                          {/* Content Outline */}
              <div className="bg-white rounded-lg border border-gray-200 p-6">
