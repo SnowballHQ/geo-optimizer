@@ -307,18 +307,32 @@ class CMSIntegration {
 
       // Publish the site to make the content live
       try {
-        await axios.post(`https://api.webflow.com/v2/sites/${siteId}/publish`, {
-          domains: [] // Empty array publishes to all domains
-        }, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-        console.log(`Successfully published site ${siteId}`);
+        // Try publishing without domains array first (newer API format)
+        let publishResponse;
+        try {
+          publishResponse = await axios.post(`https://api.webflow.com/v2/sites/${siteId}/publish`, {}, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+        } catch (firstAttemptError) {
+          // If that fails, try with domains array (older API format)
+          console.log('First publish attempt failed, trying with domains array...');
+          publishResponse = await axios.post(`https://api.webflow.com/v2/sites/${siteId}/publish`, {
+            domains: []
+          }, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+        console.log(`Successfully published site ${siteId}`, publishResponse.status);
       } catch (publishError) {
-        console.warn('Could not auto-publish site, item created but may need manual publishing:', publishError.response?.status, publishError.message);
+        console.error('Could not auto-publish site, item created but may need manual publishing:', publishError.response?.status, publishError.response?.data || publishError.message);
       }
 
       // Get site domain for URL construction
