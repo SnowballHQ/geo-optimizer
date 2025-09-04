@@ -27,6 +27,9 @@ const BlogEditor = () => {
   const [shopifyConnection, setShopifyConnection] = useState({ status: 'checking', shop: null });
   const [webflowConnection, setWebflowConnection] = useState({ status: 'checking', userEmail: null });
   const [showPublishOptions, setShowPublishOptions] = useState(false);
+  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -569,6 +572,78 @@ const BlogEditor = () => {
     }
   };
 
+  const handleImageUpload = async (file) => {
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/upload/image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth')}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.data.url) {
+        // Insert image into content
+        const imageHtml = `<img src="${result.data.url}" alt="Uploaded image" class="max-w-full h-auto rounded-lg my-4" />`;
+        const currentContent = richTextContent || formData.content || '';
+        const newContent = currentContent + imageHtml;
+        
+        setRichTextContent(newContent);
+        setFormData(prev => ({ 
+          ...prev, 
+          content: newContent,
+          description: newContent
+        }));
+        
+        setShowImageUploadModal(false);
+        toast.success('Image uploaded and added to content!');
+        console.log('Image uploaded successfully:', result.data.url);
+      } else {
+        toast.error('Failed to upload image: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleImageUrlSubmit = () => {
+    if (imageUrl) {
+      // Insert image into content
+      const imageHtml = `<img src="${imageUrl}" alt="Image" class="max-w-full h-auto rounded-lg my-4" />`;
+      const currentContent = richTextContent || formData.content || '';
+      const newContent = currentContent + imageHtml;
+      
+      setRichTextContent(newContent);
+      setFormData(prev => ({ 
+        ...prev, 
+        content: newContent,
+        description: newContent
+      }));
+      
+      setImageUrl('');
+      setShowImageUploadModal(false);
+      toast.success('Image added to content!');
+    }
+  };
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
+
   const handleSaveAsDraft = async () => {
     try {
       setSaving(true);
@@ -898,12 +973,20 @@ const BlogEditor = () => {
             <div className="bg-white rounded-lg border border-gray-200 p-6" id="rich-text-editor">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Content Editor</h2>
-                <Button
-                  onClick={() => setShowRichTextEditor(true)}
-                  className="bg-[#7765e3] hover:bg-[#6658f4] text-white"
-                >
-                  ✏️ Rich Text Editor
-                </Button>
+                <div className="flex items-center space-x-3">
+                  <Button
+                    onClick={() => setShowImageUploadModal(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    🖼️ Add Image
+                  </Button>
+                  <Button
+                    onClick={() => setShowRichTextEditor(true)}
+                    className="bg-[#7765e3] hover:bg-[#6658f4] text-white"
+                  >
+                    ✏️ Rich Text Editor
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -949,6 +1032,100 @@ const BlogEditor = () => {
         onCancel={handleRichTextCancel}
         isOpen={showRichTextEditor}
       />
+
+      {/* Image Upload Modal */}
+      {showImageUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Image to Content</h3>
+            
+            <div className="space-y-4">
+              {/* Upload File */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Image File
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="main-image-upload"
+                    disabled={uploadingImage}
+                  />
+                  <label
+                    htmlFor="main-image-upload"
+                    className={`cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 ${
+                      uploadingImage ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {uploadingImage ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        📁 Choose File
+                      </>
+                    )}
+                  </label>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Supports: JPEG, PNG, GIF, WebP (max 5MB)
+                  </p>
+                </div>
+              </div>
+
+              {/* OR Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">OR</span>
+                </div>
+              </div>
+
+              {/* Image URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Image URL
+                </label>
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  disabled={uploadingImage}
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                onClick={() => {
+                  setShowImageUploadModal(false);
+                  setImageUrl('');
+                }}
+                variant="outline"
+                disabled={uploadingImage}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleImageUrlSubmit}
+                disabled={!imageUrl || uploadingImage}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Add Image
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -24,6 +24,7 @@ const contentCalendarRouter = require("./routes/contentCalendar");
 const cmsCredentialsRouter = require("./routes/cmsCredentials");
 const shopifyRouter = require("./routes/shopify");
 const webflowRouter = require("./routes/webflow");
+const uploadRouter = require("./routes/upload");
 const onboardingRouter = require("./routes/onboarding");
 const regenerateAnalysisRouter = require("./routes/regenerateAnalysis");
 const superUserAnalysisRouter = require("./routes/superUserAnalysis");
@@ -113,9 +114,13 @@ app.use("/api/v1/content-calendar", contentCalendarRouter);
 app.use("/api/v1/cms-credentials", cmsCredentialsRouter);
 app.use("/api/v1/shopify", shopifyRouter);
 app.use("/api/v1/webflow", webflowRouter);
+app.use("/api/v1/upload", uploadRouter);
 app.use("/api/v1/onboarding", onboardingRouter);
 app.use("/api/v1/regenerate", regenerateAnalysisRouter);
 app.use("/api/v1/super-user/analysis", superUserAnalysisRouter);
+
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, '../frontend/dist')));

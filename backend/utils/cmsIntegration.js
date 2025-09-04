@@ -69,6 +69,42 @@ class CMSIntegration {
     };
   }
 
+  // Helper function to convert local image URLs to publicly accessible ones
+  async convertLocalImageUrls(htmlContent) {
+    if (!htmlContent) return htmlContent;
+    
+    // Find all img tags with local URLs
+    const imgTagRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/g;
+    let modifiedContent = htmlContent;
+    let match;
+    
+    while ((match = imgTagRegex.exec(htmlContent)) !== null) {
+      const fullImgTag = match[0];
+      const imageUrl = match[1];
+      
+      // Check if it's a local URL that needs conversion
+      if (imageUrl.includes('localhost') || imageUrl.includes('127.0.0.1') || imageUrl.includes('192.168.')) {
+        console.log('Found local image URL that needs conversion:', imageUrl);
+        
+        // Replace local URLs with public server URL
+        const publicBaseUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || 'https://your-deployed-backend.onrender.com';
+        const publicUrl = imageUrl.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, publicBaseUrl);
+        
+        // If still contains localhost, it means we're in development - skip this image for Webflow
+        if (publicUrl.includes('localhost') || publicUrl.includes('127.0.0.1')) {
+          console.warn('⚠️ Skipping local image for Webflow (not publicly accessible):', imageUrl);
+          // Remove the entire img tag for now
+          modifiedContent = modifiedContent.replace(fullImgTag, `<p><em>[Image removed: Not accessible from Webflow. Please use public image URLs or deploy your backend.]</em></p>`);
+        } else {
+          modifiedContent = modifiedContent.replace(imageUrl, publicUrl);
+          console.log('Converted image URL:', imageUrl, '→', publicUrl);
+        }
+      }
+    }
+    
+    return modifiedContent;
+  }
+
   async publishToWebflow(credentials, content) {
     const { accessToken } = credentials.authDetails;
     const { siteId } = content;
@@ -174,13 +210,16 @@ class CMSIntegration {
         .replace(/^-+|-+$/g, '')
         .substring(0, 50);
 
+      // Convert local image URLs to publicly accessible ones
+      const convertedDescription = await this.convertLocalImageUrls(cleanDescription);
+      
       // Create clean excerpt and summary text (without HTML tags)
-      const cleanTextContent = cleanDescription.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      const cleanTextContent = convertedDescription.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
       const shortExcerpt = cleanTextContent.substring(0, 150);
       const metaDescription = cleanTextContent.substring(0, 160);
 
       // Enhanced description with metadata (similar to Shopify approach but cleaner)
-      const enhancedDescription = `${cleanDescription}
+      const enhancedDescription = `${convertedDescription}
 
 <hr>
 
@@ -264,7 +303,23 @@ class CMSIntegration {
         }
       });
 
-      console.log(`Successfully published to Webflow:`, response.data.id);
+      console.log(`Successfully created Webflow item:`, response.data.id);
+
+      // Publish the site to make the content live
+      try {
+        await axios.post(`https://api.webflow.com/v2/sites/${siteId}/publish`, {
+          domains: [] // Empty array publishes to all domains
+        }, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log(`Successfully published site ${siteId}`);
+      } catch (publishError) {
+        console.warn('Could not auto-publish site, item created but may need manual publishing:', publishError.response?.status, publishError.message);
+      }
 
       // Get site domain for URL construction
       const siteResponse = await axios.get(`https://api.webflow.com/v2/sites/${siteId}`, {
