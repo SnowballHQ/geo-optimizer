@@ -245,6 +245,16 @@ export const apiService = {
   getHistory: () => api.get('/api/v1/history'),
   deleteHistory: (id) => api.delete(`/api/v1/history/${id}`),
   
+  // Analytics
+  getAnalyticsAuthUrl: () => api.get('/api/v1/analytics/auth/google'),
+  getAnalyticsStatus: () => api.get('/api/v1/analytics/status'),
+  getAnalyticsProperties: () => api.get('/api/v1/analytics/properties'),
+  getSearchConsoleSites: () => api.get('/api/v1/analytics/search-console-sites'),
+  saveAnalyticsConfiguration: (data) => api.post('/api/v1/analytics/configure', data),
+  getAnalyticsOverview: () => api.get('/api/v1/analytics/overview'),
+  getBlogPerformance: () => api.get('/api/v1/analytics/blog-performance'),
+  disconnectAnalytics: () => api.delete('/api/v1/analytics/disconnect'),
+  
   // Brand Settings
   getBrandSettings: () => api.get('/api/v1/brand-settings'),
   saveBrandSettings: (data) => api.post('/api/v1/brand-settings', data),

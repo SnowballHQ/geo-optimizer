@@ -10,6 +10,7 @@ import BrandSettings from '../components/BrandSettings';
 import ShopifySettings from '../components/ShopifySettings';
 import WebflowSettings from '../components/WebflowSettings';
 import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
+import Analytics from '../components/Analytics';
 
 import { apiService } from '../utils/api';
 import { getUserName, isSuperuser } from '../utils/auth';
@@ -23,7 +24,8 @@ import {
   Activity,
   ArrowLeft,
   Calendar,
-  Building2
+  Building2,
+  TrendingUp
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -237,6 +239,10 @@ const Dashboard = () => {
       );
     }
 
+    if (activeTool === 'analytics') {
+      return <Analytics onClose={() => setActiveTool(null)} />;
+    }
+
     return null;
   };
 
@@ -325,6 +331,19 @@ const Dashboard = () => {
           >
             <Calendar className="w-4 h-4" />
             <span>Content Calendar</span>
+          </button>
+
+          {/* Analytics - visible to all users */}
+          <button
+            onClick={() => { setActiveSection('dashboard'); setActiveTool('analytics'); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeSection === 'analytics' || activeTool === 'analytics'
+                ? 'nav-active'
+                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>Analytics</span>
           </button>
 
           {/* Shopify Integration - only for superusers
@@ -486,6 +505,31 @@ const Dashboard = () => {
                          </div>
                          <p className="text-sm text-[#4a4a6a]">
                            Generate 30-day content plans and auto-publish to your CMS platforms.
+                         </p>
+                       </CardContent>
+                     </Card>
+
+                     {/* Analytics Card - Available for all users */}
+                     <Card 
+                       className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
+                       onClick={() => setActiveTool('analytics')}
+                     >
+                       <CardContent className="p-6">
+                         <div className="flex items-center space-x-4 mb-4">
+                           <div className="w-12 h-12 bg-[#34d399] rounded-lg flex items-center justify-center">
+                             <TrendingUp className="w-6 h-6 text-white" />
+                           </div>
+                           <div>
+                             <h3 className="text-lg font-semibold text-[#000000]">
+                               Analytics
+                             </h3>
+                             <p className="text-sm text-[#4a4a6a]">
+                               Google Analytics & Search Console
+                             </p>
+                           </div>
+                         </div>
+                         <p className="text-sm text-[#4a4a6a]">
+                           Track website performance and published blog analytics from your dashboard.
                          </p>
                        </CardContent>
                      </Card>

@@ -44,6 +44,33 @@ const UserSchema = new mongoose.Schema({
         enum: ['user', 'superuser'],
         default: 'user'
     },
+    // Google Analytics integration
+    googleAnalytics: {
+        accessToken: {
+            type: String,
+            default: null
+        },
+        refreshToken: {
+            type: String,
+            default: null
+        },
+        tokenExpiresAt: {
+            type: Date,
+            default: null
+        },
+        propertyId: {
+            type: String,
+            default: null
+        },
+        searchConsoleUrl: {
+            type: String,
+            default: null
+        },
+        connectedAt: {
+            type: Date,
+            default: null
+        }
+    },
 });
 
 UserSchema.pre("save", async function(){

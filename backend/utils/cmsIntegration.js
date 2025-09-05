@@ -305,35 +305,54 @@ class CMSIntegration {
 
       console.log(`Successfully created Webflow item:`, response.data.id);
 
-      // Publish the site to make the content live
-      try {
-        // Try publishing without domains array first (newer API format)
-        let publishResponse;
+      // Publish the site to make the content live with retry logic for rate limiting
+      const publishWithRetry = async (retryCount = 0, maxRetries = 2) => {
         try {
-          publishResponse = await axios.post(`https://api.webflow.com/v2/sites/${siteId}/publish`, {}, {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
-            }
-          });
-        } catch (firstAttemptError) {
-          // If that fails, try with domains array (older API format)
-          console.log('First publish attempt failed, trying with domains array...');
-          publishResponse = await axios.post(`https://api.webflow.com/v2/sites/${siteId}/publish`, {
-            domains: []
-          }, {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
-            }
-          });
+          // Try publishing without domains array first (newer API format)
+          let publishResponse;
+          try {
+            publishResponse = await axios.post(`https://api.webflow.com/v2/sites/${siteId}/publish`, {}, {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            });
+          } catch (firstAttemptError) {
+            // If that fails, try with domains array (older API format)
+            console.log('First publish attempt failed, trying with domains array...');
+            publishResponse = await axios.post(`https://api.webflow.com/v2/sites/${siteId}/publish`, {
+              domains: []
+            }, {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            });
+          }
+          console.log(`Successfully published site ${siteId}`, publishResponse.status);
+        } catch (publishError) {
+          const isRateLimit = publishError.response?.status === 429;
+          
+          if (isRateLimit && retryCount < maxRetries) {
+            const waitTime = Math.pow(2, retryCount) * 2000; // Exponential backoff: 2s, 4s, 8s
+            console.log(`Rate limited (429). Retrying in ${waitTime/1000}s... (attempt ${retryCount + 1}/${maxRetries + 1})`);
+            
+            setTimeout(async () => {
+              await publishWithRetry(retryCount + 1, maxRetries);
+            }, waitTime);
+          } else {
+            const errorMessage = isRateLimit ? 
+              'Rate limited - content created but site publishing delayed. Will auto-publish when rate limit resets.' :
+              `Publishing failed: ${publishError.response?.data || publishError.message}`;
+            
+            console.warn('Could not auto-publish site, item created but may need manual publishing:', publishError.response?.status, errorMessage);
+          }
         }
-        console.log(`Successfully published site ${siteId}`, publishResponse.status);
-      } catch (publishError) {
-        console.error('Could not auto-publish site, item created but may need manual publishing:', publishError.response?.status, publishError.response?.data || publishError.message);
-      }
+      };
+
+      await publishWithRetry();
 
       // Get site domain for URL construction
       const siteResponse = await axios.get(`https://api.webflow.com/v2/sites/${siteId}`, {
