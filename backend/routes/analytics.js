@@ -382,6 +382,168 @@ router.get('/blog-performance', auth, async (req, res) => {
   }
 });
 
+// GET /api/v1/analytics/top-pages - Get top performing pages
+router.get('/top-pages', auth, async (req, res) => {
+  try {
+    const topPages = await googleAnalyticsService.getTopPages(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      data: topPages 
+    });
+  } catch (error) {
+    console.error('Error fetching top pages:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch top pages' 
+    });
+  }
+});
+
+// GET /api/v1/analytics/top-queries - Get top search queries
+router.get('/top-queries', auth, async (req, res) => {
+  try {
+    const topQueries = await googleAnalyticsService.getTopQueries(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      data: topQueries 
+    });
+  } catch (error) {
+    console.error('Error fetching top queries:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch top queries' 
+    });
+  }
+});
+
+// GET /api/v1/analytics/traffic-by-country - Get traffic by country
+router.get('/traffic-by-country', auth, async (req, res) => {
+  try {
+    const trafficByCountry = await googleAnalyticsService.getTrafficByCountry(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      data: trafficByCountry 
+    });
+  } catch (error) {
+    console.error('Error fetching traffic by country:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch traffic by country' 
+    });
+  }
+});
+
+// GET /api/v1/analytics/device-breakdown - Get device performance
+router.get('/device-breakdown', auth, async (req, res) => {
+  try {
+    const deviceBreakdown = await googleAnalyticsService.getDeviceBreakdown(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      data: deviceBreakdown 
+    });
+  } catch (error) {
+    console.error('Error fetching device breakdown:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch device breakdown' 
+    });
+  }
+});
+
+// GET /api/v1/analytics/query-page-matrix - Get query-page performance matrix
+router.get('/query-page-matrix', auth, async (req, res) => {
+  try {
+    const queryPageMatrix = await googleAnalyticsService.getQueryPageMatrix(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      data: queryPageMatrix 
+    });
+  } catch (error) {
+    console.error('Error fetching query-page matrix:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch query-page matrix' 
+    });
+  }
+});
+
+// GET /api/v1/analytics/keyword-trends - Get keyword trends over time
+router.get('/keyword-trends', auth, async (req, res) => {
+  try {
+    const keywordTrends = await googleAnalyticsService.getKeywordTrends(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      data: keywordTrends 
+    });
+  } catch (error) {
+    console.error('Error fetching keyword trends:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch keyword trends' 
+    });
+  }
+});
+
+// GET /api/v1/analytics/search-appearance - Get search appearance types
+router.get('/search-appearance', auth, async (req, res) => {
+  try {
+    const searchAppearance = await googleAnalyticsService.getSearchAppearanceTypes(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      data: searchAppearance 
+    });
+  } catch (error) {
+    console.error('Error fetching search appearance types:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch search appearance types' 
+    });
+  }
+});
+
+// GET /api/v1/analytics/performance-comparison - Get performance comparison
+router.get('/performance-comparison', auth, async (req, res) => {
+  try {
+    const performanceComparison = await googleAnalyticsService.getPerformanceComparison(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      data: performanceComparison 
+    });
+  } catch (error) {
+    console.error('Error fetching performance comparison:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch performance comparison' 
+    });
+  }
+});
+
+// GET /api/v1/analytics/low-hanging-fruit - Get optimization opportunities
+router.get('/low-hanging-fruit', auth, async (req, res) => {
+  try {
+    const opportunities = await googleAnalyticsService.getLowHangingFruit(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      data: opportunities 
+    });
+  } catch (error) {
+    console.error('Error fetching optimization opportunities:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch optimization opportunities' 
+    });
+  }
+});
+
 // DELETE /api/v1/analytics/disconnect - Disconnect Google Analytics
 router.delete('/disconnect', auth, async (req, res) => {
   try {

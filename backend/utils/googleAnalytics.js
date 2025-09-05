@@ -292,6 +292,457 @@ class GoogleAnalyticsService {
     };
   }
 
+  // Get top performing pages
+  async getTopPages(userId) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        throw new Error('Search Console URL not configured');
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+
+      const response = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['page'],
+          rowLimit: 10
+        }
+      });
+
+      return this.formatPagesData(response.data);
+    } catch (error) {
+      console.error('Error fetching top pages:', error);
+      throw error;
+    }
+  }
+
+  // Get top search queries
+  async getTopQueries(userId) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        throw new Error('Search Console URL not configured');
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+
+      const response = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['query'],
+          rowLimit: 10
+        }
+      });
+
+      return this.formatQueriesData(response.data);
+    } catch (error) {
+      console.error('Error fetching top queries:', error);
+      throw error;
+    }
+  }
+
+  // Get traffic by country
+  async getTrafficByCountry(userId) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        throw new Error('Search Console URL not configured');
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+
+      const response = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['country'],
+          rowLimit: 10
+        }
+      });
+
+      return this.formatCountryData(response.data);
+    } catch (error) {
+      console.error('Error fetching traffic by country:', error);
+      throw error;
+    }
+  }
+
+  // Get device performance
+  async getDeviceBreakdown(userId) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        throw new Error('Search Console URL not configured');
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+
+      const response = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['device'],
+          rowLimit: 10
+        }
+      });
+
+      return this.formatDeviceData(response.data);
+    } catch (error) {
+      console.error('Error fetching device breakdown:', error);
+      throw error;
+    }
+  }
+
+  // Format top pages data
+  formatPagesData(data) {
+    if (!data.rows || !data.rows.length) {
+      return [];
+    }
+
+    return data.rows.map(row => ({
+      page: row.keys[0],
+      clicks: row.clicks || 0,
+      impressions: row.impressions || 0,
+      ctr: row.ctr || 0,
+      avgPosition: row.position || 0
+    }));
+  }
+
+  // Format top queries data
+  formatQueriesData(data) {
+    if (!data.rows || !data.rows.length) {
+      return [];
+    }
+
+    return data.rows.map(row => ({
+      query: row.keys[0],
+      clicks: row.clicks || 0,
+      impressions: row.impressions || 0,
+      ctr: row.ctr || 0,
+      avgPosition: row.position || 0
+    }));
+  }
+
+  // Format country data
+  formatCountryData(data) {
+    if (!data.rows || !data.rows.length) {
+      return [];
+    }
+
+    const countryNames = {
+      'usa': 'United States',
+      'gbr': 'United Kingdom',
+      'can': 'Canada',
+      'aus': 'Australia',
+      'deu': 'Germany',
+      'fra': 'France',
+      'ind': 'India',
+      'chn': 'China',
+      'jpn': 'Japan',
+      'bra': 'Brazil'
+    };
+
+    return data.rows.map(row => ({
+      country: countryNames[row.keys[0]] || row.keys[0].toUpperCase(),
+      countryCode: row.keys[0],
+      clicks: row.clicks || 0,
+      impressions: row.impressions || 0,
+      ctr: row.ctr || 0,
+      avgPosition: row.position || 0
+    }));
+  }
+
+  // Format device data
+  formatDeviceData(data) {
+    if (!data.rows || !data.rows.length) {
+      return [];
+    }
+
+    return data.rows.map(row => ({
+      device: row.keys[0],
+      clicks: row.clicks || 0,
+      impressions: row.impressions || 0,
+      ctr: row.ctr || 0,
+      avgPosition: row.position || 0
+    }));
+  }
+
+  // Get query-page performance matrix
+  async getQueryPageMatrix(userId) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        throw new Error('Search Console URL not configured');
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+
+      const response = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['query', 'page'],
+          rowLimit: 50
+        }
+      });
+
+      return this.formatQueryPageData(response.data);
+    } catch (error) {
+      console.error('Error fetching query-page matrix:', error);
+      throw error;
+    }
+  }
+
+  // Get keyword trends over time
+  async getKeywordTrends(userId) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        throw new Error('Search Console URL not configured');
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+
+      const response = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['date', 'query'],
+          rowLimit: 100
+        }
+      });
+
+      return this.formatKeywordTrendsData(response.data);
+    } catch (error) {
+      console.error('Error fetching keyword trends:', error);
+      throw error;
+    }
+  }
+
+  // Get search appearance types
+  async getSearchAppearanceTypes(userId) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        throw new Error('Search Console URL not configured');
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+
+      const response = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['searchAppearance'],
+          rowLimit: 20
+        }
+      });
+
+      return this.formatSearchAppearanceData(response.data);
+    } catch (error) {
+      console.error('Error fetching search appearance types:', error);
+      throw error;
+    }
+  }
+
+  // Get performance comparison (current vs previous period)
+  async getPerformanceComparison(userId) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        throw new Error('Search Console URL not configured');
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+
+      // Current period (last 28 days)
+      const currentResponse = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['date']
+        }
+      });
+
+      // Previous period (28 days before that)
+      const previousResponse = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 56 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          dimensions: ['date']
+        }
+      });
+
+      return this.formatComparisonData(currentResponse.data, previousResponse.data);
+    } catch (error) {
+      console.error('Error fetching performance comparison:', error);
+      throw error;
+    }
+  }
+
+  // Get high-opportunity keywords (position 4-10)
+  async getLowHangingFruit(userId) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        throw new Error('Search Console URL not configured');
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+
+      const response = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['query'],
+          dimensionFilterGroups: [{
+            filters: [{
+              dimension: 'query',
+              operator: 'notContains',
+              expression: '(not set)'
+            }]
+          }],
+          rowLimit: 50
+        }
+      });
+
+      // Filter for positions 4-10 (low-hanging fruit)
+      const opportunities = response.data.rows?.filter(row => 
+        row.position >= 4 && row.position <= 10 && row.impressions >= 10
+      ) || [];
+
+      return opportunities.map(row => ({
+        query: row.keys[0],
+        clicks: row.clicks || 0,
+        impressions: row.impressions || 0,
+        ctr: row.ctr || 0,
+        avgPosition: row.position || 0,
+        opportunity: 'Position 4-10 with good impressions'
+      }));
+    } catch (error) {
+      console.error('Error fetching low-hanging fruit:', error);
+      throw error;
+    }
+  }
+
+  // Format query-page matrix data
+  formatQueryPageData(data) {
+    if (!data.rows || !data.rows.length) {
+      return [];
+    }
+
+    return data.rows.map(row => ({
+      query: row.keys[0],
+      page: row.keys[1],
+      clicks: row.clicks || 0,
+      impressions: row.impressions || 0,
+      ctr: row.ctr || 0,
+      avgPosition: row.position || 0
+    }));
+  }
+
+  // Format keyword trends data  
+  formatKeywordTrendsData(data) {
+    if (!data.rows || !data.rows.length) {
+      return [];
+    }
+
+    const trendsMap = {};
+    
+    data.rows.forEach(row => {
+      const date = row.keys[0];
+      const query = row.keys[1];
+      
+      if (!trendsMap[query]) {
+        trendsMap[query] = {
+          query,
+          totalClicks: 0,
+          totalImpressions: 0,
+          dailyData: []
+        };
+      }
+      
+      trendsMap[query].totalClicks += row.clicks || 0;
+      trendsMap[query].totalImpressions += row.impressions || 0;
+      trendsMap[query].dailyData.push({
+        date,
+        clicks: row.clicks || 0,
+        impressions: row.impressions || 0,
+        ctr: row.ctr || 0,
+        position: row.position || 0
+      });
+    });
+
+    return Object.values(trendsMap)
+      .sort((a, b) => b.totalClicks - a.totalClicks)
+      .slice(0, 10);
+  }
+
+  // Format search appearance data
+  formatSearchAppearanceData(data) {
+    if (!data.rows || !data.rows.length) {
+      return [];
+    }
+
+    const appearanceNames = {
+      'AMP_BLUE_LINK': 'AMP Results',
+      'AMP_TOP_STORIES': 'AMP Top Stories', 
+      'JOBS_DETAILS': 'Job Listings',
+      'JOBS_LISTING': 'Job Search',
+      'MERCHANT_LISTINGS': 'Shopping Results',
+      'ORGANIC': 'Regular Results',
+      'RICH_SNIPPET': 'Rich Snippets',
+      'TOP_STORIES': 'Top Stories'
+    };
+
+    return data.rows.map(row => ({
+      appearanceType: appearanceNames[row.keys[0]] || row.keys[0],
+      clicks: row.clicks || 0,
+      impressions: row.impressions || 0,
+      ctr: row.ctr || 0,
+      avgPosition: row.position || 0
+    }));
+  }
+
+  // Format comparison data
+  formatComparisonData(currentData, previousData) {
+    const current = this.formatSearchConsoleData(currentData);
+    const previous = this.formatSearchConsoleData(previousData);
+    
+    return {
+      current,
+      previous,
+      growth: {
+        clicks: current.totalClicks > 0 ? ((current.totalClicks - previous.totalClicks) / previous.totalClicks * 100) : 0,
+        impressions: current.totalImpressions > 0 ? ((current.totalImpressions - previous.totalImpressions) / previous.totalImpressions * 100) : 0,
+        ctr: current.avgCTR > 0 ? ((current.avgCTR - previous.avgCTR) / previous.avgCTR * 100) : 0,
+        position: previous.avgPosition > 0 ? ((previous.avgPosition - current.avgPosition) / previous.avgPosition * 100) : 0
+      }
+    };
+  }
+
   // Helper function to format date for Search Console API
   formatDate(date) {
     return date.toISOString().split('T')[0];

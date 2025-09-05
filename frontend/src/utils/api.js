@@ -253,6 +253,16 @@ export const apiService = {
   saveAnalyticsConfiguration: (data) => api.post('/api/v1/analytics/configure', data),
   getAnalyticsOverview: () => api.get('/api/v1/analytics/overview'),
   getBlogPerformance: () => api.get('/api/v1/analytics/blog-performance'),
+  getTopPages: () => api.get('/api/v1/analytics/top-pages'),
+  getTopQueries: () => api.get('/api/v1/analytics/top-queries'),
+  getTrafficByCountry: () => api.get('/api/v1/analytics/traffic-by-country'),
+  getDeviceBreakdown: () => api.get('/api/v1/analytics/device-breakdown'),
+  // Advanced Analytics (Phase 2)
+  getQueryPageMatrix: () => api.get('/api/v1/analytics/query-page-matrix'),
+  getKeywordTrends: () => api.get('/api/v1/analytics/keyword-trends'),
+  getSearchAppearance: () => api.get('/api/v1/analytics/search-appearance'),
+  getPerformanceComparison: () => api.get('/api/v1/analytics/performance-comparison'),
+  getLowHangingFruit: () => api.get('/api/v1/analytics/low-hanging-fruit'),
   disconnectAnalytics: () => api.delete('/api/v1/analytics/disconnect'),
   
   // Brand Settings
