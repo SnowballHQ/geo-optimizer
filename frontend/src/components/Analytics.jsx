@@ -53,8 +53,11 @@ const Analytics = ({ onClose }) => {
   const checkConnectionStatus = async () => {
     try {
       const response = await apiService.getAnalyticsStatus();
-      setConnectionStatus(response.data);
-      setIsConnected(response.data.isConnected);
+      console.log('Status check response:', response.data);
+      const statusData = response.data.data || response.data;
+      setConnectionStatus(statusData);
+      setIsConnected(statusData.isConnected);
+      console.log('Setting isConnected to:', statusData.isConnected);
     } catch (error) {
       console.error('Failed to check connection status:', error);
     }
@@ -138,12 +141,15 @@ const Analytics = ({ onClose }) => {
 
     try {
       setLoading(true);
-      await apiService.saveAnalyticsConfiguration({
+      console.log('Saving configuration:', { propertyId: selectedProperty, searchConsoleUrl: selectedSite });
+      const saveResponse = await apiService.saveAnalyticsConfiguration({
         propertyId: selectedProperty,
         searchConsoleUrl: selectedSite
       });
+      console.log('Save response:', saveResponse.data);
 
       setShowSetup(false);
+      console.log('Checking connection status after save...');
       await checkConnectionStatus();
       setError(null);
     } catch (error) {
@@ -162,8 +168,10 @@ const Analytics = ({ onClose }) => {
         apiService.getBlogPerformance()
       ]);
       
-      setOverviewData(overviewResponse.data);
-      setBlogPerformance(blogResponse.data);
+      console.log('Overview response:', overviewResponse.data);
+      console.log('Blog response:', blogResponse.data);
+      setOverviewData(overviewResponse.data.data || overviewResponse.data);
+      setBlogPerformance(blogResponse.data.data || blogResponse.data);
       setError(null);
     } catch (error) {
       console.error('Failed to fetch analytics data:', error);

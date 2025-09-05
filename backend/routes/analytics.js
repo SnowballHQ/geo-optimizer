@@ -337,10 +337,15 @@ router.get('/status', auth, async (req, res) => {
 // GET /api/v1/analytics/overview - Get website overview analytics
 router.get('/overview', auth, async (req, res) => {
   try {
+    console.log('Fetching analytics overview for user:', req.user.id);
+    
     const [analyticsData, searchConsoleData] = await Promise.all([
       googleAnalyticsService.getAnalyticsData(req.user.id),
       googleAnalyticsService.getSearchConsoleData(req.user.id)
     ]);
+
+    console.log('Analytics data received:', JSON.stringify(analyticsData, null, 2));
+    console.log('Search Console data received:', JSON.stringify(searchConsoleData, null, 2));
 
     res.json({ 
       success: true, 
