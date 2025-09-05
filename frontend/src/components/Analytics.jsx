@@ -946,8 +946,8 @@ const Analytics = ({ onClose }) => {
                                   {item.page}
                                 </div>
                               </td>
-                              <td className="text-center py-3 px-2">{item.clicks}</td>
-                              <td className="text-center py-3 px-2">{item.impressions}</td>
+                              <td className="text-center py-3 px-2">{item.clicks || 0}</td>
+                              <td className="text-center py-3 px-2">{item.impressions || 0}</td>
                               <td className="text-center py-3 px-2">{((item.ctr || 0) * 100).toFixed(1)}%</td>
                               <td className="text-center py-3 px-2">{(item.avgPosition || 0).toFixed(1)}</td>
                             </tr>
@@ -972,14 +972,14 @@ const Analytics = ({ onClose }) => {
                     <div className="space-y-6">
                       {keywordTrends.slice(0, 5).map((keyword, keywordIndex) => (
                         <div key={keywordIndex} className="border-b border-gray-100 pb-4 last:border-b-0">
-                          <h4 className="font-medium text-[#4a4a6a] mb-3">"{keyword.query}"</h4>
+                          <h4 className="font-medium text-[#4a4a6a] mb-3">"{keyword.query || 'Unknown Query'}"</h4>
                           <div className="h-32 overflow-x-auto">
                             <div className="flex items-end justify-between h-24 min-w-max space-x-1 px-2">
                               {keyword.dailyData?.slice(-14).map((day, dayIndex) => {
-                                const maxClicks = Math.max(...keyword.dailyData.map(d => d.clicks));
-                                const maxImpressions = Math.max(...keyword.dailyData.map(d => d.impressions));
-                                const clickHeight = maxClicks > 0 ? (day.clicks / maxClicks) * 60 : 0;
-                                const impressionHeight = maxImpressions > 0 ? (day.impressions / maxImpressions) * 60 : 0;
+                                const maxClicks = Math.max(...keyword.dailyData.map(d => d.clicks || 0));
+                                const maxImpressions = Math.max(...keyword.dailyData.map(d => d.impressions || 0));
+                                const clickHeight = maxClicks > 0 ? ((day.clicks || 0) / maxClicks) * 60 : 0;
+                                const impressionHeight = maxImpressions > 0 ? ((day.impressions || 0) / maxImpressions) * 60 : 0;
                                 
                                 return (
                                   <div key={dayIndex} className="flex flex-col items-center space-y-2 min-w-[30px]">
@@ -987,12 +987,12 @@ const Analytics = ({ onClose }) => {
                                       <div 
                                         className="w-3 bg-purple-500 rounded-t" 
                                         style={{ height: `${clickHeight}px` }}
-                                        title={`${day.date}: ${day.clicks} clicks`}
+                                        title={`${day.date}: ${day.clicks || 0} clicks`}
                                       ></div>
                                       <div 
                                         className="w-3 bg-orange-400 rounded-t" 
                                         style={{ height: `${impressionHeight}px` }}
-                                        title={`${day.date}: ${day.impressions} impressions`}
+                                        title={`${day.date}: ${day.impressions || 0} impressions`}
                                       ></div>
                                     </div>
                                     <div className="text-xs text-gray-600 transform rotate-45 whitespace-nowrap">
@@ -1025,20 +1025,23 @@ const Analytics = ({ onClose }) => {
                         <div key={index} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="font-medium text-[#4a4a6a] capitalize">
-                              {appearance.searchAppearance.replace('_', ' ').toLowerCase()}
+                              {(appearance.searchAppearance || 'unknown').replace('_', ' ').toLowerCase()}
                             </h4>
                             <div className="text-xs text-gray-500">
-                              {((appearance.clicks / searchAppearance.reduce((sum, item) => sum + item.clicks, 0)) * 100).toFixed(1)}%
+                              {(() => {
+                                const totalClicks = searchAppearance.reduce((sum, item) => sum + (item.clicks || 0), 0);
+                                return totalClicks > 0 ? (((appearance.clicks || 0) / totalClicks) * 100).toFixed(1) : '0.0';
+                              })()}%
                             </div>
                           </div>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Clicks:</span>
-                              <span className="font-medium">{appearance.clicks}</span>
+                              <span className="font-medium">{appearance.clicks || 0}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Impressions:</span>
-                              <span className="font-medium">{appearance.impressions}</span>
+                              <span className="font-medium">{appearance.impressions || 0}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">CTR:</span>
@@ -1172,8 +1175,8 @@ const Analytics = ({ onClose }) => {
                                   {(opportunity.avgPosition || 0).toFixed(1)}
                                 </span>
                               </td>
-                              <td className="text-center py-3 px-2">{opportunity.clicks}</td>
-                              <td className="text-center py-3 px-2">{opportunity.impressions}</td>
+                              <td className="text-center py-3 px-2">{opportunity.clicks || 0}</td>
+                              <td className="text-center py-3 px-2">{opportunity.impressions || 0}</td>
                               <td className="text-center py-3 px-2">{((opportunity.ctr || 0) * 100).toFixed(1)}%</td>
                               <td className="text-center py-3 px-2">
                                 <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
