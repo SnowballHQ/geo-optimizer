@@ -269,6 +269,9 @@ export const apiService = {
   getBrandSettings: () => api.get('/api/v1/brand-settings'),
   saveBrandSettings: (data) => api.post('/api/v1/brand-settings', data),
   refreshBrandVoice: () => api.post('/api/v1/brand-settings/refresh'),
+
+  // Published Blogs Analytics
+  getPublishedBlogs: () => api.get('/api/v1/content-calendar/published-blogs'),
   
   // Auto-reload Brand Dashboard helper
   triggerBrandDashboardReload: () => {

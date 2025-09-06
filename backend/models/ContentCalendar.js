@@ -51,6 +51,14 @@ const contentCalendarSchema = new mongoose.Schema({
   publishedAt: {
     type: Date
   },
+  publishedUrl: {
+    type: String,
+    default: null
+  },
+  lastAnalyzedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

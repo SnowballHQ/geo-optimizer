@@ -25,6 +25,49 @@ router.put('/:id', contentCalendarController.updateEntry);
 // Delete specific calendar entry
 router.delete('/:id', contentCalendarController.deleteEntry);
 
+// Get published blogs with analytics data
+router.get('/published-blogs', async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get all published content with URLs
+    const publishedBlogs = await ContentCalendar.find({
+      userId,
+      status: 'published',
+      publishedUrl: { $ne: null }
+    }).sort({ publishedAt: -1 });
+
+    console.log(`Found ${publishedBlogs.length} published blogs for user ${userId}`);
+
+    // For now, return basic published blogs data
+    // Analytics integration will be added in the next step
+    const blogsWithBasicData = publishedBlogs.map(blog => ({
+      id: blog._id,
+      title: blog.title,
+      publishedUrl: blog.publishedUrl,
+      publishedAt: blog.publishedAt,
+      cmsPlatform: blog.cmsPlatform,
+      keywords: blog.keywords,
+      targetAudience: blog.targetAudience,
+      // Analytics data will be populated later
+      analytics: {
+        position: null,
+        clicks: 0,
+        impressions: 0,
+        ctr: 0
+      }
+    }));
+
+    res.json({
+      success: true,
+      data: blogsWithBasicData
+    });
+  } catch (error) {
+    console.error('Error getting published blogs:', error);
+    res.status(500).json({ error: 'Failed to get published blogs' });
+  }
+});
+
 // Get specific calendar entry (for editor)
 router.get('/:id', contentCalendarController.getEntry);
 
@@ -183,21 +226,35 @@ router.post('/:id/publish', async (req, res) => {
     });
 
     // Publish to CMS using cmsIntegration
+    console.log('📤 About to call cmsIntegration.publishContent');
     const publishResult = await cmsIntegration.publishContent(
       cmsCredentials.platform,
       cmsCredentials,
       contentToPublish
     );
+    console.log('📥 Received publishResult from CMS integration');
 
     console.log('Publish result:', publishResult);
+    console.log('Published URL from result:', publishResult.url);
 
     if (publishResult.success) {
-      // Update the entry with published status
-      await ContentCalendar.findByIdAndUpdate(id, {
+      // Update the entry with published status and URL
+      const updateData = {
         status: 'published',
         publishedAt: new Date(),
         lastPublished: new Date(),
+        publishedUrl: publishResult.url, // Store the published URL
         cmsPlatform: cmsCredentials.platform
+      };
+      
+      console.log('Updating content with data:', updateData);
+      
+      const updatedEntry = await ContentCalendar.findByIdAndUpdate(id, updateData, { new: true });
+      console.log('Updated entry result:', {
+        id: updatedEntry._id,
+        status: updatedEntry.status,
+        publishedUrl: updatedEntry.publishedUrl,
+        cmsPlatform: updatedEntry.cmsPlatform
       });
 
       res.json({

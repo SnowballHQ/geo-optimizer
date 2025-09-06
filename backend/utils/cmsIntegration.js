@@ -13,20 +13,28 @@ class CMSIntegration {
 
   async publishContent(platform, credentials, content) {
     try {
+      console.log('🔍 publishContent wrapper called with platform:', platform);
+      
       if (!this.platforms[platform]) {
         throw new Error(`Unsupported platform: ${platform}`);
       }
 
+      console.log('🔍 Calling platform-specific publish method...');
       const result = await this.platforms[platform](credentials, content);
-      return {
+      console.log('🔍 Platform method returned result:', result);
+      
+      const finalResult = {
         success: true,
         platform,
         postId: result.postId,
         url: result.url,
         message: `Successfully published to ${platform}`
       };
+      
+      console.log('🔍 publishContent wrapper returning:', finalResult);
+      return finalResult;
     } catch (error) {
-      console.error(`Error publishing to ${platform}:`, error);
+      console.error(`❌ Error in publishContent wrapper for ${platform}:`, error);
       return {
         success: false,
         platform,
@@ -435,6 +443,7 @@ class CMSIntegration {
 
     // First, check if we have a blog, create one if not
     let blogId = 1;
+    let blogHandle = 'ai-content'; // Default handle
     try {
       // Try to get existing blogs
       const blogsResponse = await axios.get(`https://${shopDomain}/admin/api/${apiVersion}/blogs.json`, {
@@ -445,8 +454,10 @@ class CMSIntegration {
       });
       
       if (blogsResponse.data.blogs && blogsResponse.data.blogs.length > 0) {
-        blogId = blogsResponse.data.blogs[0].id;
-        console.log(`Using existing blog with ID: ${blogId}`);
+        const existingBlog = blogsResponse.data.blogs[0];
+        blogId = existingBlog.id;
+        blogHandle = existingBlog.handle;
+        console.log(`Using existing blog with ID: ${blogId}, handle: ${blogHandle}`);
       } else {
         // Create a new blog if none exists
         const createBlogResponse = await axios.post(`https://${shopDomain}/admin/api/${apiVersion}/blogs.json`, {
@@ -462,13 +473,16 @@ class CMSIntegration {
           }
         });
         
-        blogId = createBlogResponse.data.blog.id;
-        console.log(`Created new blog with ID: ${blogId}`);
+        const newBlog = createBlogResponse.data.blog;
+        blogId = newBlog.id;
+        blogHandle = newBlog.handle;
+        console.log(`Created new blog with ID: ${blogId}, handle: ${blogHandle}`);
       }
     } catch (error) {
       console.error('Error checking/creating blog:', error.message);
       // Fallback to default blog ID
       blogId = 1;
+      blogHandle = 'news'; // Most common default handle for existing blogs
     }
 
     // Function to format content with Markdown
@@ -567,9 +581,12 @@ class CMSIntegration {
       throw error;
     }
 
+    const publishedUrl = `https://${shopDomain}/blogs/${blogHandle}/${response.data.article.handle}`;
+    console.log('Shopify publish returning URL:', publishedUrl);
+    
     return {
       postId: response.data.article.id,
-      url: `https://${shopDomain}/blogs/ai-content/${response.data.article.handle}`
+      url: publishedUrl
     };
   }
 

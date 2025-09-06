@@ -148,7 +148,7 @@ class AutoPublisher {
       status: 'published',
       publishedAt: new Date(),
       cmsPostId: result.postId,
-      cmsUrl: result.url,
+      publishedUrl: result.url, // Use publishedUrl to match the schema
       cmsPlatform: targetPlatform // Update to the actual platform used
     });
 
