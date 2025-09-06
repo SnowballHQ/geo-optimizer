@@ -6,6 +6,7 @@ const autoPublisher = require('../utils/autoPublisher');
 const ContentCalendar = require('../models/ContentCalendar');
 const CMSCredentials = require('../models/CMSCredentials'); // Added missing import
 const cmsIntegration = require('../utils/cmsIntegration'); // Added missing import
+const googleAnalytics = require('../utils/googleAnalytics'); // Added for Search Console integration
 
 // Apply auth middleware to all routes
 router.use(auth);
@@ -39,28 +40,45 @@ router.get('/published-blogs', async (req, res) => {
 
     console.log(`Found ${publishedBlogs.length} published blogs for user ${userId}`);
 
-    // For now, return basic published blogs data
-    // Analytics integration will be added in the next step
-    const blogsWithBasicData = publishedBlogs.map(blog => ({
-      id: blog._id,
-      title: blog.title,
-      publishedUrl: blog.publishedUrl,
-      publishedAt: blog.publishedAt,
-      cmsPlatform: blog.cmsPlatform,
-      keywords: blog.keywords,
-      targetAudience: blog.targetAudience,
-      // Analytics data will be populated later
-      analytics: {
-        position: null,
-        clicks: 0,
-        impressions: 0,
-        ctr: 0
-      }
-    }));
+    // Fetch analytics data for each published blog
+    const blogsWithAnalytics = await Promise.all(
+      publishedBlogs.map(async (blog) => {
+        let analyticsData = {
+          position: 0,
+          clicks: 0,
+          impressions: 0,
+          ctr: 0
+        };
+
+        // Only fetch analytics if we have a valid URL
+        if (blog.publishedUrl) {
+          try {
+            console.log(`Fetching analytics for blog: ${blog.title}`);
+            analyticsData = await googleAnalytics.getURLSearchConsoleData(userId, blog.publishedUrl);
+          } catch (error) {
+            console.warn(`Failed to fetch analytics for blog ${blog.title}:`, error.message);
+            // Keep default zeros if analytics fetch fails
+          }
+        }
+
+        return {
+          id: blog._id,
+          title: blog.title,
+          publishedUrl: blog.publishedUrl,
+          publishedAt: blog.publishedAt,
+          cmsPlatform: blog.cmsPlatform,
+          keywords: blog.keywords,
+          targetAudience: blog.targetAudience,
+          analytics: analyticsData
+        };
+      })
+    );
+
+    console.log(`Fetched analytics data for ${blogsWithAnalytics.length} published blogs`);
 
     res.json({
       success: true,
-      data: blogsWithBasicData
+      data: blogsWithAnalytics
     });
   } catch (error) {
     console.error('Error getting published blogs:', error);

@@ -743,6 +743,76 @@ class GoogleAnalyticsService {
     };
   }
 
+  // Get Search Console data for a specific URL
+  async getURLSearchConsoleData(userId, url) {
+    try {
+      const { searchConsoleUrl } = await this.setupAuthClient(userId);
+      
+      if (!searchConsoleUrl) {
+        console.log('Search Console URL not configured for user:', userId);
+        return {
+          clicks: 0,
+          impressions: 0,
+          ctr: 0,
+          position: 0
+        };
+      }
+
+      const searchConsole = google.searchconsole({ version: 'v1', auth: this.oauth2Client });
+      
+      // Extract the path from the URL to match Search Console data
+      const urlPath = new URL(url).pathname;
+      console.log(`Fetching Search Console data for URL path: ${urlPath}`);
+
+      const response = await searchConsole.searchanalytics.query({
+        siteUrl: searchConsoleUrl,
+        requestBody: {
+          startDate: this.formatDate(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)),
+          endDate: this.formatDate(new Date()),
+          dimensions: ['page'],
+          dimensionFilterGroups: [{
+            filters: [{
+              dimension: 'page',
+              operator: 'contains',
+              expression: urlPath
+            }]
+          }]
+        }
+      });
+
+      if (response.data.rows && response.data.rows.length > 0) {
+        const row = response.data.rows[0];
+        const result = {
+          clicks: row.clicks || 0,
+          impressions: row.impressions || 0,
+          ctr: Math.round((row.ctr || 0) * 100 * 100) / 100, // Convert to percentage with 2 decimals
+          position: Math.round(row.position || 0)
+        };
+        console.log(`Search Console data for ${urlPath}:`, result);
+        return result;
+      }
+
+      // Return zeros if no data found (common for new URLs)
+      console.log(`No Search Console data found for ${urlPath} - likely too new or not indexed yet`);
+      return {
+        clicks: 0,
+        impressions: 0,
+        ctr: 0,
+        position: 0
+      };
+
+    } catch (error) {
+      console.error('Error fetching URL Search Console data:', error.message);
+      // Return zeros on error instead of throwing to prevent breaking the endpoint
+      return {
+        clicks: 0,
+        impressions: 0,
+        ctr: 0,
+        position: 0
+      };
+    }
+  }
+
   // Helper function to format date for Search Console API
   formatDate(date) {
     return date.toISOString().split('T')[0];
