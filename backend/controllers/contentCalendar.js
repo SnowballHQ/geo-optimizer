@@ -2,6 +2,7 @@ const OpenAI = require('openai');
 const ContentCalendar = require('../models/ContentCalendar');
 const CMSCredentials = require('../models/CMSCredentials');
 const cmsIntegration = require('../utils/cmsIntegration');
+const unsplashService = require('../utils/unsplashService');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -714,25 +715,30 @@ Description: ${description || 'Not specified'}
 Keywords: ${keywords || 'Not specified'}
 Target Audience: ${targetAudience || 'General audience'}
 
+
+You are a skilled blog writer. Write a blog post in a natural, human voice based on the content outline provided.
+
+The blog should:
+	•	Sound conversational, clear, and approachable (8th–9th grade reading level).
+	•	Avoid robotic phrases, repetitive structures, or formulaic transitions (e.g., “In conclusion,” “It’s important to note”).
+	•	Vary sentence length and rhythm to mimic human writing. Use contractions where natural (“you’ll,” “don’t,” “we’re”).
+	•	Add rhetorical questions, mini-examples, and casual asides to make it feel like a creator sharing real advice.
+	•	Integrate long-tail keywords naturally within the flow (do not keyword-stuff).
+	•	Include bold CTAs in relevant sections (pointing to {brand} features and homepage).
+	•	Write in an energetic, motivating, yet friendly tone that empowers creators and entrepreneurs.
+	•	FAQs section at the end: clear, straightforward, and helpful answers (include long-tail queries as FAQ headers).
+	•	Target word count: ~1500 words.
+
+Instruction:
+“Please generate a blog post with FAQs optimized for long-tail keywords using the content outline below
+
 ${brandContext}Outline:
 ${outline}
 
-Requirements:
-- Write in a tone that matches the brand's established voice and style
-- Incorporate brand information naturally where relevant and appropriate
-- Include proper headings (H1, H2, H3) based on the outline
-- Use the keywords naturally throughout the content
-- Target the specified audience
-- Include practical examples and actionable insights
-- Write 800-1200 words
-- Format in HTML with proper tags (H1, H2, H3, P, UL, LI, etc.)
-- Make it SEO-friendly and engaging
-- Ensure the content flows logically from the outline structure
-- Maintain consistency with the brand's messaging and values
-
-Important: The writing style, tone, and approach should align with the brand's established voice and communication style.
-
-CRITICAL: Provide ONLY the article content in HTML format. Do NOT include DOCTYPE, html, head, or body tags. Start directly with the article content using proper HTML tags like <article>, <h1>, <h2>, <p>, etc.`;
+Additional Brand Notes for Style (must be followed):
+	•	Content style = actionable, short-form friendly, practical, with occasional playful language (e.g., “Zero editing. Zero stress.”).
+	•	Language = bold, conversational, motivating — like a creative teammate, not a corporate manual.
+	•	Audience = ${targetAudience}`;
 
       console.log('OpenAI prompt for blog creation with brand context:', prompt);
 
@@ -778,10 +784,47 @@ IMPORTANT: Always respond with ONLY the article content in HTML format. Do NOT i
       
       console.log('Cleaned blog content length:', blogContent.length);
 
-      // Update the entry with the generated blog content
+      // Generate banner image using Unsplash (safe - won't break if it fails)
+      let bannerData = null;
+      let bannerHTML = '';
+      
+      try {
+        console.log('🖼️ Attempting to generate banner for blog post...');
+        bannerData = await unsplashService.generateBlogBanner(title, Array.isArray(keywords) ? keywords.join(' ') : keywords);
+        
+        if (bannerData) {
+          bannerHTML = unsplashService.generateBannerHTML(bannerData, title);
+          console.log('✅ Banner generated successfully, adding to blog content');
+          
+          // Prepend banner to blog content
+          blogContent = bannerHTML + '\n\n' + blogContent;
+        } else {
+          console.log('ℹ️ No banner generated - continuing without banner');
+        }
+      } catch (bannerError) {
+        console.warn('⚠️ Banner generation failed, continuing without banner:', bannerError.message);
+        // Don't throw - blog creation should continue even if banner fails
+      }
+
+      // Prepare update data
+      const updateData = { content: blogContent };
+      
+      // Include banner data if generated
+      if (bannerData) {
+        updateData.bannerUrl = bannerData.url;
+        updateData.bannerData = {
+          photographer: bannerData.photographer,
+          photographerUrl: bannerData.photographerUrl,
+          unsplashUrl: bannerData.unsplashUrl,
+          altText: bannerData.altText
+        };
+        console.log('💾 Saving banner data to database');
+      }
+
+      // Update the entry with the generated blog content and banner data
       const updatedEntry = await ContentCalendar.findByIdAndUpdate(
         id, 
-        { content: blogContent },
+        updateData,
         { new: true, runValidators: true }
       );
 
@@ -789,8 +832,15 @@ IMPORTANT: Always respond with ONLY the article content in HTML format. Do NOT i
 
       res.json({
         success: true,
-        data: { blogContent },
-        message: 'Blog created successfully from outline with brand context',
+        data: { 
+          blogContent,
+          banner: bannerData ? {
+            url: bannerData.url,
+            photographer: bannerData.photographer,
+            hasAutoBanner: true
+          } : { hasAutoBanner: false }
+        },
+        message: bannerData ? 'Blog created successfully with auto-generated banner' : 'Blog created successfully from outline with brand context',
         brandContext: brandContext ? 'Applied' : 'Not available'
       });
 

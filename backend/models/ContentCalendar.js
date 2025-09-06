@@ -59,6 +59,29 @@ const contentCalendarSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Banner image data from Unsplash
+  bannerUrl: {
+    type: String,
+    default: null
+  },
+  bannerData: {
+    photographer: {
+      type: String,
+      default: null
+    },
+    photographerUrl: {
+      type: String,
+      default: null
+    },
+    unsplashUrl: {
+      type: String,
+      default: null
+    },
+    altText: {
+      type: String,
+      default: null
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now
