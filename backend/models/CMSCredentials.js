@@ -12,7 +12,17 @@ const cmsCredentialsSchema = new mongoose.Schema({
     required: true
   },
   authDetails: {
-    // WordPress
+    // WordPress.com OAuth
+    accessToken: String,
+    tokenType: String,
+    scope: String,
+    userId: String,
+    userLogin: String,
+    userEmail: String,
+    userDisplayName: String,
+    sites: [mongoose.Schema.Types.Mixed],
+    
+    // WordPress Self-hosted (legacy)
     siteUrl: String,
     username: String,
     password: String,
@@ -24,13 +34,10 @@ const cmsCredentialsSchema = new mongoose.Schema({
     
     // Shopify
     shopDomain: String,
-    accessToken: String,
     apiVersion: String,
     
     // Wix
-    siteId: String,
-    apiKey: String,
-    accessToken: String
+    apiKey: String
   },
   isActive: {
     type: Boolean,

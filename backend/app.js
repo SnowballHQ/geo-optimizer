@@ -9,7 +9,11 @@ console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Set' : 'NOT SET');
 console.log('PERPLEXITY_API_KEY:', process.env.PERPLEXITY_API_KEY ? 'Set' : 'NOT SET');
 console.log('SHOPIFY_API_KEY:', process.env.SHOPIFY_API_KEY ? 'Set' : 'NOT SET');
 console.log('SHOPIFY_API_SECRET:', process.env.SHOPIFY_API_SECRET ? 'Set' : 'NOT SET');
+console.log('WORDPRESS_CLIENT_ID:', process.env.WORDPRESS_CLIENT_ID ? 'Set' : 'NOT SET');
+console.log('WORDPRESS_CLIENT_SECRET:', process.env.WORDPRESS_CLIENT_SECRET ? 'Set' : 'NOT SET');
+console.log('WORDPRESS_REDIRECT_URI:', process.env.WORDPRESS_REDIRECT_URI ? 'Set' : 'NOT SET');
 console.log('APP_URL:', process.env.APP_URL || 'http://localhost:5000 (default)');
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'http://localhost:5173 (default)');
 console.log('PORT:', process.env.PORT || '5000 (default)');
 
 const connectDB = require("./db/connect");

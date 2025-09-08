@@ -652,6 +652,25 @@ ${keywordData?.keywords.length > 0 ?
 
       console.log('generateOutline called with:', { id, title, description, keywords, targetAudience, userId });
 
+      // Validate that id is provided and is a valid ObjectId
+      if (!id || id === 'undefined' || id === 'null') {
+        console.error('❌ Invalid or missing id parameter:', id);
+        return res.status(400).json({ 
+          error: 'Valid entry ID is required to generate outline',
+          details: `Received id: ${id}`
+        });
+      }
+
+      // Import mongoose to use ObjectId validation
+      const mongoose = require('mongoose');
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        console.error('❌ Invalid ObjectId format:', id);
+        return res.status(400).json({ 
+          error: 'Invalid entry ID format',
+          details: `ID must be a valid ObjectId, received: ${id}`
+        });
+      }
+
       if (!title) {
         return res.status(400).json({ error: 'Title is required to generate outline' });
       }
@@ -791,11 +810,27 @@ When provided with brand context, ensure that:
       console.log('Generated outline with brand context:', outline);
 
       // Update the entry with the generated outline
+      console.log('🔍 Attempting to update ContentCalendar entry:', { id, outlineLength: outline?.length });
+      
       const updatedEntry = await ContentCalendar.findByIdAndUpdate(
         id, 
         { outline },
         { new: true, runValidators: true }
       );
+      
+      if (!updatedEntry) {
+        console.error('❌ ContentCalendar entry not found for id:', id);
+        return res.status(404).json({ 
+          error: 'Content calendar entry not found',
+          details: `No entry found with id: ${id}`
+        });
+      }
+      
+      console.log('✅ Successfully updated ContentCalendar entry:', { 
+        id: updatedEntry._id,
+        title: updatedEntry.title,
+        hasOutline: !!updatedEntry.outline
+      });
 
       console.log('Updated entry:', updatedEntry);
 

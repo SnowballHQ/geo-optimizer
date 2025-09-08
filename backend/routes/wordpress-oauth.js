@@ -23,8 +23,14 @@ router.get('/connect', auth, async (req, res) => {
     const userId = req.user.id;
     
     if (!WORDPRESS_CLIENT_ID || !WORDPRESS_CLIENT_SECRET || !WORDPRESS_REDIRECT_URI) {
+      console.error('❌ WordPress OAuth not configured:', {
+        WORDPRESS_CLIENT_ID: WORDPRESS_CLIENT_ID ? 'Set' : 'NOT SET',
+        WORDPRESS_CLIENT_SECRET: WORDPRESS_CLIENT_SECRET ? 'Set' : 'NOT SET', 
+        WORDPRESS_REDIRECT_URI: WORDPRESS_REDIRECT_URI ? 'Set' : 'NOT SET'
+      });
       return res.status(500).json({ 
-        error: 'WordPress.com OAuth is not configured. Please set WORDPRESS_CLIENT_ID, WORDPRESS_CLIENT_SECRET, and WORDPRESS_REDIRECT_URI environment variables.' 
+        error: 'WordPress.com OAuth is not configured. Please set WORDPRESS_CLIENT_ID, WORDPRESS_CLIENT_SECRET, and WORDPRESS_REDIRECT_URI environment variables.',
+        details: 'Contact your administrator to configure WordPress OAuth credentials.'
       });
     }
     
@@ -48,7 +54,7 @@ router.get('/connect', auth, async (req, res) => {
     authUrl.searchParams.append('client_id', WORDPRESS_CLIENT_ID);
     authUrl.searchParams.append('redirect_uri', WORDPRESS_REDIRECT_URI);
     authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('scope', 'posts media sites users');
+    authUrl.searchParams.append('scope', 'global');
     authUrl.searchParams.append('state', state);
     
     console.log(`🔗 WordPress OAuth: Initiating OAuth flow for user ${userId}`);
@@ -74,20 +80,20 @@ router.get('/callback', async (req, res) => {
     // Handle OAuth errors
     if (error) {
       console.error('❌ WordPress OAuth error:', error);
-      return res.redirect(`${process.env.APP_URL.replace(':5000', ':5174')}/?wordpress_error=1&error=${encodeURIComponent(error)}`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?wordpress_error=1&error=${encodeURIComponent(error)}`);
     }
     
     // Validate required parameters
     if (!code || !state) {
       console.error('❌ WordPress OAuth: Missing code or state parameter');
-      return res.redirect(`${process.env.APP_URL.replace(':5000', ':5174')}/?wordpress_error=1&error=missing_parameters`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?wordpress_error=1&error=missing_parameters`);
     }
     
     // Validate state parameter
     const stateData = oauthStates.get(state);
     if (!stateData) {
       console.error('❌ WordPress OAuth: Invalid or expired state parameter');
-      return res.redirect(`${process.env.APP_URL.replace(':5000', ':5174')}/?wordpress_error=1&error=invalid_state`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?wordpress_error=1&error=invalid_state`);
     }
     
     // Remove used state
@@ -97,12 +103,18 @@ router.get('/callback', async (req, res) => {
     console.log(`🔗 WordPress OAuth: Processing callback for user ${userId}`);
     
     // Exchange authorization code for access token
-    const tokenResponse = await axios.post(WORDPRESS_TOKEN_URL, {
+    const tokenData = new URLSearchParams({
       client_id: WORDPRESS_CLIENT_ID,
       client_secret: WORDPRESS_CLIENT_SECRET,
       code: code,
       grant_type: 'authorization_code',
       redirect_uri: WORDPRESS_REDIRECT_URI
+    });
+    
+    const tokenResponse = await axios.post(WORDPRESS_TOKEN_URL, tokenData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
     });
     
     const { access_token, token_type, scope } = tokenResponse.data;
@@ -111,25 +123,69 @@ router.get('/callback', async (req, res) => {
       throw new Error('No access token received from WordPress.com');
     }
     
+    console.log(`🔍 Token received with scopes: ${scope}`);
+    console.log(`🔍 Requested scopes: global`);
+    console.log(`🔍 Token type: ${token_type}`);
+    
+    // Initialize variables before try block
+    let userData = null;
+    let sitesData = null;
+    
     // Get user information from WordPress.com
-    const userResponse = await axios.get(`${WORDPRESS_API_BASE}/me`, {
-      headers: {
-        'Authorization': `${token_type} ${access_token}`
-      }
-    });
+    console.log('📡 Fetching user info from /me endpoint...');
+    try {
+      const userResponse = await axios.get(`${WORDPRESS_API_BASE}/me`, {
+        headers: {
+          'Authorization': `${token_type} ${access_token}`
+        }
+      });
+      
+      userData = userResponse.data;
+      console.log(`✅ User info retrieved: ${userData.username}`);
+      
+      // Get user's sites
+      console.log('📡 Fetching user sites from /me/sites endpoint...');
+      const sitesResponse = await axios.get(`${WORDPRESS_API_BASE}/me/sites`, {
+        headers: {
+          'Authorization': `${token_type} ${access_token}`
+        }
+      });
+      
+      sitesData = sitesResponse.data;
+      console.log(`✅ Sites retrieved: ${sitesData.sites?.length || 0} sites`);
+      
+    } catch (apiError) {
+      console.error('❌ API call failed:', {
+        endpoint: apiError.config?.url,
+        status: apiError.response?.status,
+        error: apiError.response?.data?.error,
+        message: apiError.response?.data?.message,
+        requiredScope: apiError.response?.data?.error === 'authorization_required' ? 'Check scopes' : 'N/A'
+      });
+      throw apiError;
+    }
     
-    const userData = userResponse.data;
-    
-    // Get user's sites
-    const sitesResponse = await axios.get(`${WORDPRESS_API_BASE}/me/sites`, {
-      headers: {
-        'Authorization': `${token_type} ${access_token}`
-      }
-    });
-    
-    const sitesData = sitesResponse.data;
+    // Validate that we have the required data
+    if (!userData || !sitesData) {
+      throw new Error('Failed to retrieve user data or sites data from WordPress.com');
+    }
     
     // Save WordPress OAuth credentials to database
+    console.log('🔍 About to save credentials with data:', {
+      access_token: access_token ? `${access_token.substring(0, 10)}...` : 'null',
+      token_type,
+      scope,
+      userDataKeys: userData ? Object.keys(userData) : 'null',
+      userDataSample: userData ? {
+        ID: userData.ID,
+        username: userData.username,
+        display_name: userData.display_name,
+        email: userData.email
+      } : 'null',
+      sitesDataKeys: sitesData ? Object.keys(sitesData) : 'null',
+      sitesCount: sitesData?.sites?.length || 0
+    });
+
     const credentials = await CMSCredentials.findOneAndUpdate(
       { userId, platform: 'wordpress' },
       { 
@@ -137,26 +193,58 @@ router.get('/callback', async (req, res) => {
           accessToken: access_token,
           tokenType: token_type,
           scope: scope,
-          userId: userData.ID,
-          userLogin: userData.username,
-          userEmail: userData.email,
-          userDisplayName: userData.display_name,
-          sites: sitesData.sites || []
+          userId: userData?.ID,
+          userLogin: userData?.username,
+          userEmail: userData?.email,
+          userDisplayName: userData?.display_name,
+          sites: sitesData?.sites || []
         },
         isActive: true 
       },
       { upsert: true, new: true, runValidators: true }
     );
+
+    console.log('🔍 Saved credentials result:', {
+      credentialsId: credentials._id,
+      platform: credentials.platform,
+      isActive: credentials.isActive,
+      authDetailsKeys: Object.keys(credentials.authDetails || {}),
+      accessTokenLength: credentials.authDetails?.accessToken?.length,
+      userLogin: credentials.authDetails?.userLogin,
+      sitesCount: credentials.authDetails?.sites?.length || 0
+    });
     
     console.log(`✅ WordPress OAuth: Successfully connected user ${userId} to WordPress.com account ${userData.username}`);
+    console.log('🔍 Token being stored:', {
+      tokenType: token_type,
+      scope: scope,
+      tokenLength: access_token?.length,
+      userLogin: userData.username
+    });
     
     // Redirect back to frontend with success
-    res.redirect(`${process.env.APP_URL.replace(':5000', ':5174')}/?wordpress_success=1&user=${encodeURIComponent(userData.display_name)}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?wordpress_success=1&user=${encodeURIComponent(userData.display_name)}`);
     
   } catch (error) {
     console.error('❌ WordPress OAuth callback error:', error);
-    const errorMessage = error.response?.data?.error_description || error.message || 'OAuth callback failed';
-    res.redirect(`${process.env.APP_URL.replace(':5000', ':5174')}/?wordpress_error=1&error=${encodeURIComponent(errorMessage)}`);
+    
+    // Enhanced error logging for debugging
+    if (error.response) {
+      console.error('❌ Error details:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+    }
+    
+    const errorMessage = error.response?.data?.error_description || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'OAuth callback failed';
+    
+    console.error(`❌ Redirecting to frontend with error: ${errorMessage}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?wordpress_error=1&error=${encodeURIComponent(errorMessage)}`);
   }
 });
 
@@ -173,11 +261,27 @@ router.get('/status', auth, async (req, res) => {
     });
     
     if (credentials && credentials.authDetails.accessToken) {
+      // Log stored token details for debugging (without exposing the actual token)
+      console.log('🔍 Stored credentials found:', {
+        platform: credentials.platform,
+        isActive: credentials.isActive,
+        tokenType: credentials.authDetails.tokenType,
+        scope: credentials.authDetails.scope,
+        userLogin: credentials.authDetails.userLogin,
+        tokenLength: credentials.authDetails.accessToken?.length,
+        createdAt: credentials.createdAt
+      });
+      
       // Verify token is still valid by making a test API call
+      // Normalize token type to 'Bearer' for WordPress.com API
+      const tokenType = credentials.authDetails.tokenType?.toLowerCase() === 'bearer' ? 'Bearer' : 'Bearer';
+      const authHeader = `${tokenType} ${credentials.authDetails.accessToken}`;
+      console.log('🔍 Authorization header format:', authHeader.substring(0, 20) + '...[REDACTED]');
+      
       try {
         const testResponse = await axios.get(`${WORDPRESS_API_BASE}/me`, {
           headers: {
-            'Authorization': `${credentials.authDetails.tokenType} ${credentials.authDetails.accessToken}`
+            'Authorization': authHeader
           }
         });
         
@@ -194,10 +298,22 @@ router.get('/status', auth, async (req, res) => {
         });
       } catch (apiError) {
         // Token might be expired or invalid
-        console.error('❌ WordPress OAuth token validation failed:', apiError.response?.status);
+        console.error('❌ WordPress OAuth token validation failed:', {
+          status: apiError.response?.status,
+          statusText: apiError.response?.statusText,
+          error: apiError.response?.data?.error,
+          message: apiError.response?.data?.message,
+          url: apiError.config?.url,
+          authHeaderPrefix: authHeader?.substring(0, 15) + '...'
+        });
+        
         res.json({
           status: 'token_expired',
-          message: 'WordPress.com token has expired. Please reconnect.'
+          message: 'WordPress.com token has expired. Please reconnect.',
+          debug: {
+            httpStatus: apiError.response?.status,
+            errorCode: apiError.response?.data?.error
+          }
         });
       }
     } else {
