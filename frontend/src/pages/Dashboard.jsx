@@ -9,6 +9,7 @@ import ContentCalendarView from './ContentCalendarView';
 import BrandSettings from '../components/BrandSettings';
 import ShopifySettings from '../components/ShopifySettings';
 import WebflowSettings from '../components/WebflowSettings';
+import WordPressSettings from '../components/WordPressSettings';
 import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
 import Analytics from '../components/Analytics';
 
@@ -824,6 +825,24 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <WebflowSettings />
+                </CardContent>
+              </Card>
+
+              {/* WordPress Integration */}
+              <Card className="border border-[#b0b0d8] bg-white">
+                <CardHeader>
+                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-[#21759b] rounded-lg flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">📝</span>
+                    </div>
+                    <span>WordPress Integration</span>
+                  </CardTitle>
+                  <CardDescription className="text-[#4a4a6a]">
+                    Connect your WordPress site to publish blog content using Application Passwords
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <WordPressSettings />
                 </CardContent>
               </Card>
 
