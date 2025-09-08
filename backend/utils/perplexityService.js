@@ -1,55 +1,54 @@
-const axios = require('axios');
 const TokenCostLogger = require('./tokenCostLogger');
 
 class PerplexityService {
   constructor() {
-    this.apiKey = process.env.PERPLEXITY_API_KEY;
-    this.baseURL = 'https://api.perplexity.ai';
+    this.apiKey = process.env.OPENAI_API_KEY;
+    this.baseURL = 'https://api.openai.com/v1';
     this.tokenLogger = new TokenCostLogger();
   }
 
   async getDomainInfo(domainUrl) {
     try {
-      console.log(`🔍 Fetching domain info and description from Perplexity for: ${domainUrl}`);
+      console.log(`🔍 Fetching domain info and description from OpenAI for: ${domainUrl}`);
       
       if (!this.apiKey) {
-        console.warn('⚠️ Perplexity API key not found, using fallback');
+        console.warn('⚠️ OpenAI API key not found, using fallback');
         const fallbackInfo = `Information about ${domainUrl} - a business website offering various services and solutions.`;
         const fallbackDescription = `${domainUrl} is a business website that provides various services and solutions to its customers.`;
         return { domainInfo: fallbackInfo, description: fallbackDescription };
       }
 
-      const prompt = `Analyze ${domainUrl} and provide two things:
+      const prompt = `Analyze the domain "${domainUrl}" and provide business insights based on the domain name, structure, and likely business type. Provide two things:
 
-1. A comprehensive overview of what this company does, their primary services, products, and offerings (for category analysis)
-2. A concise brand description that summarizes their core value proposition
+1. A comprehensive overview of what this company likely does, their probable primary services, products, and business offerings (for category analysis)
+2. A concise brand description that summarizes their likely core value proposition and business focus
+3. Don't give citations in the response
 
-Format your response as:
-OVERVIEW: [detailed business overview for analysis]
-DESCRIPTION: [concise brand description]`;
+Instructions:
+- Analyze the domain name and structure to infer business type and industry
+- Consider common patterns in domain naming for different industries
+- Provide detailed, specific insights rather than generic descriptions
+- Focus on actionable business intelligence
 
-      const response = await axios.post(
-        `${this.baseURL}/chat/completions`,
-        {
-          model: 'sonar',
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.1
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
-        }
-      );
+Format your response exactly as:
+OVERVIEW: [detailed business overview and likely services for analysis]
+DESCRIPTION: [concise brand description and value proposition]`;
 
-      const fullResponse = response.data.choices[0].message.content;
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: this.apiKey });
+      
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-search-preview',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+    
+      });
+
+      const fullResponse = response.choices[0].message.content;
       
       // Parse the response to extract both parts
       let domainInfo = '';
@@ -86,14 +85,14 @@ DESCRIPTION: [concise brand description]`;
       }
       
       // Log token usage and cost
-      this.tokenLogger.logPerplexityCall(
+      this.tokenLogger.logOpenAICall(
         'Domain Information & Description',
         prompt,
         fullResponse,
-        'sonar-pro'
+        'gpt-4o-mini'
       );
 
-      console.log(`✅ Perplexity response received for ${domainUrl}`);
+      console.log(`✅ OpenAI response received for ${domainUrl}`);
       console.log(`📝 Domain info length: ${domainInfo.length} chars`);
       console.log(`📝 Description length: ${description.length} chars`);
       console.log(`📝 Full response length: ${fullResponse.length} chars`);
@@ -103,11 +102,11 @@ DESCRIPTION: [concise brand description]`;
         domainInfo: fullResponse, // Save the complete response as domainInfo
         description: fullResponse, // Save the complete response as description too
         fullResponse: fullResponse, // Keep for backward compatibility
-        rawResponse: response.data // Export the complete API response object
+        rawResponse: response // Export the complete API response object
       };
 
     } catch (error) {
-      console.error(`❌ Perplexity API error for ${domainUrl}:`, error.message);
+      console.error(`❌ OpenAI API error for ${domainUrl}:`, error.message);
       
       // Fallback response
       const fallbackInfo = `Information about ${domainUrl} - a business website offering various services and solutions.`;

@@ -27,7 +27,7 @@ class SuperUserAnalysisController {
         return res.status(403).json({ error: 'Access denied. Super user access required.' });
       }
       
-      const { domain, brandName, brandInformation = '', step } = req.body;
+      const { domain, brandName, brandInformation = '', step, isLocalBrand = false } = req.body;
       
       if (!domain) {
         return res.status(400).json({ error: 'Domain is required' });
@@ -37,9 +37,17 @@ class SuperUserAnalysisController {
       
       // Get domain information from Perplexity for step 1
       let domainInfo = { description: brandInformation };
+      let extractedLocation = null;
       if (step === 1) {
         try {
           domainInfo = await perplexityService.getDomainInfo(domain);
+          
+          // Extract location if local brand is enabled
+          if (isLocalBrand && domainInfo.description) {
+            const OnboardingController = require('./onboarding');
+            extractedLocation = await OnboardingController.extractLocationFromDescription(domainInfo.description);
+            console.log(`📍 Super User Analysis: Extracted location for local brand: ${extractedLocation}`);
+          }
         } catch (error) {
           console.warn('Could not fetch domain info, using provided info:', error.message);
         }
@@ -64,6 +72,8 @@ class SuperUserAnalysisController {
           domain: domain,
           brandName: extractBrandName(brandName || domain),
           description: domainInfo.description || brandInformation,
+          isLocalBrand: isLocalBrand,
+          location: extractedLocation,
           completed: true
         }
       });
@@ -222,6 +232,8 @@ class SuperUserAnalysisController {
         domain: analysis.domain,
         brandInformation: analysis.brandInformation,
         competitors: analysis.step3Data?.competitors || [],
+        isLocalBrand: analysis.step1Data?.isLocalBrand || false,
+        location: analysis.step1Data?.location || null,
         isAdminAnalysis: true // Mark as super user analysis
       });
       
@@ -672,15 +684,49 @@ class SuperUserAnalysisController {
             'competitor1', 'competitor2', 'competitor3', 'competitor4', 'competitor5'
           ];
           
-          // Single mixed prompt that generates both keywords and prompts
-          const mixedPrompt = `You are helping a digital marketing researcher. For the category "${catDoc.categoryName}" for ${analysis.domain},
+          // Generate mixed prompt based on location
+          let mixedPrompt;
+          const isLocalBrand = analysis.step1Data?.isLocalBrand && analysis.step1Data?.location;
+          const location = analysis.step1Data?.location;
+          
+          if (isLocalBrand) {
+            // Local brand mixed prompt template
+            mixedPrompt = `You are helping a digital marketing researcher. For the category "${catDoc.categoryName}" for ${analysis.domain} in ${location},
+
+Brand Context: ${analysis.brandInformation || `${analysis.brandName} operates at ${analysis.domain}`} in ${location}
+
+Popular competitors include: ${competitorList.join(', ')}.
+
+Please do the following:
+
+STEP 1: Generate 10 long-tail keywords that users might search for when looking for ${catDoc.categoryName} services in ${location}.
+STEP 2: Based on those keywords, generate 5 natural, conversational questions that users typically ask ChatGPT about local ${catDoc.categoryName} services.
+
+Requirements:
+- Keywords should be location-specific, long-tail search terms for ${location}
+- Include local search patterns ("near me", "in ${location}", "best ${location} ${catDoc.categoryName}")
+
+- Questions should focus on local search intent and geo-specific needs
+- Questions should be framed so responses would naturally mention ${analysis.brandName} but NOT explicitly mention the brand name
+- Use natural, conversational phrasing with location context
+- Cover local recommendations, comparisons, and area-specific considerations
+- ALWAYS ALWAYS mention the ${location} in the question. 
+
+Return ONLY a JSON object with this exact format:
+{
+  "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5", "keyword6", "keyword7", "keyword8", "keyword9", "keyword10"],
+  "prompts": ["question1", "question2", "question3", "question4", "question5"]
+}`;
+          } else {
+            // Global brand mixed prompt template (original)
+            mixedPrompt = `You are helping a digital marketing researcher. For the category "${catDoc.categoryName}" for ${analysis.domain},
 
 Brand Context: ${analysis.brandInformation || `${analysis.brandName} operates at ${analysis.domain}`}
 
 Popular competitors include: ${competitorList.join(', ')}.
 
- please do the following:
- 
+Please do the following:
+
 STEP 1: Generate 10 long-tail keywords that users might search for when looking for ${catDoc.categoryName} services.
 STEP 2: Based on those keywords, generate 5 natural, conversational questions that users typically ask ChatGPT. The prompts should be super relevant for ${analysis.brandName}, not generic.
 
@@ -695,6 +741,7 @@ Return ONLY a JSON object with this exact format:
   "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5", "keyword6", "keyword7", "keyword8", "keyword9", "keyword10"],
   "prompts": ["question1", "question2", "question3", "question4", "question5"]
 }`;
+          }
 
           // Log the complete mixed prompt
           console.log("🔍 Complete OpenAI Mixed Prompt for Keywords + Prompts:");

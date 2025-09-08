@@ -19,6 +19,8 @@ const BrandProfileSchema = new mongoose.Schema({
     maxlength: 10000 
   },
   competitors: [{ type: String }], // Add missing competitors field
+  isLocalBrand: { type: Boolean, default: false }, // Flag for local brand analysis
+  location: { type: String }, // Location for local brand (extracted by OpenAI)
   isAdminAnalysis: { type: Boolean, default: false }, // Flag for super user admin analyses
   analysisSessionId: { type: String }, // Session ID for Super User analysis isolation
   createdAt: { type: Date, default: Date.now },
