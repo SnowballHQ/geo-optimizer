@@ -7,6 +7,7 @@ const ContentCalendar = require('../models/ContentCalendar');
 const CMSCredentials = require('../models/CMSCredentials'); // Added missing import
 const cmsIntegration = require('../utils/cmsIntegration'); // Added missing import
 const googleAnalytics = require('../utils/googleAnalytics'); // Added for Search Console integration
+const dataForSeoService = require('../utils/dataForSeoService'); // Added for keyword research
 
 // Apply auth middleware to all routes
 router.use(auth);
@@ -95,6 +96,90 @@ router.post('/entry', contentCalendarController.createEntry);
 // Generate content outline using OpenAI
 router.post('/:id/generate-outline', contentCalendarController.generateOutline);
 router.post('/:id/create-blog', contentCalendarController.createBlogFromOutline);
+
+// Keyword research endpoints
+router.post('/keywords/research', async (req, res) => {
+  try {
+    const { domain, brandCategories } = req.body;
+    
+    if (!domain) {
+      return res.status(400).json({ error: 'Domain is required for keyword research' });
+    }
+
+    console.log(`🔍 Manual keyword research request for domain: ${domain}`);
+    
+    const keywordData = await dataForSeoService.getComprehensiveKeywords(domain, brandCategories || []);
+    
+    if (keywordData.success) {
+      const formattedKeywords = dataForSeoService.formatKeywordsForContentGeneration(keywordData.keywords, 30);
+      
+      res.json({
+        success: true,
+        data: {
+          domain: keywordData.domain,
+          keywords: keywordData.keywords,
+          formattedKeywords,
+          metadata: keywordData.metadata,
+          source: keywordData.source
+        },
+        message: `Found ${keywordData.keywords.length} keywords for ${domain}`
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: keywordData.error || 'No keywords found for this domain',
+        data: {
+          domain: keywordData.domain,
+          keywords: [],
+          source: keywordData.source
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in keyword research endpoint:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to perform keyword research',
+      details: error.message 
+    });
+  }
+});
+
+// Get keyword suggestions for a specific keyword
+router.post('/keywords/suggestions', async (req, res) => {
+  try {
+    const { keyword } = req.body;
+    
+    if (!keyword) {
+      return res.status(400).json({ error: 'Keyword is required for suggestions' });
+    }
+
+    console.log(`💡 Keyword suggestions request for: ${keyword}`);
+    
+    const suggestions = await dataForSeoService.getKeywordSuggestions(keyword, 25);
+    
+    if (suggestions.success) {
+      res.json({
+        success: true,
+        data: suggestions,
+        message: `Found ${suggestions.suggestions.length} keyword suggestions`
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: suggestions.error || 'No suggestions found',
+        data: suggestions
+      });
+    }
+  } catch (error) {
+    console.error('Error in keyword suggestions endpoint:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get keyword suggestions',
+      details: error.message 
+    });
+  }
+});
 
 // Debug route to check CMS credentials (remove in production)
 router.get('/debug/cms-credentials', async (req, res) => {

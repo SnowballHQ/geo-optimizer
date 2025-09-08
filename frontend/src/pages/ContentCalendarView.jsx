@@ -263,6 +263,12 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
       console.log('🆕 No existing calendar found, creating new one...');
       
       // Generate new calendar with enhanced brand context
+      console.log('🔍 DEBUG: About to generate calendar with brand data:');
+      console.log('   Company Name:', brandCompanyName);
+      console.log('   Brand Profile:', userBrandProfile);
+      console.log('   Brand Profile Domain:', userBrandProfile?.domain);
+      console.log('   Brand Categories:', brandCategories);
+      
       const response = await apiService.generateContentCalendar({ 
         companyName: brandCompanyName,
         brandProfile: userBrandProfile,

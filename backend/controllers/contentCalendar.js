@@ -3,6 +3,7 @@ const ContentCalendar = require('../models/ContentCalendar');
 const CMSCredentials = require('../models/CMSCredentials');
 const cmsIntegration = require('../utils/cmsIntegration');
 const unsplashService = require('../utils/unsplashService');
+const dataForSeoService = require('../utils/dataForSeoService');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -13,6 +14,16 @@ class ContentCalendarController {
     try {
       const { companyName, brandProfile, brandCategories } = req.body;
       const userId = req.user.id;
+
+      // Debug logging for domain issue
+      console.log('🔍 DEBUG: generateCalendar received request body:');
+      console.log('   Company Name:', companyName);
+      console.log('   User ID:', userId);
+      console.log('   Brand Profile:', brandProfile);
+      console.log('   Brand Profile Type:', typeof brandProfile);
+      console.log('   Brand Profile Domain:', brandProfile?.domain);
+      console.log('   Brand Categories:', brandCategories);
+      console.log('   Brand Categories Count:', brandCategories?.length || 0);
 
       if (!companyName) {
         return res.status(400).json({ error: 'Company name is required' });
@@ -198,7 +209,77 @@ class ContentCalendarController {
   async generateContentPlan(companyName, userId, req, brandProfile = null, brandCategories = []) {
     const startTime = Date.now();
     
-    // Build enhanced brand context
+    // Step 1: Fetch keywords from DataForSEO if domain is available
+    let keywordData = null;
+    let keywordContext = '';
+    
+    console.log('🔍 DEBUG: Domain check in generateContentPlan:');
+    console.log('   brandProfile exists:', !!brandProfile);
+    console.log('   brandProfile type:', typeof brandProfile);
+    console.log('   brandProfile.domain exists:', !!brandProfile?.domain);
+    console.log('   brandProfile.domain value:', brandProfile?.domain);
+    
+    if (brandProfile && brandProfile.domain) {
+      try {
+        console.log(`🔍 Starting keyword research for domain: ${brandProfile.domain}`);
+        keywordData = await dataForSeoService.getComprehensiveKeywords(
+          brandProfile.domain, 
+          brandCategories
+        );
+        
+        if (keywordData.success && keywordData.keywords.length > 0) {
+          const formattedKeywords = dataForSeoService.formatKeywordsForContentGeneration(
+            keywordData.keywords, 
+            20
+          );
+          
+          keywordContext = `
+SEO Keyword Research Results:
+- Domain: ${keywordData.domain}
+- Keywords found: ${keywordData.keywords.length}
+- Average monthly searches: ${keywordData.metadata?.averageSearchVolume || 'N/A'}
+- Data source: ${keywordData.source}
+
+Top Keywords to Target:
+${formattedKeywords.keywordString}
+
+High-Volume Keywords (>1000 searches):
+${formattedKeywords.keywordGroups.highVolume.map(kw => `- ${kw.keyword} (${kw.searchVolume} searches)`).join('\n')}
+
+Long-Tail Opportunities (3+ words):
+${formattedKeywords.keywordGroups.longTail.map(kw => `- ${kw.keyword} (${kw.searchVolume} searches)`).join('\n')}
+
+Low Competition Keywords:
+${formattedKeywords.keywordGroups.lowCompetition.map(kw => `- ${kw.keyword} (difficulty: ${kw.difficulty})`).join('\n')}
+
+`;
+          console.log(`✅ Keyword research completed: ${keywordData.keywords.length} keywords found`);
+        } else {
+          console.log(`⚠️ No keywords found for domain: ${brandProfile.domain}`);
+          keywordContext = `
+SEO Note: Keyword research was attempted but no relevant keywords were found for ${brandProfile.domain}. 
+Content will be generated based on brand context and industry best practices.
+
+`;
+        }
+      } catch (error) {
+        console.error('❌ Keyword research failed:', error.message);
+        keywordContext = `
+SEO Note: Keyword research was attempted but failed due to API limitations. 
+Content will be generated based on brand context and industry best practices.
+
+`;
+      }
+    } else {
+      console.log('ℹ️ No domain provided, skipping keyword research');
+      keywordContext = `
+SEO Note: No domain provided for keyword research. 
+Content will be generated based on brand context and general industry topics.
+
+`;
+    }
+    
+    // Step 2: Build enhanced brand context
     let brandContext = '';
     if (brandProfile) {
       brandContext += `
@@ -222,27 +303,35 @@ Brand Information:
 `;
     }
 
-    const prompt = `You are an expert content strategist creating a personalized 30-day content calendar.
+    const prompt = `You are an expert content strategist creating a personalized 30-day SEO-optimized content calendar.
 
-${brandContext}Company: ${companyName}
+${brandContext}${keywordContext}Company: ${companyName}
+
+IMPORTANT INSTRUCTIONS:
+${keywordData && keywordData.keywords.length > 0 ? 
+`You MUST create content topics that incorporate the researched keywords above. Each blog post should target at least one primary keyword from the research data. Prioritize high-volume keywords and long-tail opportunities.` : 
+`Since no keyword research data is available, focus on industry-relevant topics and include naturally SEO-friendly keywords based on the brand categories and business type.`}
 
 Create a 30-day content calendar that:
 1. Aligns with the brand's tone and messaging style
-2. Incorporates relevant industry topics based on brand categories
+2. ${keywordData?.keywords.length > 0 ? 'Strategically incorporates the researched keywords into content topics' : 'Uses industry-relevant SEO keywords'}
 3. Targets the appropriate audience for this brand
-4. Uses SEO-friendly titles and keywords
+4. Uses SEO-friendly titles optimized for search engines
 5. Provides diverse content types and topics
 6. Maintains consistency with the brand's voice
+7. ${keywordData?.keywords.length > 0 ? 'Balances high-volume keywords with long-tail opportunities' : 'Includes both competitive and niche keyword opportunities'}
 
 Return the response as a JSON array with 30 objects, each containing:
 {
-  "title": "SEO-optimized blog post title",
-  "description": "Detailed description that matches brand tone",
-  "keywords": "keyword1, keyword2, keyword3",
+  "title": "SEO-optimized blog post title incorporating target keywords",
+  "description": "Detailed description that matches brand tone and explains the content value",
+  "keywords": "primary_keyword, secondary_keyword, long_tail_keyword",
   "targetAudience": "Specific target audience description"
 }
 
-Focus on creating content that would be valuable for ${companyName}'s audience and reflects their brand identity.`;
+${keywordData?.keywords.length > 0 ? 
+`Focus on creating content that targets the researched keywords while providing value for ${companyName}'s audience. Use the high-volume and long-tail keywords as inspiration for content topics.` : 
+`Focus on creating content that would be valuable for ${companyName}'s audience and reflects their brand identity with strong SEO potential.`}`;
 
     // Prepare request payload for logging
     const requestPayload = {
@@ -296,20 +385,81 @@ Focus on creating content that would be valuable for ${companyName}'s audience a
 
       let parsedResult;
       try {
-        // Extract JSON from the response
-        const jsonMatch = response.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          parsedResult = JSON.parse(jsonMatch[0]);
+        console.log('🔍 DEBUG: OpenAI Response Content (first 500 chars):');
+        console.log(response.substring(0, 500));
+        console.log('🔍 DEBUG: OpenAI Response Content (last 500 chars):');
+        console.log(response.substring(Math.max(0, response.length - 500)));
+        
+        // Try multiple JSON extraction methods
+        let jsonString = null;
+        
+        // Method 1: Look for array pattern
+        const arrayMatch = response.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+          jsonString = arrayMatch[0];
+          console.log('✅ Found JSON array using method 1');
+        }
+        
+        // Method 2: Look between ```json blocks
+        if (!jsonString) {
+          const codeBlockMatch = response.match(/```json\s*([\s\S]*?)\s*```/i);
+          if (codeBlockMatch) {
+            jsonString = codeBlockMatch[1].trim();
+            console.log('✅ Found JSON in code block using method 2');
+          }
+        }
+        
+        // Method 3: Look for object array pattern more loosely
+        if (!jsonString) {
+          const looseArrayMatch = response.match(/(\[\s*\{[\s\S]*\}\s*\])/);
+          if (looseArrayMatch) {
+            jsonString = looseArrayMatch[1];
+            console.log('✅ Found JSON using loose array pattern method 3');
+          }
+        }
+        
+        // Method 4: Try to extract everything between first [ and last ]
+        if (!jsonString) {
+          const firstBracket = response.indexOf('[');
+          const lastBracket = response.lastIndexOf(']');
+          if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+            jsonString = response.substring(firstBracket, lastBracket + 1);
+            console.log('✅ Found JSON using bracket extraction method 4');
+          }
+        }
+        
+        if (jsonString) {
+          console.log('🔍 DEBUG: Attempting to parse JSON string (first 200 chars):');
+          console.log(jsonString.substring(0, 200));
+          
+          parsedResult = JSON.parse(jsonString);
+          
+          // Validate that it's an array
+          if (!Array.isArray(parsedResult)) {
+            throw new Error('Parsed result is not an array');
+          }
           
           // Log successful parsing
           console.log(`✅ Content plan parsed successfully`);
           console.log(`   Generated ${parsedResult.length} content ideas`);
           
+          // Attach keyword data to the result for later use
+          if (keywordData && keywordData.success) {
+            parsedResult.keywordResearchData = {
+              domain: keywordData.domain,
+              keywords: keywordData.keywords,
+              source: keywordData.source,
+              metadata: keywordData.metadata
+            };
+          }
+          
           return parsedResult;
         }
-        throw new Error('No valid JSON found in response');
+        
+        throw new Error('No valid JSON found in response using any extraction method');
       } catch (parseError) {
         console.error('❌ Error parsing OpenAI response:', parseError);
+        console.log('🔍 DEBUG: Parse error details:', parseError.message);
         
         // Fallback: generate a basic plan
         console.log(`🔄 Using fallback content plan`);
@@ -394,13 +544,17 @@ Focus on creating content that would be valuable for ${companyName}'s audience a
       console.log('Could not determine user CMS platform, defaulting to Shopify');
     }
 
+    // Extract keyword research data if available
+    const keywordResearchData = contentPlan.keywordResearchData || null;
+    
     for (let i = 0; i < 30; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
 
       const content = contentPlan[i] || contentPlan[contentPlan.length - 1];
       
-      formattedPlan.push({
+      // Prepare formatted entry
+      const formattedEntry = {
         date: date.toISOString().split('T')[0],
         title: content.title,
         description: content.description,
@@ -408,7 +562,34 @@ Focus on creating content that would be valuable for ${companyName}'s audience a
         targetAudience: content.targetAudience,
         status: 'draft',
         cmsPlatform: userCmsPlatform
-      });
+      };
+
+      // Add keyword research data if available
+      if (keywordResearchData) {
+        formattedEntry.keywordResearchData = {
+          domain: keywordResearchData.domain,
+          researchDate: new Date(),
+          totalKeywordsFound: keywordResearchData.keywords?.length || 0,
+          averageSearchVolume: keywordResearchData.metadata?.averageSearchVolume || 0,
+          keywordSource: keywordResearchData.source || 'none'
+        };
+
+        // Add source keywords if available (first few relevant keywords)
+        if (keywordResearchData.keywords && keywordResearchData.keywords.length > 0) {
+          const relevantKeywords = keywordResearchData.keywords.slice(0, 5).map(kw => ({
+            keyword: kw.keyword,
+            searchVolume: kw.searchVolume,
+            difficulty: kw.difficulty,
+            cpc: kw.cpc || 0,
+            competition: kw.competition || 0,
+            source: kw.source
+          }));
+          
+          formattedEntry.sourceKeywords = relevantKeywords;
+        }
+      }
+      
+      formattedPlan.push(formattedEntry);
     }
 
     return formattedPlan;

@@ -82,6 +82,57 @@ const contentCalendarSchema = new mongoose.Schema({
       default: null
     }
   },
+  // SEO Keywords from DataForSEO
+  sourceKeywords: [{
+    keyword: {
+      type: String,
+      required: true
+    },
+    searchVolume: {
+      type: Number,
+      default: 0
+    },
+    difficulty: {
+      type: Number,
+      default: 0
+    },
+    cpc: {
+      type: Number,
+      default: 0
+    },
+    competition: {
+      type: Number,
+      default: 0
+    },
+    source: {
+      type: String,
+      enum: ['dataforseo', 'fallback', 'manual'],
+      default: 'manual'
+    }
+  }],
+  keywordResearchData: {
+    domain: {
+      type: String,
+      default: null
+    },
+    researchDate: {
+      type: Date,
+      default: null
+    },
+    totalKeywordsFound: {
+      type: Number,
+      default: 0
+    },
+    averageSearchVolume: {
+      type: Number,
+      default: 0
+    },
+    keywordSource: {
+      type: String,
+      enum: ['dataforseo', 'fallback', 'none'],
+      default: 'none'
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now
