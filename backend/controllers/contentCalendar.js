@@ -432,7 +432,17 @@ ${keywordData?.keywords.length > 0 ?
           console.log('🔍 DEBUG: Attempting to parse JSON string (first 200 chars):');
           console.log(jsonString.substring(0, 200));
           
-          parsedResult = JSON.parse(jsonString);
+          // Remove JSON comments before parsing
+          const cleanedJsonString = jsonString
+            .replace(/\/\/.*$/gm, '')  // Remove // comments
+            .replace(/\/\*[\s\S]*?\*\//g, '')  // Remove /* */ comments
+            .replace(/,\s*([}\]])/g, '$1')  // Remove trailing commas
+            .trim();
+          
+          console.log('🔍 DEBUG: Cleaned JSON string (first 200 chars):');
+          console.log(cleanedJsonString.substring(0, 200));
+          
+          parsedResult = JSON.parse(cleanedJsonString);
           
           // Validate that it's an array
           if (!Array.isArray(parsedResult)) {
