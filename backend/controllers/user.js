@@ -11,42 +11,65 @@ const { authenticationMiddleware } = require('../middleware/auth');
 
 
 const login = async (req, res) => {
-  console.log('🔐 Login attempt:', { body: req.body, headers: req.headers });
+  console.log('🔐 Secure login attempt from IP:', req.ip);
   
   const { email, password } = req.body;
+  const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
 
   if (!email || !password) {
-    console.log('❌ Missing email or password:', { email: !!email, password: !!password });
+    console.log('❌ Missing email or password');
     return res.status(400).json({
-      msg: "Bad request. Please add email and password in the request body",
+      error: "Please provide email and password",
     });
   }
 
-  console.log('🔍 Looking for user with email:', email);
-  let foundUser = await User.findOne({ email: req.body.email });
+  console.log('🔍 Authenticating user:', email);
   
-  if (foundUser) {
-    console.log('✅ User found:', foundUser.name);
-    const isMatch = await foundUser.comparePassword(password);
-    console.log('🔑 Password match:', isMatch);
-
-    if (isMatch) {
+  try {
+    // Use new secure authentication method with account lockout
+    const authResult = await User.getAuthenticated(email, password, clientIP);
+    
+    if (authResult.success) {
+      // Generate JWT token with shorter expiration for better security
       const token = jwt.sign(
-        { id: foundUser._id, name: foundUser.name, role: foundUser.role || 'user' },
+        { 
+          id: authResult.user._id, 
+          name: authResult.user.name, 
+          role: authResult.user.role || 'user' 
+        },
         process.env.JWT_SECRET,
         {
-          expiresIn: "30d",
+          expiresIn: "24h", // Reduced from 30d to 24h for better security
         }
       );
-      console.log('🎉 Login successful, token generated');
-      return res.status(200).json({ msg: "user logged in", token });
+      
+      console.log('✅ Login successful for:', authResult.user.email);
+      return res.status(200).json({ 
+        success: true,
+        message: "Login successful", 
+        token,
+        user: {
+          id: authResult.user._id,
+          name: authResult.user.name,
+          email: authResult.user.email,
+          role: authResult.user.role
+        }
+      });
     } else {
-      console.log('❌ Password mismatch');
-      return res.status(400).json({ msg: "Bad password" });
+      console.log('❌ Authentication failed:', authResult.message);
+      
+      const statusCode = authResult.locked ? 423 : 401; // 423 = Locked
+      return res.status(statusCode).json({ 
+        error: authResult.message,
+        locked: authResult.locked || false,
+        attemptsLeft: authResult.attemptsLeft || 0
+      });
     }
-  } else {
-    console.log('❌ User not found with email:', email);
-    return res.status(400).json({ msg: "Bad credentials" });
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    return res.status(500).json({
+      error: "Authentication failed. Please try again.",
+    });
   }
 };
 
@@ -66,34 +89,67 @@ const getAllUsers = async (req, res) => {
 };
 
 const register = async (req, res) => {
-  let foundUser = await User.findOne({ email: req.body.email });
-  if (foundUser === null) {
-    let { name, email, password } = req.body; // <-- use 'name'
-    if (name && email && password) { // <-- check for truthy, not .length
-      const person = new User({
-        name,
-        email,
-        password,
+  console.log('📝 Secure registration attempt from IP:', req.ip);
+  
+  const { name, email, password } = req.body;
+  const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+  
+  try {
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      console.log('❌ Registration failed: Email already exists');
+      return res.status(409).json({ 
+        error: "An account with this email already exists" 
       });
-      await person.save();
-      
-      // Generate JWT token for automatic login
-      const token = jwt.sign(
-        { id: person._id, name: person.name, role: person.role || 'user' },
-        process.env.JWT_SECRET,
-        { expiresIn: "30d" }
-      );
-      
-      return res.status(201).json({ 
-        person,
-        token, // Add token to response
-        message: "Registration successful"
-      });
-    } else {
-      return res.status(400).json({ msg: "Please add all values in the request body" });
     }
-  } else {
-    return res.status(400).json({ msg: "Email already in use" });
+
+    // Create new user with enhanced security tracking
+    const person = new User({
+      name: name.trim(),
+      email: email.toLowerCase(),
+      password,
+      lastLoginAt: new Date(),
+      lastLoginIP: clientIP
+    });
+    
+    await person.save();
+    
+    // Generate JWT token for automatic login with shorter expiration
+    const token = jwt.sign(
+      { id: person._id, name: person.name, role: person.role || 'user' },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" } // Reduced from 30d to 24h for better security
+    );
+    
+    console.log('✅ Registration successful for:', person.email);
+    return res.status(201).json({ 
+      success: true,
+      message: "Registration successful",
+      token,
+      user: {
+        id: person._id,
+        name: person.name,
+        email: person.email,
+        role: person.role
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Registration error:', error);
+    
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        error: "Registration validation failed",
+        details: validationErrors
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: "Registration failed. Please try again." 
+    });
   }
 };
 

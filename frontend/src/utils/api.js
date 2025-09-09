@@ -142,6 +142,7 @@ export const apiService = {
   
   // Custom Prompts
   addCustomPrompt: (data) => api.post('/api/v1/brand/prompts/custom', data),
+  deletePrompt: (promptId) => api.delete(`/api/v1/brand/prompts/${promptId}`),
   addCompetitor: (brandId, data) => api.post(`/api/v1/brand/${brandId}/competitors`, data),
   deleteCompetitor: (brandId, competitorName) => api.delete(`/api/v1/brand/${brandId}/competitors/${encodeURIComponent(competitorName)}`),
   enhancePrompt: (data) => api.post('/api/v1/brand/prompts/enhance', data),
@@ -325,6 +326,9 @@ export const apiService = {
       console.log('ℹ️ AUTO-RELOAD: User not on Brand Dashboard, skipping reload');
     }
   },
+  
+  // Super User Prompt Management
+  deleteSuperUserPrompt: (analysisId, promptId) => api.delete(`/api/v1/super-user/analysis/${analysisId}/prompts/${promptId}`),
   
   // Removed unused legacy endpoints
 };

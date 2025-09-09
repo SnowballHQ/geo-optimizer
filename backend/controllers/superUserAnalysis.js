@@ -1484,6 +1484,153 @@ Return ONLY a JSON object with this exact format:
     }
   }
 
+  // Delete prompt from super user analysis
+  async deletePrompt(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId, promptId } = req.params;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      console.log(`🗑️ Super User: Deleting prompt ${promptId} from analysis ${analysisId}`);
+      
+      // Find the analysis to ensure user has access
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      if (!analysis.analysisResults?.brandId) {
+        return res.status(404).json({ error: 'No brand data available for this analysis' });
+      }
+      
+      // Find the prompt and validate it belongs to this analysis
+      const prompt = await CategorySearchPrompt.findById(promptId).populate('categoryId');
+      
+      if (!prompt) {
+        return res.status(404).json({ error: 'Prompt not found' });
+      }
+      
+      // Verify the prompt belongs to this analysis session
+      if (prompt.brandId.toString() !== analysis.analysisResults.brandId.toString()) {
+        return res.status(403).json({ error: 'Access denied: Prompt does not belong to this analysis' });
+      }
+      
+      const categoryId = prompt.categoryId._id;
+      const categoryName = prompt.categoryId.categoryName;
+      
+      console.log(`🔍 Super User: Prompt belongs to category: ${categoryName} (${categoryId})`);
+      
+      // Step 1: Find and delete AI responses for this prompt AND analysis session
+      const aiResponses = await PromptAIResponse.find({ 
+        promptId: prompt._id,
+        analysisSessionId: analysis.analysisId // Only delete responses from this analysis session
+      });
+      const responseIds = aiResponses.map(response => response._id);
+      
+      console.log(`🔍 Super User: Found ${aiResponses.length} AI responses to delete for this analysis`);
+      
+      // Step 2: Delete brand mentions linked to these responses
+      const CategoryPromptMention = require("../models/CategoryPromptMention");
+      const deletedMentions = await CategoryPromptMention.deleteMany({
+        responseId: { $in: responseIds },
+        analysisSessionId: analysis.analysisId // Only delete mentions from this analysis session
+      });
+      
+      console.log(`🗑️ Super User: Deleted ${deletedMentions.deletedCount} brand mentions`);
+      
+      // Step 3: Delete AI responses from this analysis session only
+      const deletedResponses = await PromptAIResponse.deleteMany({
+        promptId: prompt._id,
+        analysisSessionId: analysis.analysisId
+      });
+      
+      console.log(`🗑️ Super User: Deleted ${deletedResponses.deletedCount} AI responses`);
+      
+      // Step 4: Delete the prompt (it may be shared, but we remove it as it's part of isolated analysis)
+      await CategorySearchPrompt.findByIdAndDelete(promptId);
+      
+      console.log(`🗑️ Super User: Deleted prompt: ${promptId}`);
+      
+      // Step 5: Recalculate SOV for this specific analysis session
+      console.log(`📊 Super User: Recalculating SOV for analysis ${analysis.analysisId}`);
+      
+      // Get brand profile
+      const brandProfile = await BrandProfile.findById(analysis.analysisResults.brandId);
+      if (!brandProfile) {
+        throw new Error('Brand profile not found');
+      }
+      
+      // Get remaining AI responses for this analysis session only
+      const remainingResponses = await PromptAIResponse.find({ 
+        brandId: analysis.analysisResults.brandId,
+        analysisSessionId: analysis.analysisId
+      }).populate('promptId');
+      
+      console.log(`📊 Super User: Found ${remainingResponses.length} remaining responses for SOV calculation`);
+      
+      // Get competitors from analysis data
+      const competitors = analysis.step3Data?.competitors || [];
+      
+      // Recalculate SOV for this analysis session only
+      const { calculateShareOfVoice } = require("./brand/shareOfVoice");
+      const sovResult = await calculateShareOfVoice(
+        brandProfile,
+        competitors,
+        remainingResponses,
+        null, // categoryId - null for all categories
+        analysis.analysisId, // analysisSessionId - isolate to this analysis
+        true // preserveOldRecords - true for super user isolation
+      );
+      
+      // Update analysis results with new SOV data
+      analysis.analysisResults.shareOfVoice = sovResult.shareOfVoice || {};
+      analysis.analysisResults.mentionCounts = sovResult.mentionCounts || {};
+      analysis.analysisResults.totalMentions = sovResult.totalMentions || 0;
+      analysis.analysisResults.brandShare = sovResult.brandShare || 0;
+      analysis.analysisResults.aiVisibilityScore = sovResult.aiVisibilityScore || 0;
+      
+      await analysis.save();
+      
+      console.log(`✅ Super User: SOV recalculated for analysis ${analysis.analysisId}:`, {
+        totalMentions: sovResult.totalMentions,
+        brandShare: sovResult.brandShare,
+        competitors: Object.keys(sovResult.shareOfVoice || {})
+      });
+      
+      res.json({
+        success: true,
+        message: 'Prompt deleted and analysis SOV recalculated successfully',
+        analysisId: analysis.analysisId,
+        deletedData: {
+          promptId: promptId,
+          categoryId: categoryId,
+          categoryName: categoryName,
+          deletedResponses: deletedResponses.deletedCount,
+          deletedMentions: deletedMentions.deletedCount
+        },
+        updatedSOV: {
+          shareOfVoice: sovResult.shareOfVoice || {},
+          mentionCounts: sovResult.mentionCounts || {},
+          totalMentions: sovResult.totalMentions || 0,
+          brandShare: sovResult.brandShare || 0,
+          aiVisibilityScore: sovResult.aiVisibilityScore || 0
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Super User: Error deleting prompt:', error);
+      res.status(500).json({ error: 'Failed to delete prompt and recalculate analysis SOV' });
+    }
+  }
+
   // Delete analysis (cleanup)
   async deleteAnalysis(req, res) {
     try {

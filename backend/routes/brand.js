@@ -23,6 +23,7 @@ router.get("/prompts/:promptId/response", auth, brandController.getPromptRespons
 router.post("/prompts/custom", auth, brandController.addCustomPrompt);
 router.post("/prompts/enhance", auth, brandController.enhancePrompt);
 router.post("/prompts/:promptId/generate", auth, brandController.generateCustomResponse);
+router.delete("/prompts/:promptId", auth, brandController.deletePrompt);
 
 // Debug endpoint
 router.get("/debug/ai-responses", auth, brandController.debugAIResponses);

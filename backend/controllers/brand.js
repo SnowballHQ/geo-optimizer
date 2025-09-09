@@ -1340,3 +1340,117 @@ exports.getBrandResponses = async (req, res) => {
     res.status(500).json({ error: 'Failed to get brand responses' });
   }
 };
+
+// Delete prompt and recalculate SOV
+exports.deletePrompt = async (req, res) => {
+  try {
+    const { promptId } = req.params;
+    const userId = req.user.id;
+    
+    console.log(`🗑️ Deleting prompt: ${promptId} for user: ${userId}`);
+    
+    // Find the prompt and validate ownership
+    const prompt = await CategorySearchPrompt.findById(promptId).populate('categoryId');
+    
+    if (!prompt) {
+      return res.status(404).json({ error: 'Prompt not found' });
+    }
+    
+    // Get user's brand to validate ownership
+    const brand = await BrandProfile.findOne({ ownerUserId: userId.toString() });
+    
+    if (!brand) {
+      return res.status(404).json({ error: 'Brand profile not found' });
+    }
+    
+    // Verify the prompt belongs to this user's brand
+    if (!prompt.brandId || prompt.brandId.toString() !== brand._id.toString()) {
+      return res.status(403).json({ error: 'Access denied: You don\'t have permission to delete this prompt' });
+    }
+    
+    const categoryId = prompt.categoryId._id;
+    const categoryName = prompt.categoryId.categoryName;
+    
+    console.log(`🔍 Prompt belongs to category: ${categoryName} (${categoryId})`);
+    
+    // Step 1: Find and delete AI responses for this prompt
+    const aiResponses = await PromptAIResponse.find({ promptId: prompt._id });
+    const responseIds = aiResponses.map(response => response._id);
+    
+    console.log(`🔍 Found ${aiResponses.length} AI responses to delete`);
+    
+    // Step 2: Delete brand mentions linked to these responses
+    const CategoryPromptMention = require("../models/CategoryPromptMention");
+    const deletedMentions = await CategoryPromptMention.deleteMany({
+      responseId: { $in: responseIds }
+    });
+    
+    console.log(`🗑️ Deleted ${deletedMentions.deletedCount} brand mentions`);
+    
+    // Step 3: Delete AI responses
+    const deletedResponses = await PromptAIResponse.deleteMany({
+      promptId: prompt._id
+    });
+    
+    console.log(`🗑️ Deleted ${deletedResponses.deletedCount} AI responses`);
+    
+    // Step 4: Delete the prompt itself
+    await CategorySearchPrompt.findByIdAndDelete(promptId);
+    
+    console.log(`🗑️ Deleted prompt: ${promptId}`);
+    
+    // Step 5: Recalculate SOV for the brand
+    console.log(`📊 Recalculating SOV for brand: ${brand.brandName}`);
+    
+    const { calculateShareOfVoice } = require("./brand/shareOfVoice");
+    
+    // Get remaining AI responses for SOV calculation
+    const remainingResponses = await PromptAIResponse.find({ 
+      brandId: brand._id 
+    }).populate('promptId');
+    
+    console.log(`📊 Found ${remainingResponses.length} remaining responses for SOV calculation`);
+    
+    // Get competitors from brand profile
+    const competitors = brand.competitors || [];
+    
+    // Recalculate SOV
+    const sovResult = await calculateShareOfVoice(
+      brand,
+      competitors,
+      remainingResponses,
+      null, // categoryId - null for all categories
+      null, // analysisSessionId - null for regular users
+      false // preserveOldRecords - false to replace old SOV data
+    );
+    
+    console.log(`✅ SOV recalculated:`, {
+      totalMentions: sovResult.totalMentions,
+      brandShare: sovResult.brandShare,
+      competitors: Object.keys(sovResult.shareOfVoice || {})
+    });
+    
+    res.json({
+      success: true,
+      message: 'Prompt deleted and SOV recalculated successfully',
+      deletedData: {
+        promptId: promptId,
+        categoryId: categoryId,
+        categoryName: categoryName,
+        deletedResponses: deletedResponses.deletedCount,
+        deletedMentions: deletedMentions.deletedCount
+      },
+      updatedSOV: {
+        shareOfVoice: sovResult.shareOfVoice || {},
+        mentionCounts: sovResult.mentionCounts || {},
+        totalMentions: sovResult.totalMentions || 0,
+        brandShare: sovResult.brandShare || 0,
+        aiVisibilityScore: sovResult.aiVisibilityScore || 0
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error deleting prompt:', error);
+    res.status(500).json({ error: 'Failed to delete prompt and recalculate SOV' });
+  }
+};

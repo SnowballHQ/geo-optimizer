@@ -45,6 +45,9 @@ router.get('/:analysisId/download-pdf', superUserAnalysisController.downloadAnal
 // POST /api/v1/super-user/analysis/save-to-history - Save analysis to history
 router.post('/save-to-history', superUserAnalysisController.saveToHistory);
 
+// DELETE /api/v1/super-user/analysis/:analysisId/prompts/:promptId - Delete specific prompt
+router.delete('/:analysisId/prompts/:promptId', superUserAnalysisController.deletePrompt);
+
 // DELETE /api/v1/super-user/analysis/:analysisId - Delete analysis
 router.delete('/:analysisId', superUserAnalysisController.deleteAnalysis);
 

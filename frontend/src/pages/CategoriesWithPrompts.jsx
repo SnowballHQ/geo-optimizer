@@ -5,6 +5,8 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { ChevronDown, ChevronRight, MessageSquare, Sparkles, Clock } from 'lucide-react';
 import AddCustomPrompt from '../components/AddCustomPrompt';
+import DeletePromptModal from '../components/DeletePromptModal';
+import { toast } from 'react-toastify';
 
 const CategoriesWithPrompts = ({ 
   categories, 
@@ -19,6 +21,7 @@ const CategoriesWithPrompts = ({
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [promptResponses, setPromptResponses] = useState({});
   const [loadingResponses, setLoadingResponses] = useState({});
+  const [deletingPrompts, setDeletingPrompts] = useState({});
 
   // Helper function to get prompt text safely
   const getPromptText = (prompt) => {
@@ -326,6 +329,66 @@ const CategoriesWithPrompts = ({
     console.log('✅ CategoriesWithPrompts - All refresh callbacks completed');
   };
 
+  const handleDeletePrompt = async (promptId, categoryName) => {
+    try {
+      setDeletingPrompts(prev => ({ ...prev, [promptId]: true }));
+      
+      console.log(`🗑️ Deleting prompt: ${promptId} (${isSuperUser ? 'Super User' : 'Normal User'})`);
+      
+      let response;
+      if (isSuperUser && analysisId) {
+        // Super User deletion with analysis isolation
+        response = await apiService.deleteSuperUserPrompt(analysisId, promptId);
+        toast.success('Prompt deleted and analysis SOV recalculated successfully!');
+      } else {
+        // Normal user deletion
+        response = await apiService.deletePrompt(promptId);
+        toast.success('Prompt deleted and SOV recalculated successfully!');
+      }
+      
+      console.log('✅ Prompt deleted successfully:', response.data);
+      
+      // Remove from local state
+      setCategoryPrompts(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(categoryId => {
+          updated[categoryId] = updated[categoryId].filter(p => p._id !== promptId);
+        });
+        return updated;
+      });
+      
+      // Clear any cached response
+      setPromptResponses(prev => {
+        const updated = { ...prev };
+        delete updated[promptId];
+        return updated;
+      });
+      
+      // Trigger parent data refresh to update SOV display
+      if (onDataUpdate && typeof onDataUpdate === 'function') {
+        console.log('🔄 Triggering parent data update after prompt deletion');
+        await onDataUpdate();
+      }
+      
+      if (onSOVUpdate && typeof onSOVUpdate === 'function') {
+        console.log('🔄 Triggering SOV update after prompt deletion');
+        await onSOVUpdate();
+      }
+      
+      // Auto-reload Brand Dashboard for normal users
+      if (!isSuperUser && apiService.triggerBrandDashboardReload) {
+        apiService.triggerBrandDashboardReload();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error deleting prompt:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to delete prompt';
+      toast.error(`Error: ${errorMessage}`);
+    } finally {
+      setDeletingPrompts(prev => ({ ...prev, [promptId]: false }));
+    }
+  };
+
   if (!categories || categories.length === 0) {
     return (
       <Card>
@@ -437,24 +500,34 @@ const CategoriesWithPrompts = ({
                                     )}
                                   </div>
                                   
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handlePromptClick(prompt._id || prompt.id)}
-                                    disabled={isLoading}
-                                    className="ml-3 text-xs"
-                                  >
-                                    {isLoading ? (
-                                      <div className="flex items-center space-x-1">
-                                        <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin"></div>
-                                        <span>Loading...</span>
-                                      </div>
-                                    ) : hasResponse ? (
-                                      'Hide'
-                                    ) : (
-                                      'View'
-                                    )}
-                                  </Button>
+                                  <div className="flex items-center space-x-2 ml-3">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handlePromptClick(prompt._id || prompt.id)}
+                                      disabled={isLoading || deletingPrompts[prompt._id]}
+                                      className="text-xs"
+                                    >
+                                      {isLoading ? (
+                                        <div className="flex items-center space-x-1">
+                                          <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin"></div>
+                                          <span>Loading...</span>
+                                        </div>
+                                      ) : hasResponse ? (
+                                        'Hide'
+                                      ) : (
+                                        'View'
+                                      )}
+                                    </Button>
+                                    
+                                    <DeletePromptModal
+                                      promptText={getPromptText(prompt)}
+                                      categoryName={category.categoryName}
+                                      onConfirm={() => handleDeletePrompt(prompt._id, category.categoryName)}
+                                      isDeleting={deletingPrompts[prompt._id]}
+                                      isSuperUser={isSuperUser}
+                                    />
+                                  </div>
                                 </div>
                               </CardContent>
                             </Card>

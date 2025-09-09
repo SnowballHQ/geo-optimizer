@@ -1,25 +1,31 @@
 require("dotenv").config();
 require('express-async-errors');
 
-// Debug environment variables
-console.log('Environment variables loaded:');
-console.log('MONGO_URI:', process.env.MONGO_URI ? 'Set' : 'NOT SET');
-console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'NOT SET');
-console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Set' : 'NOT SET');
-console.log('PERPLEXITY_API_KEY:', process.env.PERPLEXITY_API_KEY ? 'Set' : 'NOT SET');
-console.log('SHOPIFY_API_KEY:', process.env.SHOPIFY_API_KEY ? 'Set' : 'NOT SET');
-console.log('SHOPIFY_API_SECRET:', process.env.SHOPIFY_API_SECRET ? 'Set' : 'NOT SET');
-console.log('WORDPRESS_CLIENT_ID:', process.env.WORDPRESS_CLIENT_ID ? 'Set' : 'NOT SET');
-console.log('WORDPRESS_CLIENT_SECRET:', process.env.WORDPRESS_CLIENT_SECRET ? 'Set' : 'NOT SET');
-console.log('WORDPRESS_REDIRECT_URI:', process.env.WORDPRESS_REDIRECT_URI ? 'Set' : 'NOT SET');
-console.log('APP_URL:', process.env.APP_URL || 'http://localhost:5000 (default)');
-console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'http://localhost:5173 (default)');
+// Secure environment variable logging - only log status, not values
+console.log('🔐 Environment Security Check:');
+console.log('MONGO_URI:', process.env.MONGO_URI ? '✅ Set' : '❌ NOT SET');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ Set' : '❌ NOT SET');
+console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅ Set' : '❌ NOT SET');
+console.log('PERPLEXITY_API_KEY:', process.env.PERPLEXITY_API_KEY ? '✅ Set' : '❌ NOT SET');
+console.log('SHOPIFY_API_KEY:', process.env.SHOPIFY_API_KEY ? '✅ Set' : '❌ NOT SET');
+console.log('SHOPIFY_API_SECRET:', process.env.SHOPIFY_API_SECRET ? '✅ Set' : '❌ NOT SET');
+console.log('WORDPRESS_CLIENT_ID:', process.env.WORDPRESS_CLIENT_ID ? '✅ Set' : '❌ NOT SET');
+console.log('WORDPRESS_CLIENT_SECRET:', process.env.WORDPRESS_CLIENT_SECRET ? '✅ Set' : '❌ NOT SET');
+console.log('WORDPRESS_REDIRECT_URI:', process.env.WORDPRESS_REDIRECT_URI ? '✅ Set' : '❌ NOT SET');
+console.log('APP_URL:', process.env.APP_URL ? '✅ Set' : 'http://localhost:5000 (default)');
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL ? '✅ Set' : 'http://localhost:5173 (default)');
 console.log('PORT:', process.env.PORT || '5000 (default)');
 
 const connectDB = require("./db/connect");
 const express = require("express");
 const cors = require('cors');
 const path = require('path');
+
+// Security middleware imports
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
 const app = express();
 const mainRouter = require("./routes/user");
 const brandRouter = require("./routes/brand");
@@ -38,7 +44,53 @@ const analyticsRouter = require("./routes/analytics");
 // Initialize auto-publisher
 require('./utils/autoPublisher');
 
-app.use(express.json());
+// Security Middleware Configuration
+console.log('🛡️  Initializing Security Middleware...');
+
+// Set security headers with helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https:"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https:"],
+      fontSrc: ["'self'", "https:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// Rate limiting for all requests
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Limit each IP to 1000 requests per windowMs
+  message: {
+    error: 'Too many requests from this IP, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/api/v1/health';
+  }
+});
+
+app.use(generalLimiter);
+
+// Sanitize user input to prevent NoSQL injection attacks
+app.use(mongoSanitize());
+
+// Clean user input from malicious XSS code
+app.use(xss());
+
+app.use(express.json({ limit: '10mb' }));
 
 // CORS configuration for development and production
 const allowedOrigins = [
