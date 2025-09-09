@@ -24,7 +24,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   
   // New state variables for enhanced features
-  const [currentView, setCurrentView] = useState('week'); // week, month, list, published
+  const [currentView, setCurrentView] = useState('week'); // week, month, list
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showContentEditor, setShowContentEditor] = useState(false);
   const [editingContent, setEditingContent] = useState(null);
@@ -49,9 +49,6 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
   const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
   
-  // Published blogs state
-  const [publishedBlogs, setPublishedBlogs] = useState([]);
-  const [isLoadingPublishedBlogs, setIsLoadingPublishedBlogs] = useState(false);
   const [editorFormData, setEditorFormData] = useState({
     title: '',
     description: '',
@@ -728,27 +725,6 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
     }
   }, [inline, shouldAutoLoad]);
 
-  // Fetch published blogs
-  const fetchPublishedBlogs = async () => {
-    try {
-      setIsLoadingPublishedBlogs(true);
-      const response = await apiService.getPublishedBlogs();
-      console.log('Published blogs response:', response.data);
-      setPublishedBlogs(response.data.data || []);
-    } catch (error) {
-      console.error('Error fetching published blogs:', error);
-      setPublishedBlogs([]);
-    } finally {
-      setIsLoadingPublishedBlogs(false);
-    }
-  };
-
-  // Load published blogs when switching to published view
-  useEffect(() => {
-    if (currentView === 'published') {
-      fetchPublishedBlogs();
-    }
-  }, [currentView]);
 
   // Check for existing calendars when company name changes
   useEffect(() => {
@@ -1348,7 +1324,6 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
             {currentView === 'week' && `Week of ${currentDate.toLocaleDateString()}`}
             {currentView === 'month' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             {currentView === 'list' && 'Content List View'}
-            {currentView === 'published' && 'Published Blogs'}
           </div>
           
           <Button
@@ -1388,15 +1363,6 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
           >
             <List className="w-4 h-4 mr-1" />
             List
-          </Button>
-          <Button
-            variant={currentView === 'published' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setCurrentView('published')}
-            className={currentView === 'published' ? 'gradient-primary' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
-          >
-            <CheckCircle className="w-4 h-4 mr-1" />
-            Published
           </Button>
           
           <Button
@@ -1551,123 +1517,6 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
         </div>
       )}
 
-      {/* Published Blogs View */}
-      {currentView === 'published' && (
-        <div className="space-y-4">
-          {isLoadingPublishedBlogs && (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6658f4]"></div>
-              <span className="ml-2 text-[#4a4a6a]">Loading published blogs...</span>
-            </div>
-          )}
-
-          {!isLoadingPublishedBlogs && publishedBlogs.length === 0 && (
-            <Card className="border-[#b0b0d8] bg-white">
-              <CardContent className="p-8 text-center">
-                <CheckCircle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                <h3 className="text-lg font-semibold text-[#4a4a6a] mb-2">No Published Blogs Yet</h3>
-                <p className="text-[#4a4a6a] mb-4">
-                  Publish some content to see analytics data here.
-                </p>
-                <Button
-                  onClick={() => setCurrentView('list')}
-                  className="bg-[#6658f4] hover:bg-[#5a47e8] text-white"
-                >
-                  View Content Calendar
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {!isLoadingPublishedBlogs && publishedBlogs.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-[#4a4a6a]">
-                  Published Blogs ({publishedBlogs.length})
-                </h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchPublishedBlogs}
-                  className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                >
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  Refresh
-                </Button>
-              </div>
-
-              {publishedBlogs.map((blog) => (
-                <Card key={blog.id} className="border border-[#b0b0d8] bg-white hover:border-[#6658f4] transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h4 className="font-semibold text-[#4a4a6a]">{blog.title}</h4>
-                          <Badge className="bg-green-100 text-green-800">
-                            Published
-                          </Badge>
-                          <Badge variant="outline" className="border-blue-200 text-blue-800">
-                            {blog.cmsPlatform}
-                          </Badge>
-                          <span className="text-sm text-[#4a4a6a]">
-                            {new Date(blog.publishedAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="text-sm text-[#4a4a6a] mb-2">
-                          <strong>Keywords:</strong> {Array.isArray(blog.keywords) ? blog.keywords.join(', ') : blog.keywords}
-                        </div>
-                        <div className="text-sm text-[#4a4a6a] mb-2">
-                          <strong>Target Audience:</strong> {blog.targetAudience}
-                        </div>
-                        
-                        {/* Analytics Data */}
-                        <div className="grid grid-cols-4 gap-4 mt-3 p-3 bg-gray-50 rounded-md">
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-[#4a4a6a]">
-                              {blog.analytics.position || '-'}
-                            </div>
-                            <div className="text-xs text-gray-600">Avg Position</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-purple-600">
-                              {blog.analytics.clicks || 0}
-                            </div>
-                            <div className="text-xs text-gray-600">Clicks</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-orange-600">
-                              {blog.analytics.impressions || 0}
-                            </div>
-                            <div className="text-xs text-gray-600">Impressions</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-green-600">
-                              {blog.analytics.ctr ? (blog.analytics.ctr * 100).toFixed(1) + '%' : '0%'}
-                            </div>
-                            <div className="text-xs text-gray-600">CTR</div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(blog.publishedUrl, '_blank')}
-                          className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Content Editor Modal */}
       {showContentEditor && editingContent && editingContent.title && (

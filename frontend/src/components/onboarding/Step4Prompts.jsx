@@ -7,6 +7,7 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
   const [prompts, setPrompts] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editValue, setEditValue] = useState('');
 
@@ -61,6 +62,7 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
 
   const handleSaveEdit = async () => {
     if (editValue.trim()) {
+      setIsSavingEdit(true);
       const newPrompts = [...prompts];
       newPrompts[editingIndex] = editValue.trim();
       setPrompts(newPrompts);
@@ -75,6 +77,8 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
         console.error('❌ Failed to save edited prompts:', error);
         // Note: We don't show an error to user as the local state is updated
         // and they can continue with the onboarding
+      } finally {
+        setIsSavingEdit(false);
       }
     }
     setEditingIndex(null);
@@ -188,16 +192,27 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
                           <Button
                             onClick={handleSaveEdit}
                             size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
+                            disabled={isSavingEdit}
+                            className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
                           >
-                            <Save className="w-4 h-4 mr-1" />
-                            Save
+                            {isSavingEdit ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-4 h-4 mr-1" />
+                                Save
+                              </>
+                            )}
                           </Button>
                           <Button
                             onClick={handleCancelEdit}
                             size="sm"
                             variant="outline"
-                            className="border-gray-300 text-gray-700"
+                            disabled={isSavingEdit}
+                            className="border-gray-300 text-gray-700 disabled:opacity-50"
                           >
                             <X className="w-4 h-4 mr-1" />
                             Cancel

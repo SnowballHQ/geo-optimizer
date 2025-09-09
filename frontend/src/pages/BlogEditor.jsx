@@ -24,6 +24,7 @@ const BlogEditor = () => {
   const [richTextContent, setRichTextContent] = useState('');
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
   const [generatedBlogContent, setGeneratedBlogContent] = useState('');
+  const [contentUpdateKey, setContentUpdateKey] = useState(0);
   const [shopifyConnection, setShopifyConnection] = useState({ status: 'checking', shop: null });
   const [webflowConnection, setWebflowConnection] = useState({ status: 'checking', userEmail: null });
   const [showPublishOptions, setShowPublishOptions] = useState(false);
@@ -329,7 +330,10 @@ const BlogEditor = () => {
           contentPreview: generatedContent.substring(0, 100) + '...'
         });
         
-        // Update formData.content FIRST and PRIMARY - like outline does with formData.outline
+        // Update richTextContent FIRST to ensure it's immediately available
+        setRichTextContent(generatedContent);
+        
+        // Update formData.content SECOND - like outline does with formData.outline
         setFormData(prev => {
           console.log('📝 Setting formData.content:', { 
             contentLength: generatedContent.length,
@@ -342,8 +346,8 @@ const BlogEditor = () => {
           };
         });
         
-        // Update richTextContent as secondary for Rich Text Editor sync
-        setRichTextContent(generatedContent);
+        // Force UI update by incrementing content update key
+        setContentUpdateKey(prev => prev + 1);
         
         // Update post state for consistency
         setPost(prev => prev ? {
@@ -918,9 +922,16 @@ const BlogEditor = () => {
                  <Button
                    onClick={handleGenerateOutline}
                    disabled={generatingOutline || !formData.title}
-                   className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-2"
+                   className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-2 disabled:opacity-50"
                  >
-                   {generatingOutline ? 'Generating...' : formData.outline ? '🔄 Regenerate' : '✨ Generate Outline'}
+                   {generatingOutline ? (
+                     <>
+                       <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                       Generating...
+                     </>
+                   ) : (
+                     formData.outline ? '🔄 Regenerate' : '✨ Generate Outline'
+                   )}
                  </Button>
                </div>
                
@@ -995,9 +1006,13 @@ const BlogEditor = () => {
                     Content
                   </label>
                   <div className="border border-gray-300 rounded-md p-4 min-h-[400px] bg-gray-50">
-                    {(formData.content || richTextContent) ? (
-                      <div className="prose prose-lg max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: formData.content || richTextContent }} />
+                    {(richTextContent || formData.content) ? (
+                      <div className="prose prose-lg max-w-none" key={`content-${contentUpdateKey}`}>
+                        <div 
+                          dangerouslySetInnerHTML={{ 
+                            __html: richTextContent || formData.content 
+                          }} 
+                        />
                       </div>
                     ) : (
                       <div className="text-center py-16 text-gray-500">
@@ -1009,12 +1024,12 @@ const BlogEditor = () => {
                 </div>
 
                 {/* Content Preview */}
-                {(formData.content || richTextContent) && (
+                {(richTextContent || formData.content) && (
                   <div className="mt-6">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Content Preview</h3>
                     <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-                      <div className="prose prose-sm max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: formData.content || richTextContent }} />
+                      <div className="prose prose-sm max-w-none" key={`preview-${contentUpdateKey}`}>
+                        <div dangerouslySetInnerHTML={{ __html: richTextContent || formData.content }} />
                       </div>
                     </div>
                   </div>
