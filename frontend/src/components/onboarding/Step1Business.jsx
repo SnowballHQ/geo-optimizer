@@ -8,6 +8,7 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
   const [domain, setDomain] = useState('');
   const [brandName, setBrandName] = useState('');
   const [description, setDescription] = useState('');
+  const [isLocalBrand, setIsLocalBrand] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
@@ -16,6 +17,7 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
       setDomain(progress.step1.domain || '');
       setBrandName(progress.step1.brandName || '');
       setDescription(progress.step1.description || '');
+      setIsLocalBrand(progress.step1.isLocalBrand || false);
     }
   }, [progress]);
 
@@ -53,6 +55,7 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
         domain: domain.trim(),
         brandName: brandName.trim(),
         description: description.trim(),
+        isLocalBrand: isLocalBrand,
         completed: true
       }
     }, 2);
@@ -123,6 +126,21 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 resize-none"
               />
+            </div>
+
+            <div>
+              <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isLocalBrand}
+                  onChange={(e) => setIsLocalBrand(e.target.checked)}
+                  className="w-4 h-4 text-primary-500 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Local Brand</span>
+                  <p className="text-xs text-gray-500">Enable if this is a location-specific business</p>
+                </div>
+              </label>
             </div>
           </div>
         </div>

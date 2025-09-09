@@ -62,7 +62,7 @@ class OnboardingController {
   async step1DomainAnalysis(req, res) {
     try {
       const userId = req.user.id;
-      const { domain, superUserMode = false, sessionId } = req.body;
+      const { domain, superUserMode = false, sessionId, isLocalBrand = false } = req.body;
       
       if (!domain) {
         return res.status(400).json({ error: 'Domain is required' });
@@ -80,12 +80,21 @@ class OnboardingController {
         // Get domain information from Perplexity
         const domainInfo = await perplexityService.getDomainInfo(domain);
         
+        // Extract location if local brand is enabled for super user
+        let extractedLocation = null;
+        if (isLocalBrand && domainInfo.description) {
+          extractedLocation = await this.extractLocationFromDescription(domainInfo.description);
+          console.log(`📍 Super User: Extracted location for local brand: ${extractedLocation}`);
+        }
+        
         // Create temporary isolated brand profile for Super User analysis
         const brand = new BrandProfile({
           ownerUserId: userId.toString(),
           domain,
           brandName: domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
           brandInformation: domainInfo.description || '',
+          isLocalBrand: isLocalBrand,
+          location: extractedLocation,
           isAdminAnalysis: true, // Mark as Super User analysis
           analysisSessionId: sessionId // Add session ID for isolation
         });
@@ -98,6 +107,7 @@ class OnboardingController {
           success: true,
           brand,
           domainInfo,
+          location: extractedLocation,
           currentStep: 1,
           superUserMode: true,
           sessionId: sessionId
@@ -108,6 +118,13 @@ class OnboardingController {
         // Get domain information from Perplexity
         const domainInfo = await perplexityService.getDomainInfo(domain);
         
+        // Extract location if local brand is enabled
+        let extractedLocation = null;
+        if (isLocalBrand && domainInfo.description) {
+          extractedLocation = await this.extractLocationFromDescription(domainInfo.description);
+          console.log(`📍 Extracted location for local brand: ${extractedLocation}`);
+        }
+        
         // Create or update brand profile (normal user flow)
         const brand = await BrandProfile.findOneAndUpdate(
           { ownerUserId: userId.toString() },
@@ -115,6 +132,8 @@ class OnboardingController {
             domain,
             brandName: domain.replace(/^https?:\/\//, '').replace(/^www\./, ''),
             brandInformation: domainInfo.description || '',
+            isLocalBrand: isLocalBrand,
+            location: extractedLocation,
             updatedAt: new Date()
           },
           { upsert: true, new: true }
@@ -129,6 +148,8 @@ class OnboardingController {
               domain,
               brandName: brand.brandName,
               description: domainInfo.description || '',
+              isLocalBrand: isLocalBrand,
+              location: extractedLocation,
               completed: true
             },
             $addToSet: { completedSteps: 1 }
@@ -140,6 +161,7 @@ class OnboardingController {
           success: true,
           brand,
           domainInfo,
+          location: extractedLocation,
           currentStep: 1
         });
       }
@@ -316,8 +338,8 @@ class OnboardingController {
           openai, 
           categories, 
           brand, 
-          brand.competitors || []
-          // Note: brandDescription parameter removed as function signature only takes 4 params
+          brand.competitors || [],
+          brand.location // Pass location for local brand prompt generation
         );
         
         console.log(`✅ Onboarding Step 4: Generated ${prompts.length} prompts`);
@@ -626,6 +648,49 @@ class OnboardingController {
     } catch (error) {
       console.error('Get status error:', error);
       res.status(500).json({ error: 'Failed to get status' });
+    }
+  }
+
+  // Extract location from business description using OpenAI
+  async extractLocationFromDescription(description) {
+    try {
+      console.log(`🔍 Extracting location from description using OpenAI`);
+      
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const locationPrompt = `From this business description, identify the primary location/city where this business operates. Return only the location name (city, state format if applicable). If no clear location is mentioned, return "null".
+
+Business Description: ${description}`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: locationPrompt }],
+        max_tokens: 50,
+        temperature: 0.1
+      });
+
+      const locationResult = response.choices[0].message.content.trim();
+      
+      // Log token usage
+      tokenLogger.logOpenAICall(
+        'Location Extraction',
+        locationPrompt,
+        locationResult,
+        'gpt-3.5-turbo'
+      );
+      
+      // Return null if OpenAI couldn't find a location
+      if (locationResult.toLowerCase() === 'null' || locationResult.toLowerCase() === 'none') {
+        return null;
+      }
+      
+      console.log(`✅ Location extracted: ${locationResult}`);
+      return locationResult;
+      
+    } catch (error) {
+      console.error('❌ Error extracting location from description:', error);
+      return null;
     }
   }
 }
