@@ -330,6 +330,14 @@ export const apiService = {
   // Super User Prompt Management
   deleteSuperUserPrompt: (analysisId, promptId) => api.delete(`/api/v1/super-user/analysis/${analysisId}/prompts/${promptId}`),
   
+  // Payment API methods
+  getPaymentInfo: () => api.get('/api/v1/payment/info'),
+  createPaymentIntent: (data) => api.post('/api/v1/payment/create-payment-intent', data),
+  handlePaymentSuccess: (data) => api.post('/api/v1/payment/success', data),
+  createSubscription: (data) => api.post('/api/v1/payment/create-subscription', data),
+  cancelSubscription: () => api.post('/api/v1/payment/cancel-subscription'),
+  updateBillingAddress: (data) => api.post('/api/v1/payment/billing-address', data),
+  
   // Removed unused legacy endpoints
 };
 

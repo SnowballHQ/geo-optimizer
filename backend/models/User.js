@@ -99,6 +99,68 @@ const UserSchema = new mongoose.Schema({
             default: null
         }
     },
+
+    // Stripe payment integration
+    stripeCustomerId: {
+        type: String,
+        sparse: true,
+        default: null
+    },
+    subscriptionStatus: {
+        type: String,
+        enum: ['none', 'active', 'canceled', 'past_due', 'unpaid', 'incomplete'],
+        default: 'none'
+    },
+    subscriptionId: {
+        type: String,
+        sparse: true,
+        default: null
+    },
+    planType: {
+        type: String,
+        enum: ['free', 'basic', 'premium', 'enterprise'],
+        default: 'free'
+    },
+    paymentHistory: [{
+        paymentIntentId: {
+            type: String,
+            required: true
+        },
+        amount: {
+            type: Number,
+            required: true
+        },
+        currency: {
+            type: String,
+            default: 'usd'
+        },
+        status: {
+            type: String,
+            enum: ['succeeded', 'pending', 'failed', 'canceled'],
+            required: true
+        },
+        planType: {
+            type: String,
+            required: true
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    billingAddress: {
+        line1: String,
+        line2: String,
+        city: String,
+        state: String,
+        postal_code: String,
+        country: String
+    },
+    paymentMethodId: {
+        type: String,
+        sparse: true,
+        default: null
+    },
 });
 
 UserSchema.pre("save", async function(){

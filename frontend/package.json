@@ -12,6 +12,8 @@
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.12",
+    "@stripe/react-stripe-js": "^4.0.1",
+    "@stripe/stripe-js": "^7.9.0",
     "@tailwindcss/typography": "^0.5.16",
     "@tiptap/extension-code-block": "^3.1.0",
     "@tiptap/extension-image": "^3.1.0",

@@ -12,6 +12,7 @@ import WebflowSettings from '../components/WebflowSettings';
 import WordPressSettings from '../components/WordPressSettings';
 import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
 import Analytics from '../components/Analytics';
+import StripePaymentSettings from '../components/StripePaymentSettings';
 
 import { apiService } from '../utils/api';
 import { getUserName, isSuperuser } from '../utils/auth';
@@ -992,6 +993,24 @@ const Dashboard = () => {
                   <div className="flex justify-end">
                     <Button className="gradient-primary">Save Integrations</Button>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Payment & Billing */}
+              <Card className="border border-[#b0b0d8] bg-white">
+                <CardHeader>
+                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-[#7765e3] rounded-lg flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">💳</span>
+                    </div>
+                    <span>Payment & Billing</span>
+                  </CardTitle>
+                  <CardDescription className="text-[#4a4a6a]">
+                    Manage your subscription and billing information
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StripePaymentSettings />
                 </CardContent>
               </Card>
 

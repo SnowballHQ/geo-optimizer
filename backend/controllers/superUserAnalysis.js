@@ -753,7 +753,7 @@ Return ONLY a JSON object with this exact format:
             model: "gpt-3.5-turbo",
             messages: [{ role: "user", content: mixedPrompt }],
             max_tokens: 500,
-            temperature: 0.1
+            temperature: 0.6,
           });
 
           const mixedContent = mixedResponse.choices[0].message.content;
