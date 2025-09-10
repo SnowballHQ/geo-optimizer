@@ -34,17 +34,38 @@ const ShareOfVoiceTable = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [competitorToDelete, setCompetitorToDelete] = useState('');
 
-  // Debug logging
+  // ✅ ENHANCED DEBUG LOGGING for Super User issues
   console.log("ShareOfVoiceTable received props:", {
     shareOfVoice,
+    shareOfVoiceType: typeof shareOfVoice,
+    shareOfVoiceKeys: shareOfVoice ? Object.keys(shareOfVoice) : [],
     mentionCounts,
+    mentionCountsType: typeof mentionCounts,
+    mentionCountsKeys: mentionCounts ? Object.keys(mentionCounts) : [],
     totalMentions,
     brandShare,
     aiVisibilityScore,
     brandId,
     brandName,
-    calculationMethod: propCalculationMethod
+    calculationMethod: propCalculationMethod,
+    isSuperUser,
+    analysisId
   });
+  
+  // ✅ CRITICAL: Log the exact values for debugging Super User SOV issues
+  if (shareOfVoice && typeof shareOfVoice === 'object') {
+    console.log("🔍 CRITICAL: ShareOfVoice values being processed:");
+    Object.entries(shareOfVoice).forEach(([brand, share]) => {
+      console.log(`   ${brand}: ${share} (type: ${typeof share})`);
+    });
+  }
+  
+  if (mentionCounts && typeof mentionCounts === 'object') {
+    console.log("🔍 CRITICAL: MentionCounts values being processed:");
+    Object.entries(mentionCounts).forEach(([brand, count]) => {
+      console.log(`   ${brand}: ${count} (type: ${typeof count})`);
+    });
+  }
 
   // Function to fetch mention data for a brand
   const handleBrandClick = async (brandNameToFetch) => {
@@ -249,17 +270,33 @@ const ShareOfVoiceTable = ({
 
   // Check if data is in the new enhanced format
   if (shareOfVoice && mentionCounts) {
-    shareData = Object.keys(mentionCounts).map(name => ({
-      name,
-      mentions: mentionCounts[name] || 0,
-      share: shareOfVoice[name] || 0
-    })).sort((a, b) => b.share - a.share);
+    console.log("✅ CRITICAL: Processing shareOfVoice and mentionCounts in enhanced format");
+    console.log("🔍 CRITICAL: mentionCounts keys:", Object.keys(mentionCounts));
+    console.log("🔍 CRITICAL: shareOfVoice keys:", Object.keys(shareOfVoice));
+    
+    shareData = Object.keys(mentionCounts).map(name => {
+      const mentions = mentionCounts[name] || 0;
+      const share = shareOfVoice[name] || 0;
+      
+      console.log(`🔍 PROCESSING: ${name} -> mentions: ${mentions} (${typeof mentions}), share: ${share} (${typeof share})`);
+      
+      return {
+        name,
+        mentions: mentions,
+        share: share
+      };
+    }).sort((a, b) => b.share - a.share);
+    
     totalMentionsCount = totalMentions || shareData.reduce((sum, item) => sum + item.mentions, 0);
     brandsCount = shareData.length;
+    
+    console.log("✅ CRITICAL: Final shareData array:", shareData);
+    console.log("✅ CRITICAL: Total mentions count:", totalMentionsCount);
     
     // Check if using fallback (no actual mentions)
     if (totalMentionsCount === 0) {
       isUsingFallback = true;
+      console.log("⚠️ CRITICAL: Using fallback mode (no actual mentions)");
     }
   }
   // Check if data is in the old format (nested object)

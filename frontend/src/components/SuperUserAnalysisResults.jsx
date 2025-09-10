@@ -51,42 +51,110 @@ const SuperUserAnalysisResults = ({
       console.log('🔍 Share of Voice data entries:', Object.entries(shareOfVoiceData));
       console.log('🔍 Mention counts:', mentionCounts);
       
-      // Convert shareOfVoice data to the format expected by ShareOfVoiceTable  
-      // Use the original total mentions (136) - this represents ALL brand mentions extracted from AI responses
-      // The individual brand counts (3,3,6,0,0,0) represent mentions for the specific brands being analyzed
+      // ✅ FIX: Enhanced SOV data processing with validation
       const totalMentionsExtracted = analysisData.analysisResults?.totalMentions || 0;
       const analyzedBrandTotal = Object.values(mentionCounts).reduce((sum, count) => sum + (count || 0), 0);
       
-      console.log('🔍 SOV Data Analysis:', {
-        totalMentionsExtracted, // All brand mentions found (136)
-        analyzedBrandTotal,     // Sum of our specific brands (12)  
-        mentionCounts,          // Individual brand counts
-        shareOfVoiceData        // Backend calculated percentages
+      console.log('🔍 Enhanced SOV Data Analysis:', {
+        totalMentionsExtracted, 
+        analyzedBrandTotal,
+        mentionCounts,
+        shareOfVoiceData,
+        hasValidSOV: Object.keys(shareOfVoiceData).length > 0,
+        hasValidMentions: Object.keys(mentionCounts).length > 0,
+        brandShare: analysisData.analysisResults?.brandShare,
+        aiVisibilityScore: analysisData.analysisResults?.aiVisibilityScore
+      });
+      
+      // ✅ FIX: Better handling for empty SOV data
+      if (Object.keys(shareOfVoiceData).length === 0 && Object.keys(mentionCounts).length === 0) {
+        console.log('⚠️ WARNING: Both shareOfVoice and mentionCounts are empty');
+        
+        // Try to extract brands from competitors list as fallback
+        const competitors = analysisData.step3Data?.competitors || analysisData.analysisResults?.competitors || [];
+        const brandName = analysisData.brandName;
+        const allBrands = [brandName, ...competitors].filter(Boolean);
+        
+        console.log('🔄 Creating fallback SOV data for brands:', allBrands);
+        
+        // Create minimal SOV structure for display
+        allBrands.forEach(brand => {
+          shareOfVoiceData[brand] = 0;
+          mentionCounts[brand] = 0;
+        });
+        
+        console.log('✅ Fallback SOV data created:', { shareOfVoiceData, mentionCounts });
+      }
+      
+      // ✅ CRITICAL DEBUG: Log the exact SOV data structure we're working with
+      console.log('🔍 DETAILED SOV DEBUG BEFORE PROCESSING:', {
+        shareOfVoiceData,
+        shareOfVoiceDataType: typeof shareOfVoiceData,
+        shareOfVoiceDataKeys: Object.keys(shareOfVoiceData),
+        shareOfVoiceDataEntries: Object.entries(shareOfVoiceData),
+        mentionCounts,
+        mentionCountsType: typeof mentionCounts,
+        mentionCountsKeys: Object.keys(mentionCounts),
+        totalMentionsExtracted
+      });
+      
+      // ✅ CRITICAL DEBUG: Test if shareOfVoiceData has the expected values
+      console.log('🔍 CRITICAL: Testing direct access to SOV values:');
+      Object.keys(shareOfVoiceData).forEach(brandName => {
+        const directValue = shareOfVoiceData[brandName];
+        console.log(`   ${brandName}: ${directValue} (type: ${typeof directValue})`);
       });
       
       const formattedSovData = Object.entries(shareOfVoiceData).map(([brandName, share]) => {
         const brandMentions = mentionCounts[brandName] || 0;
         
-        console.log(`🔍 Processing brand: ${brandName}`, {
-          backendShare: share,
+        console.log(`🔍 PROCESSING BRAND: ${brandName}`, {
+          originalShare: share,
+          shareType: typeof share,
+          shareValue: share,
           brandMentions: brandMentions,
-          totalMentions: totalMentionsExtracted
+          totalMentions: totalMentionsExtracted,
+          rawShareOfVoiceEntry: [brandName, share]
         });
         
-        // Calculate share based on mentions if we have the data
+        // ✅ CRITICAL FIX: Simplified and more reliable share calculation
         let finalShare = 0;
         
-        if (typeof share === 'number' && share >= 0) {
-          // Use backend calculated share (already in percentage)
-          finalShare = share;
-          console.log(`✅ Using backend calculated share for ${brandName}: ${finalShare}%`);
-        } else if (brandMentions > 0 && totalMentionsExtracted > 0) {
-          // Calculate share from mentions
+        // Try direct numeric conversion first - this handles most cases
+        const numericShare = Number(share);
+        if (!isNaN(numericShare) && numericShare >= 0) {
+          finalShare = numericShare;
+          console.log(`✅ SUCCESS: Direct numeric conversion for ${brandName}: ${finalShare}%`);
+        } 
+        // Handle percentage strings
+        else if (typeof share === 'string' && share.includes('%')) {
+          const numericValue = parseFloat(share.replace('%', ''));
+          if (!isNaN(numericValue) && numericValue >= 0) {
+            finalShare = numericValue;
+            console.log(`✅ SUCCESS: Parsed percentage string for ${brandName}: ${finalShare}%`);
+          }
+        }
+        // Fallback to mention-based calculation
+        else if (brandMentions > 0 && totalMentionsExtracted > 0) {
           finalShare = (brandMentions / totalMentionsExtracted) * 100;
-          console.log(`📊 Calculated share for ${brandName}: ${finalShare}%`);
+          console.log(`✅ SUCCESS: Calculated from mentions for ${brandName}: ${finalShare}%`);
+        }
+        // Final fallback - log for debugging
+        else {
+          console.log(`⚠️ ZERO RESULT for ${brandName}:`, {
+            shareValue: share,
+            shareType: typeof share,
+            numericShare: numericShare,
+            isNaN: isNaN(numericShare),
+            brandMentions: brandMentions,
+            totalMentions: totalMentionsExtracted
+          });
         }
         
-        console.log(`🎯 Final share for ${brandName}: ${finalShare}%`);
+        // Ensure we have a valid number
+        finalShare = Math.max(0, finalShare || 0);
+        
+        console.log(`🎯 FINAL RESULT for ${brandName}: ${finalShare}%`);
         
         return {
           brand: brandName,
@@ -95,26 +163,47 @@ const SuperUserAnalysisResults = ({
         };
       }).sort((a, b) => b.share - a.share);
       
+      // ✅ FIX: Validate formatted SOV data
+      console.log('🎯 Final formatted SOV data:', formattedSovData);
+      if (formattedSovData.length === 0) {
+        console.log('⚠️ WARNING: No formatted SOV data created, this will cause display issues');
+      } else {
+        const totalShares = formattedSovData.reduce((sum, item) => sum + item.share, 0);
+        console.log(`📊 Total SOV shares add up to: ${totalShares}%`);
+      }
+      
       console.log('🎯 Final formatted SOV data:', formattedSovData);
       
       // Use the actual data structure from the backend instead of creating temporary ones
       console.log('🔍 Using actual backend data structure');
       
-      // PRIORITY: Use populated categories first (these come with prompts and responses already attached)
-      const populatedCategories = analysisData.analysisResults?.populatedCategories;
+      // ✅ FIX: Use populated categories first (these come with prompts and responses already attached)
+      // Backend sends populatedCategories at root level, not in analysisResults
+      const populatedCategories = analysisData.populatedCategories || analysisData.analysisResults?.populatedCategories;
       console.log('🔍 DEBUG: Populated categories from backend:', populatedCategories);
+      console.log('🔍 DEBUG: Populated categories length:', populatedCategories?.length);
+      console.log('🔍 DEBUG: First populated category:', populatedCategories?.[0]);
       
-      // Fallback to step data if populated categories not available
-      const actualCategories = populatedCategories || analysisData.step2Data?.categories || analysisData.analysisResults?.categories || [];
-      const actualPrompts = analysisData.step4Data?.prompts || analysisData.analysisResults?.prompts || [];
+      // ✅ FIX: Use populated categories directly if available, otherwise fall back to step data
+      let actualCategories, actualPrompts;
+      
+      if (populatedCategories && populatedCategories.length > 0) {
+        console.log('✅ Using populatedCategories from backend');
+        actualCategories = populatedCategories;
+        actualPrompts = []; // Prompts are already included in populated categories
+      } else {
+        console.log('⚠️ Falling back to step data');
+        actualCategories = analysisData.step2Data?.categories || analysisData.analysisResults?.categories || [];
+        actualPrompts = analysisData.step4Data?.prompts || analysisData.analysisResults?.prompts || [];
+      }
       
       console.log('🔍 Step2Data categories:', analysisData.step2Data?.categories);
       console.log('🔍 Step4Data prompts:', analysisData.step4Data?.prompts);
       console.log('🔍 AnalysisResults categories:', analysisData.analysisResults?.categories);
       console.log('🔍 AnalysisResults prompts:', analysisData.analysisResults?.prompts);
       
-      console.log('🔍 Actual categories from backend:', actualCategories);
-      console.log('🔍 Actual prompts from backend:', actualPrompts);
+      console.log('🔍 Final actualCategories:', actualCategories);
+      console.log('🔍 Final actualPrompts:', actualPrompts);
       
       // DEBUG: Log first few prompts in detail
       if (actualPrompts.length > 0) {
@@ -137,17 +226,44 @@ const SuperUserAnalysisResults = ({
       let basicCategories;
       
       if (populatedCategories && populatedCategories.length > 0) {
-        // Use populated categories directly - these already have prompts with proper structure
+        // ✅ FIX: Use populated categories directly - these already have prompts with proper structure
         console.log('✅ Using populated categories with prompts from backend');
-        basicCategories = populatedCategories.map(category => ({
-          ...category,
-          prompts: (category.prompts || []).map(prompt => ({
-            ...prompt,
-            // Ensure we always have proper prompt text from various possible fields
-            promptText: prompt.promptText || prompt.text || prompt.question || prompt.prompt || prompt.content || `Prompt ${prompt._id}`,
-            responses: prompt.responses || []
-          }))
-        }));
+        console.log(`🔍 Processing ${populatedCategories.length} populated categories`);
+        
+        basicCategories = populatedCategories.map((category, index) => {
+          console.log(`🔍 DEBUG: Processing populated category ${index}: ${category.categoryName}`);
+          console.log(`🔍 DEBUG: Category has ${category.prompts?.length || 0} prompts`);
+          
+          // Log first prompt details for debugging
+          if (category.prompts && category.prompts.length > 0) {
+            const firstPrompt = category.prompts[0];
+            console.log(`🔍 DEBUG: First prompt in category:`, {
+              _id: firstPrompt._id,
+              promptText: firstPrompt.promptText,
+              text: firstPrompt.text,
+              question: firstPrompt.question,
+              hasAiResponse: !!firstPrompt.aiResponse,
+              aiResponseLength: firstPrompt.aiResponse?.responseText?.length
+            });
+          }
+          
+          return {
+            ...category,
+            prompts: (category.prompts || []).map(prompt => {
+              const enhancedPrompt = {
+                ...prompt,
+                // ✅ FIX: Ensure we always have proper prompt text from various possible fields
+                promptText: prompt.promptText || prompt.text || prompt.question || prompt.prompt || prompt.content || `Prompt ${prompt._id}`,
+                text: prompt.text || prompt.promptText,
+                question: prompt.question || prompt.promptText,
+                responses: prompt.responses || []
+              };
+              
+              console.log(`✅ Enhanced prompt: ${enhancedPrompt._id} -> ${enhancedPrompt.promptText.substring(0, 50)}...`);
+              return enhancedPrompt;
+            })
+          };
+        });
       } else {
         // Fallback: Create categories from step data
         console.log('📋 Creating categories from step data');
@@ -198,6 +314,15 @@ const SuperUserAnalysisResults = ({
         console.log('🔍 DEBUG: First category prompts:', basicCategories[0].prompts?.slice(0, 3));
       }
       
+      // ✅ CRITICAL DEBUG: Log final data being passed to ShareOfVoiceTable
+      const brandShareItem = formattedSovData.find(item => item.brand === analysisData.brandName);
+      console.log('🔍 CRITICAL: Looking for brand in formattedSovData:', {
+        searchingFor: analysisData.brandName,
+        formattedSovDataBrands: formattedSovData.map(item => item.brand),
+        foundItem: brandShareItem,
+        foundShare: brandShareItem?.share
+      });
+
       const basicResults = {
         brand: {
           _id: analysisData.analysisResults?.brandId,
@@ -208,7 +333,7 @@ const SuperUserAnalysisResults = ({
         shareOfVoice: {
           data: formattedSovData,
           mentionCounts: mentionCounts,
-          totalMentions: totalMentionsExtracted, // Use the actual total mentions extracted (136)
+          totalMentions: totalMentionsExtracted,
           brandShare: formattedSovData.find(item => item.brand === analysisData.brandName)?.share || 0,
           aiVisibilityScore: formattedSovData.find(item => item.brand === analysisData.brandName)?.share || 0
         },
@@ -217,6 +342,26 @@ const SuperUserAnalysisResults = ({
         prompts: actualPrompts,
         responses: []
       };
+      
+      // ✅ CRITICAL DEBUG: Log the complete basicResults object being passed to components
+      // ✅ CRITICAL DEBUG: Log the RAW backend data being passed to ShareOfVoiceTable
+      console.log('📤 CRITICAL: RAW analysisResults data for ShareOfVoiceTable:', {
+        shareOfVoiceRaw: analysisData.analysisResults?.shareOfVoice,
+        mentionCountsRaw: analysisData.analysisResults?.mentionCounts,
+        totalMentionsRaw: analysisData.analysisResults?.totalMentions,
+        brandShareRaw: analysisData.analysisResults?.brandShare,
+        aiVisibilityScoreRaw: analysisData.analysisResults?.aiVisibilityScore
+      });
+      
+      console.log('📤 CRITICAL: Complete basicResults object being passed to ShareOfVoiceTable:', {
+        shareOfVoiceData: basicResults.shareOfVoice.data,
+        shareOfVoiceDataLength: basicResults.shareOfVoice.data?.length,
+        shareOfVoiceFirstItem: basicResults.shareOfVoice.data?.[0],
+        brandShare: basicResults.shareOfVoice.brandShare,
+        aiVisibilityScore: basicResults.shareOfVoice.aiVisibilityScore,
+        totalMentions: basicResults.shareOfVoice.totalMentions,
+        mentionCounts: basicResults.shareOfVoice.mentionCounts
+      });
       
       console.log('🔍 Basic results created:', basicResults);
       setDetailedResults(basicResults);
@@ -462,11 +607,11 @@ const SuperUserAnalysisResults = ({
             domain={analysisData.domain}
             brandId={analysisData.analysisResults?.brandId}
             brandName={analysisData.brandName}
-            shareOfVoice={sovData?.data || []}
-            mentionCounts={sovData?.mentionCounts}
-            totalMentions={sovData?.totalMentions}
-            brandShare={sovData?.brandShare}
-            aiVisibilityScore={sovData?.aiVisibilityScore}
+            shareOfVoice={analysisData.analysisResults?.shareOfVoice || {}}
+            mentionCounts={analysisData.analysisResults?.mentionCounts || {}}
+            totalMentions={analysisData.analysisResults?.totalMentions || 0}
+            brandShare={analysisData.analysisResults?.brandShare || 0}
+            aiVisibilityScore={analysisData.analysisResults?.aiVisibilityScore || 0}
             isSuperUser={true}
             analysisId={analysisData.analysisId}
           />

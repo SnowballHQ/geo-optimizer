@@ -23,31 +23,74 @@ const CategoriesWithPrompts = ({
   const [loadingResponses, setLoadingResponses] = useState({});
   const [deletingPrompts, setDeletingPrompts] = useState({});
 
-  // Helper function to get prompt text safely
+  // ✅ ENHANCED: Helper function to get prompt text safely with improved extraction
   const getPromptText = (prompt) => {
     console.log('🔍 DEBUG: Full prompt object:', prompt);
     console.log('🔍 DEBUG: Prompt keys:', Object.keys(prompt || {}));
     
-    const text = prompt.promptText || prompt.question || prompt.text || prompt.prompt || prompt.content;
+    // ✅ FIX: Enhanced field extraction with more comprehensive fallbacks
+    let text = null;
+    
+    // Primary fields (most common)
+    if (!text) text = prompt.promptText;
+    if (!text) text = prompt.question;
+    if (!text) text = prompt.text;
+    if (!text) text = prompt.prompt;
+    if (!text) text = prompt.content;
+    
+    // ✅ FIX: Additional fields for Super User analyses
+    if (!text) text = prompt.query;
+    if (!text) text = prompt.description;
+    if (!text) text = prompt.title;
+    
+    // ✅ FIX: Handle nested objects that might contain the text
+    if (!text && prompt.promptData) {
+      text = prompt.promptData.text || prompt.promptData.promptText || prompt.promptData.question;
+    }
+    
+    // ✅ FIX: Handle array scenarios
+    if (!text && Array.isArray(prompt.prompts) && prompt.prompts.length > 0) {
+      text = prompt.prompts[0].text || prompt.prompts[0].promptText || prompt.prompts[0];
+    }
+    
     console.log('🔍 DEBUG: Extracted text:', text);
     console.log('🔍 DEBUG: Individual field values:', {
       promptText: prompt.promptText,
       question: prompt.question,
       text: prompt.text,
       prompt: prompt.prompt,
-      content: prompt.content
+      content: prompt.content,
+      query: prompt.query,
+      description: prompt.description,
+      title: prompt.title
     });
     
+    // ✅ FIX: Validate text content more thoroughly
     if (text && typeof text === 'string' && text.trim()) {
-      return text.length > 150 ? text.slice(0, 150) + '...' : text;
+      const cleanText = text.trim();
+      // Don't show if it looks like an ID or is too short
+      if (cleanText.length > 10 && !cleanText.match(/^[a-f0-9]{24}$/i) && !cleanText.startsWith('Prompt ')) {
+        return cleanText.length > 150 ? cleanText.slice(0, 150) + '...' : cleanText;
+      }
     }
-    console.log('❌ DEBUG: No valid text found, using fallback');
-    return 'Prompt (' + (prompt._id || 'No ID') + ')';
+    
+    // ✅ FIX: Better fallback with more descriptive message
+    console.log('❌ DEBUG: No valid text found, using enhanced fallback');
+    if (prompt._id) {
+      return `[Prompt ${prompt._id.slice(-6)}] - Click to view details`;
+    }
+    return '[Prompt Content] - Click to view details';
   };
 
-  // Helper function to render response content
+  // ✅ ENHANCED: Helper function to render response content with improved extraction
   const renderResponseContent = (hasResponse) => {
-    if (!hasResponse) return React.createElement('span', {className: 'text-muted-foreground italic'}, 'No response content');
+    console.log('🔍 DEBUG: Response content received:', hasResponse);
+    console.log('🔍 DEBUG: Response type:', typeof hasResponse);
+    
+    if (!hasResponse) {
+      console.log('🔍 DEBUG: No response content available');
+      return React.createElement('span', {className: 'text-muted-foreground italic'}, 'No response content');
+    }
     
     if (typeof hasResponse === 'string') {
       if (hasResponse.startsWith('Error:')) {
@@ -56,17 +99,61 @@ const CategoriesWithPrompts = ({
       if (hasResponse.trim() === '') {
         return React.createElement('span', {className: 'text-muted-foreground italic'}, 'Empty response');
       }
+      // ✅ FIX: Check for the specific Super User error message  
+      if (hasResponse.includes('Response not available - this should be preloaded')) {
+        console.log('🔍 DEBUG: Found Super User preload error message - this indicates data extraction failed');
+        return React.createElement('span', {className: 'text-orange-600 italic'}, 'Response data extraction failed - check console logs');
+      }
+      // ✅ FIX: Check for debug messages that indicate structural issues
+      if (hasResponse.includes('[Response object available but no clear text content')) {
+        return React.createElement('span', {className: 'text-orange-600 italic'}, 'Response structure unclear - see console for details');
+      }
       return React.createElement('div', {className: 'whitespace-pre-wrap'}, hasResponse);
     }
     
     if (typeof hasResponse === 'object') {
-      const content = hasResponse.responseText || hasResponse.content || hasResponse.text || hasResponse.message;
-      if (content) {
+      console.log('🔍 DEBUG: Response object keys:', Object.keys(hasResponse));
+      
+      // ✅ FIX: Use same field extraction logic as other functions for consistency
+      let content = null;
+      const possibleFields = [
+        'responseText', 'content', 'text', 'message', 'response', 'data', 'aiResponseText'
+      ];
+      
+      for (const field of possibleFields) {
+        const fieldValue = hasResponse[field];
+        if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+          content = fieldValue;
+          console.log(`✅ DEBUG: Found content in field '${field}': ${content.substring(0, 100)}...`);
+          break;
+        }
+      }
+      
+      // ✅ FIX: Check nested aiResponse structure
+      if (!content && hasResponse.aiResponse) {
+        const nestedResponse = hasResponse.aiResponse;
+        if (typeof nestedResponse === 'string' && nestedResponse.trim()) {
+          content = nestedResponse;
+        } else if (nestedResponse && typeof nestedResponse === 'object') {
+          for (const field of possibleFields) {
+            const fieldValue = nestedResponse[field];
+            if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+              content = fieldValue;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (content && typeof content === 'string' && content.trim()) {
         return React.createElement('div', {className: 'whitespace-pre-wrap'}, content);
       }
+      
+      // ✅ FIX: More informative fallback message
+      console.log('🔍 DEBUG: No clear content found in object, available fields:', Object.keys(hasResponse));
       return React.createElement('div', 
-        {className: 'whitespace-pre-wrap text-xs bg-gray-100 p-2 rounded'}, 
-        JSON.stringify(hasResponse, null, 2)
+        {className: 'whitespace-pre-wrap text-xs bg-yellow-50 p-2 rounded border'}, 
+        `Response data structure found but content extraction failed. Available fields: ${Object.keys(hasResponse).join(', ')}. Check browser console for detailed debugging.`
       );
     }
     
@@ -85,12 +172,37 @@ const CategoriesWithPrompts = ({
     }
   }, [categories, brandId]);
 
+  // ✅ CRITICAL DEBUG: Process categories with comprehensive response content logging
   const processCategoriesWithPrompts = () => {
+    console.log('🔍 CRITICAL: Processing categories with prompts for response extraction');
+    console.log('🔍 CRITICAL: Categories received:', categories);
+    console.log('🔍 CRITICAL: Categories count:', categories?.length);
+    console.log('🔍 CRITICAL: First category structure:', categories?.[0]);
+    
     const promptsMap = {};
     
-    categories.forEach(category => {
+    categories.forEach((category, categoryIndex) => {
+      console.log(`🔍 CRITICAL: Processing category ${categoryIndex}: ${category.categoryName || category.name}`);
+      console.log(`🔍 CRITICAL: Category ${categoryIndex} full object:`, category);
+      console.log(`🔍 CRITICAL: Category ${categoryIndex} prompts:`, category.prompts);
+      console.log(`🔍 CRITICAL: Category ${categoryIndex} prompts count:`, category.prompts?.length || 0);
+      
       if (category.prompts && Array.isArray(category.prompts)) {
-        const processedPrompts = category.prompts.map(prompt => {
+        const processedPrompts = category.prompts.map((prompt, promptIndex) => {
+          console.log(`🔍 CRITICAL: Processing prompt ${promptIndex} in category ${categoryIndex}`);
+          console.log(`🔍 CRITICAL: Raw prompt object:`, prompt);
+          console.log(`🔍 CRITICAL: Prompt ID: ${prompt._id}`);
+          console.log(`🔍 CRITICAL: Prompt text: ${prompt.promptText}`);
+          console.log(`🔍 CRITICAL: Prompt has aiResponse:`, !!prompt.aiResponse);
+          
+          if (prompt.aiResponse) {
+            console.log(`🔍 CRITICAL: aiResponse structure:`, prompt.aiResponse);
+            console.log(`🔍 CRITICAL: aiResponse keys:`, Object.keys(prompt.aiResponse));
+            console.log(`🔍 CRITICAL: aiResponse.responseText:`, prompt.aiResponse.responseText?.substring(0, 100) + '...');
+            console.log(`🔍 CRITICAL: aiResponse.content:`, prompt.aiResponse.content?.substring(0, 100) + '...');
+            console.log(`🔍 CRITICAL: aiResponse.text:`, prompt.aiResponse.text?.substring(0, 100) + '...');
+          }
+          
           if (typeof prompt === 'string') {
             return {
               _id: 'prompt_' + Math.random().toString(36).substr(2, 9),
@@ -102,43 +214,134 @@ const CategoriesWithPrompts = ({
             };
           }
           
-          return {
+          // ✅ CRITICAL FIX: Enhanced prompt processing for Super User data
+          const processedPrompt = {
             ...prompt,
             _id: prompt._id || prompt.id || 'prompt_' + Math.random().toString(36).substr(2, 9),
-            categoryId: category._id
+            categoryId: category._id,
+            // ✅ FIX: Ensure prompt text fields are populated
+            promptText: prompt.promptText || prompt.text || prompt.question || prompt.prompt || prompt.content,
+            text: prompt.text || prompt.promptText || prompt.question,
+            question: prompt.question || prompt.promptText || prompt.text
           };
+          
+          console.log(`✅ CRITICAL: Processed prompt ${promptIndex}:`, {
+            id: processedPrompt._id,
+            promptText: processedPrompt.promptText?.substring(0, 50) + '...',
+            hasAiResponse: !!processedPrompt.aiResponse,
+            aiResponseKeys: processedPrompt.aiResponse ? Object.keys(processedPrompt.aiResponse) : []
+          });
+          return processedPrompt;
         });
         
         promptsMap[category._id] = processedPrompts;
+        console.log(`✅ DEBUG: Mapped ${processedPrompts.length} prompts for category ${category.categoryName || category.name}`);
       } else {
         promptsMap[category._id] = [];
+        console.log(`⚠️ DEBUG: No prompts found for category ${category.categoryName || category.name}`);
       }
     });
     
     setCategoryPrompts(promptsMap);
+    console.log('✅ DEBUG: Category prompts set:', promptsMap);
     
-    // Pre-populate responses that are already available in the backend data
+    // ✅ CRITICAL DEBUG: Pre-populate responses with comprehensive extraction logic
     const initialResponses = {};
-    categories.forEach(category => {
+    console.log('🔍 CRITICAL: Starting response extraction from categories');
+    console.log('🔍 CRITICAL: Categories for response extraction:', categories);
+    
+    categories.forEach((category, categoryIndex) => {
+      console.log(`🔍 CRITICAL: Extracting responses from category ${categoryIndex}: ${category.categoryName || category.name}`);
+      
       if (category.prompts && Array.isArray(category.prompts)) {
-        category.prompts.forEach(prompt => {
+        console.log(`🔍 CRITICAL: Category ${categoryIndex} has ${category.prompts.length} prompts`);
+        
+        category.prompts.forEach((prompt, promptIndex) => {
           const promptId = prompt._id || prompt.id;
+          console.log(`🔍 CRITICAL: Processing prompt ${promptIndex} (ID: ${promptId}) for response extraction`);
+          console.log(`🔍 CRITICAL: Prompt ${promptIndex} aiResponse:`, prompt.aiResponse);
+          
           if (promptId && prompt.aiResponse) {
-            const responseText = prompt.aiResponse.responseText || 
-                               prompt.aiResponse.content || 
-                               prompt.aiResponse.message || 
-                               prompt.aiResponse;
+            console.log(`🔍 CRITICAL: Prompt ${promptId} HAS aiResponse, attempting extraction`);
+            console.log(`🔍 CRITICAL: aiResponse type:`, typeof prompt.aiResponse);
+            console.log(`🔍 CRITICAL: aiResponse structure:`, prompt.aiResponse);
+            console.log(`🔍 CRITICAL: aiResponse JSON:`, JSON.stringify(prompt.aiResponse, null, 2));
+            console.log(`🔍 CRITICAL: aiResponse validation data:`, prompt.aiResponse._dataValidation);
             
-            if (responseText && typeof responseText === 'string') {
-              initialResponses[promptId] = responseText;
+            // ✅ CRITICAL FIX: Simplified and more robust response text extraction
+            let responseText = null;
+            
+            if (typeof prompt.aiResponse === 'string' && prompt.aiResponse.trim()) {
+              responseText = prompt.aiResponse;
+              console.log(`✅ CRITICAL: Extracted response as string: ${responseText.substring(0, 100)}...`);
+            } else if (prompt.aiResponse && typeof prompt.aiResponse === 'object') {
+              console.log(`🔍 CRITICAL: aiResponse object keys:`, Object.keys(prompt.aiResponse));
+              
+              // Try to extract response text from any available field
+              const possibleFields = [
+                'responseText', 'content', 'text', 'message', 'response', 'data', 'aiResponseText'
+              ];
+              
+              for (const field of possibleFields) {
+                const fieldValue = prompt.aiResponse[field];
+                if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+                  responseText = fieldValue;
+                  console.log(`✅ CRITICAL: Found response in field '${field}': ${responseText.substring(0, 100)}...`);
+                  break;
+                }
+              }
+              
+              // If no string field found, check for nested objects
+              if (!responseText && prompt.aiResponse.aiResponse) {
+                const nestedResponse = prompt.aiResponse.aiResponse;
+                if (typeof nestedResponse === 'string') {
+                  responseText = nestedResponse;
+                  console.log(`✅ CRITICAL: Found nested string response: ${responseText.substring(0, 100)}...`);
+                } else if (nestedResponse && typeof nestedResponse === 'object') {
+                  for (const field of possibleFields) {
+                    const fieldValue = nestedResponse[field];
+                    if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+                      responseText = fieldValue;
+                      console.log(`✅ CRITICAL: Found response in nested field '${field}': ${responseText.substring(0, 100)}...`);
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              if (!responseText) {
+                console.log(`⚠️ CRITICAL: No valid response text found. Available fields:`, Object.keys(prompt.aiResponse));
+                console.log(`🔍 CRITICAL: Field values:`, possibleFields.map(f => ({ 
+                  [f]: prompt.aiResponse[f] ? `${typeof prompt.aiResponse[f]} (${String(prompt.aiResponse[f]).substring(0, 30)}...)` : 'undefined'
+                })));
+              }
             }
+            
+            console.log(`🔍 CRITICAL: Final extracted response for ${promptId}:`, responseText ? responseText.substring(0, 100) + '...' : 'NOT FOUND');
+            
+            if (responseText && typeof responseText === 'string' && responseText.trim()) {
+              initialResponses[promptId] = responseText;
+              console.log(`✅ CRITICAL: Successfully pre-populated response for prompt ${promptId} (length: ${responseText.length})`);
+            } else {
+              console.log(`⚠️ CRITICAL: Failed to extract valid response text for prompt ${promptId}`);
+            }
+          } else {
+            console.log(`⚠️ CRITICAL: Prompt ${promptId} does NOT have aiResponse`);
           }
         });
+      } else {
+        console.log(`⚠️ CRITICAL: Category ${categoryIndex} does not have prompts array`);
       }
     });
     
+    console.log('🔍 DEBUG: Final initialResponses object:', initialResponses);
+    console.log('🔍 DEBUG: Number of pre-populated responses:', Object.keys(initialResponses).length);
+    
     if (Object.keys(initialResponses).length > 0) {
+      console.log('✅ DEBUG: Setting pre-populated responses');
       setPromptResponses(initialResponses);
+    } else {
+      console.log('⚠️ DEBUG: No initial responses found - this may cause loading issues');
     }
   };
 
@@ -218,16 +421,43 @@ const CategoriesWithPrompts = ({
           console.log('🔍 DEBUG: Prompt has aiResponse:', !!prompt.aiResponse);
           
           if (prompt.aiResponse) {
-            if (prompt.aiResponse.responseText) {
-              responseContent = prompt.aiResponse.responseText;
-            } else if (prompt.aiResponse.content) {
-              responseContent = prompt.aiResponse.content;
-            } else if (prompt.aiResponse.message) {
-              responseContent = prompt.aiResponse.message;
-            } else if (typeof prompt.aiResponse === 'string') {
+            // ✅ FIX: Use the same robust extraction logic as processCategoriesWithPrompts
+            if (typeof prompt.aiResponse === 'string' && prompt.aiResponse.trim()) {
               responseContent = prompt.aiResponse;
-            } else {
-              responseContent = JSON.stringify(prompt.aiResponse, null, 2);
+            } else if (prompt.aiResponse && typeof prompt.aiResponse === 'object') {
+              const possibleFields = [
+                'responseText', 'content', 'text', 'message', 'response', 'data', 'aiResponseText'
+              ];
+              
+              for (const field of possibleFields) {
+                const fieldValue = prompt.aiResponse[field];
+                if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+                  responseContent = fieldValue;
+                  console.log(`✅ DEBUG: Found response in field '${field}': ${responseContent.substring(0, 100)}...`);
+                  break;
+                }
+              }
+              
+              // Check nested structure if no direct field found
+              if (!responseContent && prompt.aiResponse.aiResponse) {
+                const nestedResponse = prompt.aiResponse.aiResponse;
+                if (typeof nestedResponse === 'string' && nestedResponse.trim()) {
+                  responseContent = nestedResponse;
+                } else if (nestedResponse && typeof nestedResponse === 'object') {
+                  for (const field of possibleFields) {
+                    const fieldValue = nestedResponse[field];
+                    if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+                      responseContent = fieldValue;
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              if (!responseContent) {
+                console.log('🔍 DEBUG: No valid response text found, object keys:', Object.keys(prompt.aiResponse));
+                responseContent = `[Response object available but no clear text content. Keys: ${Object.keys(prompt.aiResponse).join(', ')}]`;
+              }
             }
             
             console.log('✅ DEBUG: Found response content:', responseContent?.substring(0, 100));
@@ -249,12 +479,80 @@ const CategoriesWithPrompts = ({
     
     console.log('🔍 DEBUG: No cached response found');
     
-    // For Super User analyses, we don't need to make API calls since all data should be preloaded
+    // ✅ FIX: Enhanced Super User handling with comprehensive fallback options
     if (isSuperUser) {
-      console.log('❌ DEBUG: Super User analysis should have all responses preloaded, showing error');
+      console.log('⚠️ DEBUG: Super User analysis - no cached response found, trying COMPREHENSIVE extraction methods');
+      
+      // ✅ FIX: Try to extract response from different data structures with ENHANCED logic
+      let fallbackResponse = null;
+      
+      // Look for response in the categories data again with different approaches
+      for (const category of categories) {
+        if (category.prompts && Array.isArray(category.prompts)) {
+          for (const prompt of category.prompts) {
+            if ((prompt._id === promptId || prompt.id === promptId)) {
+              console.log('🔍 DEBUG: Re-examining prompt for Super User response:', prompt);
+              console.log('🔍 DEBUG: Prompt keys for extraction:', Object.keys(prompt));
+              
+              // ✅ ENHANCED: Use the same robust extraction as in the main function
+              const possibleFields = [
+                'responseText', 'content', 'text', 'message', 'response', 'data', 'aiResponseText'
+              ];
+              
+              // Try direct fields first
+              for (const field of possibleFields) {
+                const fieldValue = prompt[field];
+                if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+                  fallbackResponse = fieldValue;
+                  console.log(`✅ DEBUG: Found fallback response in direct field '${field}': ${fallbackResponse.substring(0, 100)}...`);
+                  break;
+                }
+              }
+              
+              // ✅ NEW: Check if prompt has a responses array (some backend structures use this)
+              if (!fallbackResponse && prompt.responses && Array.isArray(prompt.responses) && prompt.responses.length > 0) {
+                const firstResponse = prompt.responses[0];
+                if (typeof firstResponse === 'string') {
+                  fallbackResponse = firstResponse;
+                  console.log('✅ DEBUG: Found fallback response in responses array (string)');
+                } else if (firstResponse && typeof firstResponse === 'object') {
+                  for (const field of possibleFields) {
+                    const fieldValue = firstResponse[field];
+                    if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+                      fallbackResponse = fieldValue;
+                      console.log(`✅ DEBUG: Found fallback response in responses[0].${field}`);
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              if (fallbackResponse) break;
+            }
+          }
+          if (fallbackResponse) break;
+        }
+      }
+      
+      if (fallbackResponse && typeof fallbackResponse === 'string' && fallbackResponse.trim().length > 10) {
+        console.log(`✅ DEBUG: Using enhanced fallback response (length: ${fallbackResponse.length})`);
+        setPromptResponses(prev => ({
+          ...prev,
+          [promptId]: fallbackResponse
+        }));
+        return;
+      }
+      
+      console.log('❌ DEBUG: Super User analysis - COMPREHENSIVE extraction failed, all methods exhausted');
+      console.log('🔍 DEBUG: Categories structure for debugging:', categories.map(cat => ({
+        name: cat.categoryName,
+        promptsCount: cat.prompts?.length || 0,
+        firstPromptKeys: cat.prompts?.[0] ? Object.keys(cat.prompts[0]) : []
+      })));
+      
       setPromptResponses(prev => ({
         ...prev,
-        [promptId]: 'Response not available - this should be preloaded for Super User analyses'
+        [promptId]: 'Response extraction failed - check browser console for detailed analysis structure debugging'
       }));
       return;
     }

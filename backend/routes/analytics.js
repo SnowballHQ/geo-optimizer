@@ -124,18 +124,103 @@ router.get('/auth/google/callback', async (req, res) => {
     // Close popup window and notify parent window of success
     res.send(`
       <html>
-        <body>
-          <script>
-            if (window.opener) {
-              // Notify parent window of successful authentication
-              window.opener.postMessage({ type: 'GOOGLE_ANALYTICS_AUTH_SUCCESS' }, '*');
-              window.close();
-            } else {
-              // Fallback: redirect if not in popup
-              window.location.href = '${process.env.FRONTEND_URL || 'http://localhost:5173'}?analytics=connected';
+        <head>
+          <title>Authentication Successful</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              text-align: center;
+              padding: 40px;
+              background: #f5f5f5;
             }
+            .success-container {
+              background: white;
+              padding: 30px;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              display: inline-block;
+            }
+            .success-icon {
+              font-size: 48px;
+              margin-bottom: 20px;
+            }
+            button {
+              padding: 12px 24px;
+              background: #4CAF50;
+              color: white;
+              border: none;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 16px;
+              margin-top: 20px;
+            }
+            button:hover {
+              background: #45a049;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="success-container">
+            <div class="success-icon">✅</div>
+            <h2>Authentication Successful!</h2>
+            <p>Google Analytics has been connected successfully.</p>
+            <p>This window should close automatically.</p>
+            <button onclick="forceClose()">Close Window Manually</button>
+          </div>
+          
+          <script>
+            function closeWindow() {
+              console.log('Attempting to close OAuth popup window...');
+              
+              // Try multiple methods to close the popup and notify parent
+              if (window.opener && !window.opener.closed) {
+                console.log('Found window.opener, sending success message...');
+                try {
+                  window.opener.postMessage({ type: 'GOOGLE_ANALYTICS_AUTH_SUCCESS' }, '*');
+                  setTimeout(() => {
+                    console.log('Closing popup via window.opener...');
+                    window.close();
+                  }, 100);
+                  return;
+                } catch (e) {
+                  console.warn('Failed to use window.opener:', e);
+                }
+              }
+              
+              // Try parent window (for iframe scenarios)
+              if (window.parent && window.parent !== window) {
+                console.log('Found window.parent, sending success message...');
+                try {
+                  window.parent.postMessage({ type: 'GOOGLE_ANALYTICS_AUTH_SUCCESS' }, '*');
+                  setTimeout(() => {
+                    console.log('Closing popup via window.parent...');
+                    window.close();
+                  }, 100);
+                  return;
+                } catch (e) {
+                  console.warn('Failed to use window.parent:', e);
+                }
+              }
+              
+              // Last resort: try to close anyway after a delay
+              console.log('No opener/parent found, attempting direct close...');
+              setTimeout(() => {
+                console.log('Force closing popup window...');
+                window.close();
+              }, 2000);
+            }
+            
+            function forceClose() {
+              console.log('Manual close button clicked');
+              window.close();
+            }
+            
+            // Start the close process immediately
+            closeWindow();
+            
+            // Backup: try again after a short delay in case initial attempt fails
+            setTimeout(closeWindow, 500);
           </script>
-          <p>Authentication successful! This window should close automatically.</p>
         </body>
       </html>
     `);
