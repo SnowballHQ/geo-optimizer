@@ -19,7 +19,7 @@ IMPORTANT: In your response, make sure to explicitly mention the brand names tha
     
     try {
       const aiResp = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Using faster model for better performance
+        model: "gpt-5-chat-latest", // Using faster model for better performance
         messages: [{ role: "user", content: enhancedPrompt }],
         max_tokens: 600, // Limit tokens for faster responses
       });
