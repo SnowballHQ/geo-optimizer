@@ -363,6 +363,19 @@ const SuperUserAnalysisResults = ({
         mentionCounts: basicResults.shareOfVoice.mentionCounts
       });
       
+      // ✅ CRITICAL: Log backend populated categories for debugging
+      console.log('🔍 BACKEND POPULATED CATEGORIES:', analysisData.populatedCategories);
+      if (analysisData.populatedCategories && analysisData.populatedCategories.length > 0) {
+        console.log('✅ USING BACKEND POPULATED CATEGORIES with aiResponse data');
+        console.log('🔍 First populated category:', analysisData.populatedCategories[0]);
+        if (analysisData.populatedCategories[0]?.prompts?.[0]) {
+          console.log('🔍 First prompt in populated category:', analysisData.populatedCategories[0].prompts[0]);
+          console.log('🔍 First prompt has aiResponse:', !!analysisData.populatedCategories[0].prompts[0].aiResponse);
+        }
+      } else {
+        console.log('⚠️ No populatedCategories from backend, using basicResults');
+      }
+      
       console.log('🔍 Basic results created:', basicResults);
       setDetailedResults(basicResults);
       
@@ -627,7 +640,7 @@ const SuperUserAnalysisResults = ({
           <CategoriesWithPrompts 
             domain={analysisData.domain}
             brandId={analysisData.analysisResults.brandId}
-            categories={detailedResults.categories}
+            categories={analysisData.populatedCategories || detailedResults.categories}
             prompts={detailedResults.prompts}
             isSuperUser={true}
             analysisId={analysisData.analysisId}

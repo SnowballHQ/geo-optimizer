@@ -42,9 +42,69 @@ class BrandAnalysisPDFGenerator {
   // Measure text height using the same font/size that will be used to render it,
   // avoiding mismatches that cause overlap.
   measureTextHeight(text, options = {}) {
-    const { size = 10, width = this.contentWidth - 20, lineGap = 3 } = options;
+    const { size = 10, width = this.contentWidth - 20, lineGap = 3, align = 'left' } = options;
+    
+    if (!text || text.length === 0) {
+      return 0;
+    }
+    
+    // Store current font size to restore later
+    const currentFontSize = this.doc._fontSize;
+    
+    // Set the font size for accurate measurement
     this.doc.fontSize(size);
-    return this.doc.heightOfString(text || '', { width, lineGap });
+    
+    // Measure with same parameters used for rendering
+    const height = this.doc.heightOfString(text, { 
+      width, 
+      lineGap, 
+      align 
+    });
+    
+    // Restore original font size
+    this.doc.fontSize(currentFontSize);
+    
+    return height;
+  }
+
+  // Estimate height needed for SOV section
+  estimateSOVSectionHeight(analysisData) {
+    if (!analysisData.shareOfVoice || Object.keys(analysisData.shareOfVoice).length === 0) {
+      return 100; // Minimal height for "no data" message
+    }
+    
+    const entries = Object.keys(analysisData.shareOfVoice).length;
+    const headerHeight = 80;
+    const tableHeaderHeight = 25;
+    const rowHeight = 25;
+    
+    return headerHeight + tableHeaderHeight + (entries * rowHeight) + 50;
+  }
+
+  // Estimate height needed for categories section
+  estimateCategoriesSectionHeight(categories) {
+    if (!categories || categories.length === 0) {
+      return 100;
+    }
+    
+    let totalHeight = 80; // Section header
+    
+    categories.forEach(category => {
+      totalHeight += 30; // Category header
+      if (category.prompts && category.prompts.length > 0) {
+        category.prompts.forEach(prompt => {
+          totalHeight += 60; // Prompt header + text (estimated)
+          if (prompt.aiResponse && prompt.aiResponse.responseText) {
+            const responseLength = prompt.aiResponse.responseText.length;
+            const estimatedLines = Math.ceil(responseLength / 80); // Rough estimate
+            totalHeight += estimatedLines * 12 + 40; // Response text + spacing
+          }
+        });
+      }
+      totalHeight += 20; // Category spacing
+    });
+    
+    return Math.min(totalHeight, 600); // Cap at reasonable height
   }
 
   generateBrandAnalysisPDF(analysisData) {
@@ -76,30 +136,39 @@ class BrandAnalysisPDFGenerator {
   }
 
   generateContent(analysisData) {
+    let currentY = this.margin;
+
     // Title Page
     this.addTitlePage(analysisData);
+    
+    // Add new page only if we have more content and need space
     this.doc.addPage();
+    currentY = this.margin;
 
     // Executive Summary
-    this.addExecutiveSummary(analysisData);
-    this.doc.addPage();
+    const summaryEndY = this.addExecutiveSummary(analysisData, currentY);
+    currentY = summaryEndY;
 
-    // Share of Voice Analysis
-    this.addShareOfVoiceSection(analysisData);
-    this.doc.addPage();
-
-    // Competitors Section
-    // this.addCompetitorsSection(analysisData);
-
-    // Categories Analysis
-    if (analysisData.categories && analysisData.categories.length > 0) {
-      this.doc.addPage();
-      this.addCategoriesSection(analysisData.categories, analysisData);
+    // Share of Voice Analysis - only add page if needed
+    const sovNeededHeight = this.estimateSOVSectionHeight(analysisData);
+    currentY = this.ensureSpace(currentY, sovNeededHeight, this.margin + 20);
+    if (currentY === this.margin + 20) {
+      // New page was created, add some top margin
+      currentY = this.margin + 40;
     }
+    const sovEndY = this.addShareOfVoiceSection(analysisData, currentY);
+    currentY = sovEndY;
 
-    // Contact Page at the end
-    // this.doc.addPage();
-    // this.addContactPage();
+    // Categories Analysis - only add page if needed
+    if (analysisData.categories && analysisData.categories.length > 0) {
+      const categoriesNeededHeight = this.estimateCategoriesSectionHeight(analysisData.categories);
+      currentY = this.ensureSpace(currentY, categoriesNeededHeight, this.margin + 20);
+      if (currentY === this.margin + 20) {
+        // New page was created
+        currentY = this.margin + 40;
+      }
+      this.addCategoriesSection(analysisData.categories, analysisData, currentY);
+    }
   }
 
   addTitlePage(analysisData) {
@@ -169,17 +238,21 @@ class BrandAnalysisPDFGenerator {
     this.doc.text(` ${value}`, { align: 'left' });
   }
 
-  addExecutiveSummary(analysisData) {
-    this.addSectionTitle('Executive Summary');
+  addExecutiveSummary(analysisData, startY = this.margin) {
+    let currentY = startY;
+    
+    currentY = this.addSectionTitle('Executive Summary', currentY);
 
     // Metrics box with improved design
-    const boxY = 140;
+    const boxHeight = 150;
+    currentY = this.ensureSpace(currentY, boxHeight + 20, this.margin + 40);
+    
     this.doc
-      .rect(this.margin, boxY, this.contentWidth, 150)
+      .rect(this.margin, currentY, this.contentWidth, boxHeight)
       .fillAndStroke(this.colors.surface, this.colors.border);
 
     // Key metrics
-    const metricsY = boxY + 30;
+    const metricsY = currentY + 30;
     const col1X = this.margin + 30;
     const col2X = this.margin + (this.contentWidth / 2) + 30;
 
@@ -188,9 +261,10 @@ class BrandAnalysisPDFGenerator {
     this.addMetric('Total Mentions', (analysisData.totalMentions || 0).toString(), col1X, metricsY + 40);
     this.addMetric('Competitors Found', (analysisData.competitors?.length || 0).toString(), col2X, metricsY + 40);
 
+    currentY += boxHeight + 30;
+
     // Description (guard for long text)
-    let currentY = 320;
-    currentY = this.ensureSpace(currentY, 30, 80);
+    currentY = this.ensureSpace(currentY, 30, this.margin + 40);
     this.doc
       .fontSize(16)
       .fillColor(this.colors.text)
@@ -199,7 +273,7 @@ class BrandAnalysisPDFGenerator {
     currentY += 30;
     const description = analysisData.description || 'No description available.';
     const descHeight = this.measureTextHeight(description, { size: 12, width: this.contentWidth, lineGap: 5 });
-    currentY = this.ensureSpace(currentY, descHeight, 80);
+    currentY = this.ensureSpace(currentY, descHeight, this.margin + 40);
     this.doc
       .fontSize(12)
       .fillColor(this.colors.textLight)
@@ -207,6 +281,8 @@ class BrandAnalysisPDFGenerator {
         width: this.contentWidth,
         lineGap: 5
       });
+
+    return currentY + descHeight + 40;
   }
 
   addMetric(label, value, x, y) {
@@ -221,15 +297,17 @@ class BrandAnalysisPDFGenerator {
       .text(value, x, y + 15);
   }
 
-  addShareOfVoiceSection(analysisData) {
-    this.addSectionTitle('Share of Voice Analysis');
+  addShareOfVoiceSection(analysisData, startY = this.margin) {
+    let currentY = startY;
+    
+    currentY = this.addSectionTitle('Share of Voice Analysis', currentY);
 
     if (!analysisData.shareOfVoice || Object.keys(analysisData.shareOfVoice).length === 0) {
       this.doc
         .fontSize(12)
         .fillColor(this.colors.textMuted)
-        .text('No Share of Voice data available.', this.margin, 140);
-      return;
+        .text('No Share of Voice data available.', this.margin, currentY);
+      return currentY + 30;
     }
 
     const rowHeight = 25;
@@ -252,7 +330,7 @@ class BrandAnalysisPDFGenerator {
         .text('Rank',            col4X + 10, y + 8);
     };
 
-    let currentY = 160;
+    currentY = this.ensureSpace(currentY, rowHeight, this.margin + 40);
     drawHeader(currentY);
     currentY += rowHeight;
 
@@ -260,8 +338,8 @@ class BrandAnalysisPDFGenerator {
 
     sortedEntries.forEach(([brand, percentage], index) => {
       // Ensure space for row; if new page, redraw header
-      currentY = this.ensureSpace(currentY, rowHeight, 80);
-      if (currentY === 80) {
+      currentY = this.ensureSpace(currentY, rowHeight, this.margin + 40);
+      if (currentY === this.margin + 40) {
         drawHeader(currentY);
         currentY += rowHeight;
       }
@@ -290,6 +368,8 @@ class BrandAnalysisPDFGenerator {
 
       currentY += rowHeight;
     });
+
+    return currentY + 20;
   }
 
   // addCompetitorsSection(analysisData) {
@@ -331,25 +411,30 @@ class BrandAnalysisPDFGenerator {
   //   });
   // }
 
-  addCategoriesSection(categories, analysisData = null) {
-    this.addSectionTitle('Detailed Category Analysis');
+  addCategoriesSection(categories, analysisData = null, startY = this.margin) {
+    let currentY = this.addSectionTitle('Detailed Category Analysis', startY);
+    
+    const descriptionHeight = this.measureTextHeight(
+      `Analysis across ${categories.length} business categories with AI-generated insights:`,
+      { size: 12, width: this.contentWidth }
+    );
+    
+    currentY = this.ensureSpace(currentY, descriptionHeight + 10, this.margin + 40);
     
     this.doc
       .fontSize(12)
       .fillColor(this.colors.textMuted)
       .text(`Analysis across ${categories.length} business categories with AI-generated insights:`, 
-        this.margin, 140, { width: this.contentWidth });
+        this.margin, currentY, { width: this.contentWidth });
+
+    currentY += descriptionHeight + 20;
 
     // Add competitor mention summary with improved design (if analysisData is available)
-    let competitorMentionsY;
     if (analysisData) {
-      competitorMentionsY = this.addCompetitorMentionSummary(analysisData);
-    } else {
-      // Skip competitor mention summary if no analysisData
-      competitorMentionsY = 140;
+      currentY = this.addCompetitorMentionSummary(analysisData, currentY);
     }
 
-    let currentY = competitorMentionsY + 10; // start below mentions summary
+    currentY += 10; // start below mentions summary
 
     categories.forEach((category, index) => {
       // Ensure space for category header
@@ -457,18 +542,20 @@ class BrandAnalysisPDFGenerator {
     });
   }
 
-  addCompetitorMentionSummary(analysisData) {
+  addCompetitorMentionSummary(analysisData, startY = 165) {
     // Use the actual mentionsByBrand data that was already extracted
     const mentionsByBrand = analysisData.mentionsByBrand || {};
     
     // Display mention summary organized by brand and prompts
     if (Object.keys(mentionsByBrand).length > 0) {
+      let currentY = this.ensureSpace(startY, 30, this.margin + 40);
+      
       this.doc
         .fontSize(16)
         .fillColor(this.colors.text)
-        .text('Brand Mentions by Prompt', this.margin, 165);
+        .text('Brand Mentions by Prompt', this.margin, currentY);
 
-      let summaryY = 190;
+      let summaryY = currentY + 25;
       
       // Sort brands by number of mentions (descending)
       const sortedBrands = Object.entries(mentionsByBrand)
@@ -477,10 +564,7 @@ class BrandAnalysisPDFGenerator {
       // Display each brand and its mentions organized by prompts
       sortedBrands.forEach(([brandName, mentions]) => {
         // Check if we need space for this brand section
-        if (summaryY > 650) {
-          this.doc.addPage();
-          summaryY = 80;
-        }
+        summaryY = this.ensureSpace(summaryY, 55, 80);
 
         // Brand header box
         this.doc
@@ -516,10 +600,7 @@ class BrandAnalysisPDFGenerator {
         // Display each unique prompt and its details
         Object.values(promptGroups).forEach((group, index) => {
           // Check for page break
-          if (summaryY > 680) {
-            this.doc.addPage();
-            summaryY = 80;
-          }
+          summaryY = this.ensureSpace(summaryY, 70, 80);
           
           // Prompt header
           this.doc
@@ -534,6 +615,12 @@ class BrandAnalysisPDFGenerator {
             ? group.promptText.substring(0, 120) + '...'
             : group.promptText;
             
+          const promptTextHeight = this.measureTextHeight(`Prompt: "${promptPreview}"`, {
+            size: 10,
+            width: this.contentWidth - 40,
+            lineGap: 1
+          });
+            
           this.doc
             .fontSize(10)
             .fillColor(this.colors.textLight)
@@ -542,7 +629,7 @@ class BrandAnalysisPDFGenerator {
               lineGap: 1
             });
           
-          summaryY += 25;
+          summaryY += promptTextHeight + 15;
           
           // // Response preview (first response if available)
           // if (group.responses.length > 0) {
@@ -570,32 +657,45 @@ class BrandAnalysisPDFGenerator {
       return summaryY + 15; // Return the Y position for continuing content
     } else {
       // No mentions found
+      let currentY = this.ensureSpace(startY, 50, this.margin + 40);
+      
       this.doc
         .fontSize(16)
         .fillColor(this.colors.text)
-        .text('Brand Mentions by Prompt', this.margin, 165);
+        .text('Brand Mentions by Prompt', this.margin, currentY);
         
+      currentY += 25;
+      
       this.doc
         .fontSize(12)
         .fillColor(this.colors.textMuted)
-        .text('No brand mentions found in this analysis.', this.margin, 190);
+        .text('No brand mentions found in this analysis.', this.margin, currentY);
       
-      return 220; // Return default Y position if no mentions
+      return currentY + 30; // Return Y position after no mentions message
     }
   }
 
-  addSectionTitle(title) {
-    // Section line with primary color
-    this.doc
-      .moveTo(this.margin, 110)
-      .lineTo(this.pageWidth - this.margin, 110)
-      .stroke(this.colors.primary);
-
+  addSectionTitle(title, startY = this.margin) {
+    let currentY = startY;
+    
+    // Ensure space for title and line
+    currentY = this.ensureSpace(currentY, 50, this.margin + 40);
+    
     // Section title
     this.doc
       .fontSize(20)
       .fillColor(this.colors.text)
-      .text(title, this.margin, 80);
+      .text(title, this.margin, currentY);
+
+    currentY += 30;
+
+    // Section line with primary color
+    this.doc
+      .moveTo(this.margin, currentY)
+      .lineTo(this.pageWidth - this.margin, currentY)
+      .stroke(this.colors.primary);
+
+    return currentY + 20; // Return Y position after title and line
   }
 
   addLogo() {

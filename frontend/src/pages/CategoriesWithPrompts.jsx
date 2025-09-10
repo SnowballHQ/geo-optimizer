@@ -289,36 +289,83 @@ const CategoriesWithPrompts = ({
               const originalPromptText = prompt.promptText || prompt.text || prompt.question || prompt.prompt || '';
               console.log(`🔍 CRITICAL: Original prompt text for validation: ${originalPromptText.substring(0, 100)}...`);
               
-              // Try response-specific fields first
+              // ✅ SMART EXTRACTION: Use backend _dataValidation data for better decisions
+              const backendValidation = prompt.aiResponse._dataValidation || {};
+              console.log(`🔍 CRITICAL: Backend validation data:`, backendValidation);
+              
+              // Try response-specific fields first with smart validation
               for (const field of responseFields) {
                 const fieldValue = prompt.aiResponse[field];
                 if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
-                  // Validate this is actually a response, not the prompt
-                  if (fieldValue !== originalPromptText && fieldValue.length > originalPromptText.length + 50) {
+                  console.log(`🔍 CRITICAL: Testing field '${field}' - length: ${fieldValue.length}, prompt length: ${originalPromptText.length}`);
+                  console.log(`🔍 CRITICAL: Field '${field}' content preview: ${fieldValue.substring(0, 100)}...`);
+                  console.log(`🔍 CRITICAL: Original prompt preview: ${originalPromptText.substring(0, 100)}...`);
+                  
+                  // ✅ SMART VALIDATION: Multiple validation approaches
+                  let isValidResponse = false;
+                  let validationReason = '';
+                  
+                  // Method 1: Use backend validation data if available
+                  if (backendValidation.hasResponseText && field === 'responseText') {
+                    isValidResponse = true;
+                    validationReason = 'backend validation confirms responseText exists';
+                  }
+                  // Method 2: Length-based validation for long responses (backend shows 2287+ chars)
+                  else if (fieldValue.length > 1000) {
+                    isValidResponse = true;
+                    validationReason = `long response (${fieldValue.length} chars) likely valid`;
+                  }
+                  // Method 3: Original strict validation as fallback
+                  else if (fieldValue !== originalPromptText && fieldValue.length > originalPromptText.length + 50) {
+                    isValidResponse = true;
+                    validationReason = 'strict validation passed';
+                  }
+                  
+                  if (isValidResponse) {
                     responseText = fieldValue;
-                    console.log(`✅ CRITICAL: Found VALIDATED response in field '${field}': ${responseText.substring(0, 100)}...`);
+                    console.log(`✅ CRITICAL: Found VALIDATED response in field '${field}': ${responseText.substring(0, 100)}... (reason: ${validationReason})`);
                     break;
                   } else {
-                    console.log(`⚠️ CRITICAL: Field '${field}' contains prompt text or too short, skipping`);
+                    console.log(`⚠️ CRITICAL: Field '${field}' failed all validation methods`);
+                    console.log(`   - Backend validation: ${backendValidation.hasResponseText && field === 'responseText'}`);
+                    console.log(`   - Length validation (>1000): ${fieldValue.length > 1000}`);
+                    console.log(`   - Strict validation: ${fieldValue !== originalPromptText && fieldValue.length > originalPromptText.length + 50}`);
                   }
                 }
               }
               
-              // If no response-specific field worked, try generic fields with stricter validation
+              // If no response-specific field worked, try generic fields with smart validation
               if (!responseText) {
-                console.log(`🔍 CRITICAL: No response-specific field found, trying generic fields with validation`);
+                console.log(`🔍 CRITICAL: No response-specific field found, trying generic fields with smart validation`);
                 for (const field of genericFields) {
                   const fieldValue = prompt.aiResponse[field];
                   if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
-                    // Strict validation for generic fields
-                    if (fieldValue !== originalPromptText && 
-                        fieldValue.length > originalPromptText.length + 100 &&
-                        !fieldValue.startsWith(originalPromptText)) {
+                    console.log(`🔍 CRITICAL: Testing generic field '${field}' - length: ${fieldValue.length}`);
+                    
+                    // ✅ SMART VALIDATION for generic fields
+                    let isValidResponse = false;
+                    let validationReason = '';
+                    
+                    // Method 1: Very long responses are likely valid (backend shows 2287+ chars)
+                    if (fieldValue.length > 1500) {
+                      isValidResponse = true;
+                      validationReason = `very long content (${fieldValue.length} chars) likely valid response`;
+                    }
+                    // Method 2: Original strict validation for generic fields
+                    else if (fieldValue !== originalPromptText && 
+                             fieldValue.length > originalPromptText.length + 100 &&
+                             !fieldValue.startsWith(originalPromptText)) {
+                      isValidResponse = true;
+                      validationReason = 'strict generic validation passed';
+                    }
+                    
+                    if (isValidResponse) {
                       responseText = fieldValue;
-                      console.log(`✅ CRITICAL: Found VALIDATED response in generic field '${field}': ${responseText.substring(0, 100)}...`);
+                      console.log(`✅ CRITICAL: Found VALIDATED response in generic field '${field}': ${responseText.substring(0, 100)}... (reason: ${validationReason})`);
                       break;
                     } else {
-                      console.log(`⚠️ CRITICAL: Generic field '${field}' failed validation (likely contains prompt text)`);
+                      console.log(`⚠️ CRITICAL: Generic field '${field}' failed validation`);
+                      console.log(`   - Length validation (>1500): ${fieldValue.length > 1500}`);
                       console.log(`   - Field length: ${fieldValue.length}, Prompt length: ${originalPromptText.length}`);
                       console.log(`   - Starts with prompt: ${fieldValue.startsWith(originalPromptText)}`);
                     }
@@ -332,8 +379,9 @@ const CategoriesWithPrompts = ({
                 const nestedResponse = prompt.aiResponse.aiResponse;
                 
                 if (typeof nestedResponse === 'string' && nestedResponse.trim()) {
-                  // Validate nested string response
-                  if (nestedResponse !== originalPromptText && nestedResponse.length > originalPromptText.length + 50) {
+                  // Smart validation for nested string response
+                  if (nestedResponse.length > 1000 || 
+                      (nestedResponse !== originalPromptText && nestedResponse.length > originalPromptText.length + 50)) {
                     responseText = nestedResponse;
                     console.log(`✅ CRITICAL: Found VALIDATED nested string response: ${responseText.substring(0, 100)}...`);
                   } else {
@@ -373,10 +421,25 @@ const CategoriesWithPrompts = ({
               }
               
               if (!responseText) {
-                console.log(`⚠️ CRITICAL: No valid response text found. Available fields:`, Object.keys(prompt.aiResponse));
-                console.log(`🔍 CRITICAL: Field values:`, possibleFields.map(f => ({ 
-                  [f]: prompt.aiResponse[f] ? `${typeof prompt.aiResponse[f]} (${String(prompt.aiResponse[f]).substring(0, 30)}...)` : 'undefined'
-                })));
+                // ✅ EMERGENCY FALLBACK: Extract any long field as response
+                console.log(`⚠️ CRITICAL: Smart validation failed, trying emergency fallback`);
+                const allFields = [...responseFields, ...genericFields];
+                
+                for (const field of Object.keys(prompt.aiResponse)) {
+                  const fieldValue = prompt.aiResponse[field];
+                  if (fieldValue && typeof fieldValue === 'string' && fieldValue.length > 500) {
+                    responseText = fieldValue;
+                    console.log(`✅ EMERGENCY: Using field '${field}' with ${fieldValue.length} characters as response`);
+                    break;
+                  }
+                }
+                
+                if (!responseText) {
+                  console.log(`⚠️ CRITICAL: No valid response text found. Available fields:`, Object.keys(prompt.aiResponse));
+                  console.log(`🔍 CRITICAL: Field values:`, allFields.map(f => ({ 
+                    [f]: prompt.aiResponse[f] ? `${typeof prompt.aiResponse[f]} (${String(prompt.aiResponse[f]).substring(0, 30)}...)` : 'undefined'
+                  })));
+                }
               }
             }
             
@@ -484,46 +547,123 @@ const CategoriesWithPrompts = ({
           console.log('🔍 DEBUG: Prompt has aiResponse:', !!prompt.aiResponse);
           
           if (prompt.aiResponse) {
-            // ✅ FIX: Use the same robust extraction logic as processCategoriesWithPrompts
+            // ✅ FIX: Use the same SMART VALIDATED extraction logic as processCategoriesWithPrompts
+            const originalPromptText = prompt.promptText || prompt.text || prompt.question || prompt.prompt || '';
+            const backendValidation = prompt.aiResponse._dataValidation || {};
+            console.log(`🔍 DEBUG: Original prompt for validation: ${originalPromptText.substring(0, 50)}...`);
+            console.log(`🔍 DEBUG: Backend validation data:`, backendValidation);
+            
             if (typeof prompt.aiResponse === 'string' && prompt.aiResponse.trim()) {
-              responseContent = prompt.aiResponse;
+              // Smart validation for string response
+              if (prompt.aiResponse.length > 1000 || 
+                  (prompt.aiResponse !== originalPromptText && prompt.aiResponse.length > originalPromptText.length + 50)) {
+                responseContent = prompt.aiResponse;
+                console.log(`✅ DEBUG: Found VALIDATED string response: ${responseContent.substring(0, 100)}...`);
+              } else {
+                console.log(`⚠️ DEBUG: String aiResponse failed validation (likely prompt text)`);
+              }
             } else if (prompt.aiResponse && typeof prompt.aiResponse === 'object') {
-              const possibleFields = [
-                'responseText', 'content', 'text', 'message', 'response', 'data', 'aiResponseText'
+              const responseFields = [
+                'responseText', 'aiResponseText', 'response'
+              ];
+              const genericFields = [
+                'content', 'message', 'text', 'data'
               ];
               
-              for (const field of possibleFields) {
+              // Try response-specific fields first with smart validation
+              for (const field of responseFields) {
                 const fieldValue = prompt.aiResponse[field];
                 if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
-                  responseContent = fieldValue;
-                  console.log(`✅ DEBUG: Found response in field '${field}': ${responseContent.substring(0, 100)}...`);
-                  break;
+                  console.log(`🔍 DEBUG: Testing field '${field}' - length: ${fieldValue.length}`);
+                  
+                  // Smart validation like in processCategoriesWithPrompts
+                  let isValidResponse = false;
+                  let validationReason = '';
+                  
+                  if (backendValidation.hasResponseText && field === 'responseText') {
+                    isValidResponse = true;
+                    validationReason = 'backend validation confirms responseText exists';
+                  } else if (fieldValue.length > 1000) {
+                    isValidResponse = true;
+                    validationReason = `long response (${fieldValue.length} chars) likely valid`;
+                  } else if (fieldValue !== originalPromptText && fieldValue.length > originalPromptText.length + 50) {
+                    isValidResponse = true;
+                    validationReason = 'strict validation passed';
+                  }
+                  
+                  if (isValidResponse) {
+                    responseContent = fieldValue;
+                    console.log(`✅ DEBUG: Found VALIDATED response in field '${field}': ${responseContent.substring(0, 100)}... (reason: ${validationReason})`);
+                    break;
+                  } else {
+                    console.log(`⚠️ DEBUG: Field '${field}' failed all validation methods`);
+                  }
                 }
               }
               
-              // Check nested structure if no direct field found
-              if (!responseContent && prompt.aiResponse.aiResponse) {
-                const nestedResponse = prompt.aiResponse.aiResponse;
-                if (typeof nestedResponse === 'string' && nestedResponse.trim()) {
-                  responseContent = nestedResponse;
-                } else if (nestedResponse && typeof nestedResponse === 'object') {
-                  for (const field of possibleFields) {
-                    const fieldValue = nestedResponse[field];
-                    if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+              // Try generic fields with stricter validation if needed
+              if (!responseContent) {
+                for (const field of genericFields) {
+                  const fieldValue = prompt.aiResponse[field];
+                  if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+                    if (fieldValue !== originalPromptText && 
+                        fieldValue.length > originalPromptText.length + 100 &&
+                        !fieldValue.startsWith(originalPromptText)) {
                       responseContent = fieldValue;
+                      console.log(`✅ DEBUG: Found VALIDATED response in generic field '${field}': ${responseContent.substring(0, 100)}...`);
                       break;
+                    } else {
+                      console.log(`⚠️ DEBUG: Generic field '${field}' failed validation`);
                     }
                   }
                 }
               }
               
+              // Check nested structure with validation if no direct field found
+              if (!responseContent && prompt.aiResponse.aiResponse) {
+                console.log(`🔍 DEBUG: Trying nested aiResponse with validation`);
+                const nestedResponse = prompt.aiResponse.aiResponse;
+                
+                if (typeof nestedResponse === 'string' && nestedResponse.trim()) {
+                  if (nestedResponse !== originalPromptText && nestedResponse.length > originalPromptText.length + 50) {
+                    responseContent = nestedResponse;
+                    console.log(`✅ DEBUG: Found VALIDATED nested string response`);
+                  }
+                } else if (nestedResponse && typeof nestedResponse === 'object') {
+                  // Try response fields in nested structure
+                  for (const field of responseFields) {
+                    const fieldValue = nestedResponse[field];
+                    if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+                      if (fieldValue !== originalPromptText && fieldValue.length > originalPromptText.length + 50) {
+                        responseContent = fieldValue;
+                        console.log(`✅ DEBUG: Found VALIDATED nested response in '${field}'`);
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+              
+              // ✅ EMERGENCY FALLBACK: Extract any long field as response
               if (!responseContent) {
-                console.log('🔍 DEBUG: No valid response text found, object keys:', Object.keys(prompt.aiResponse));
-                responseContent = `[Response object available but no clear text content. Keys: ${Object.keys(prompt.aiResponse).join(', ')}]`;
+                console.log('🔍 DEBUG: Smart validation failed, trying emergency fallback');
+                for (const field of Object.keys(prompt.aiResponse)) {
+                  const fieldValue = prompt.aiResponse[field];
+                  if (fieldValue && typeof fieldValue === 'string' && fieldValue.length > 500) {
+                    responseContent = fieldValue;
+                    console.log(`✅ EMERGENCY: Using field '${field}' with ${fieldValue.length} characters as response`);
+                    break;
+                  }
+                }
+                
+                if (!responseContent) {
+                  console.log('🔍 DEBUG: No VALIDATED response text found, object keys:', Object.keys(prompt.aiResponse));
+                  responseContent = `[Response validation failed - likely contains prompt text instead of AI response. Check console for details.]`;
+                }
               }
             }
             
-            console.log('✅ DEBUG: Found response content:', responseContent?.substring(0, 100));
+            console.log('✅ DEBUG: Final response content:', responseContent?.substring(0, 100));
             foundResponse = true;
             break;
           }
@@ -601,19 +741,45 @@ const CategoriesWithPrompts = ({
                 }
               }
               
-              // ✅ NEW: Check if prompt has a responses array (some backend structures use this)
+              // ✅ NEW: Check if prompt has a responses array with validation
               if (!fallbackResponse && prompt.responses && Array.isArray(prompt.responses) && prompt.responses.length > 0) {
+                console.log('🔍 DEBUG: Checking responses array for Super User fallback');
                 const firstResponse = prompt.responses[0];
-                if (typeof firstResponse === 'string') {
-                  fallbackResponse = firstResponse;
-                  console.log('✅ DEBUG: Found fallback response in responses array (string)');
+                
+                if (typeof firstResponse === 'string' && firstResponse.trim()) {
+                  // Validate responses array string
+                  if (firstResponse !== originalPromptText && firstResponse.length > originalPromptText.length + 50) {
+                    fallbackResponse = firstResponse;
+                    console.log('✅ DEBUG: Found VALIDATED fallback response in responses array (string)');
+                  } else {
+                    console.log('⚠️ DEBUG: Responses array string failed validation (likely prompt text)');
+                  }
                 } else if (firstResponse && typeof firstResponse === 'object') {
-                  for (const field of possibleFields) {
+                  // Try response-specific fields first in responses array
+                  for (const field of responseFields) {
                     const fieldValue = firstResponse[field];
                     if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
-                      fallbackResponse = fieldValue;
-                      console.log(`✅ DEBUG: Found fallback response in responses[0].${field}`);
-                      break;
+                      if (fieldValue !== originalPromptText && fieldValue.length > originalPromptText.length + 50) {
+                        fallbackResponse = fieldValue;
+                        console.log(`✅ DEBUG: Found VALIDATED fallback response in responses[0].${field}`);
+                        break;
+                      }
+                    }
+                  }
+                  
+                  // Try generic fields if needed
+                  if (!fallbackResponse) {
+                    for (const field of genericFields) {
+                      const fieldValue = firstResponse[field];
+                      if (fieldValue && typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+                        if (fieldValue !== originalPromptText && 
+                            fieldValue.length > originalPromptText.length + 100 &&
+                            !fieldValue.startsWith(originalPromptText)) {
+                          fallbackResponse = fieldValue;
+                          console.log(`✅ DEBUG: Found VALIDATED fallback response in responses[0] generic field '${field}'`);
+                          break;
+                        }
+                      }
                     }
                   }
                 }
