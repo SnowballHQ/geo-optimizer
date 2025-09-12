@@ -40,7 +40,7 @@ const ProgressBar = ({ currentStep }) => {
                 {/* Connecting Line - Only show between steps, not after the last step */}
                 {index < steps.length - 1 && (
                   <div
-                    className={`absolute top-5 left-10 w-full h-0.5 transition-all duration-300 ${
+                    className={`absolute top-5 left-9 w-full h-0.5 transition-all duration-300 ${
                       isCompleted ? 'bg-primary-500' : 'bg-gray-300'
                     }`}
                     style={{ width: 'calc(100vw / 4 - 2.5rem)' }}
