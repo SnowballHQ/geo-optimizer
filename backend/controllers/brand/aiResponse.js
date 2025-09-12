@@ -31,7 +31,7 @@ IMPORTANT: In your response, make sure to explicitly mention the brand names tha
         `AI Response - ${catDoc.categoryName}`,
         enhancedPrompt,
         responseContent,
-        'gpt-4o-mini'
+        'gpt-5'
       );
       
       console.log(`✅ Response generated for: ${promptDoc.promptText.substring(0, 50)}...`);
