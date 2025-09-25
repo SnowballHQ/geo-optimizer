@@ -2,6 +2,8 @@ const OpenAI = require('openai');
 const ContentCalendar = require('../models/ContentCalendar');
 const CMSCredentials = require('../models/CMSCredentials');
 const cmsIntegration = require('../utils/cmsIntegration');
+const unsplashService = require('../utils/unsplashService');
+const dataForSeoService = require('../utils/dataForSeoService');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -10,15 +12,25 @@ const openai = new OpenAI({
 class ContentCalendarController {
   async generateCalendar(req, res) {
     try {
-      const { companyName } = req.body;
+      const { companyName, brandProfile, brandCategories } = req.body;
       const userId = req.user.id;
+
+      // Debug logging for domain issue
+      console.log('🔍 DEBUG: generateCalendar received request body:');
+      console.log('   Company Name:', companyName);
+      console.log('   User ID:', userId);
+      console.log('   Brand Profile:', brandProfile);
+      console.log('   Brand Profile Type:', typeof brandProfile);
+      console.log('   Brand Profile Domain:', brandProfile?.domain);
+      console.log('   Brand Categories:', brandCategories);
+      console.log('   Brand Categories Count:', brandCategories?.length || 0);
 
       if (!companyName) {
         return res.status(400).json({ error: 'Company name is required' });
       }
 
-      // Generate 30-day content plan using OpenAI
-      const contentPlan = await this.generateContentPlan(companyName, userId, req);
+      // Generate 30-day content plan using OpenAI with enhanced brand context
+      const contentPlan = await this.generateContentPlan(companyName, userId, req, brandProfile, brandCategories);
       
       // Format dates for the next 30 days
       const formattedPlan = await this.formatContentPlan(contentPlan, companyName, userId);
@@ -26,7 +38,7 @@ class ContentCalendarController {
       res.json({
         success: true,
         data: formattedPlan,
-        message: 'Content calendar generated successfully'
+        message: 'Content calendar generated successfully with brand context'
       });
 
     } catch (error) {
@@ -47,9 +59,38 @@ class ContentCalendarController {
         return res.status(400).json({ error: 'Invalid request data' });
       }
 
+      // Check if entries already exist for this user and company to prevent duplicates
+      const existingEntries = await ContentCalendar.find({ userId, companyName });
+      
+      if (existingEntries.length > 0) {
+        console.log(`⚠️ Calendar entries already exist for user ${userId} and company ${companyName}: ${existingEntries.length} entries`);
+        
+        // Return existing entries instead of creating duplicates
+        return res.json({
+          success: true,
+          data: existingEntries,
+          message: `Content calendar already exists with ${existingEntries.length} entries - loaded existing calendar`,
+          isExisting: true
+        });
+      }
+
       // Save approved content plan to database
       const savedEntries = [];
       for (const item of contentPlan) {
+        // Additional check per entry to prevent race conditions
+        const duplicateCheck = await ContentCalendar.findOne({
+          userId,
+          companyName,
+          date: new Date(item.date),
+          title: item.title
+        });
+
+        if (duplicateCheck) {
+          console.log(`⚠️ Duplicate entry found for ${item.title} on ${item.date}, skipping`);
+          savedEntries.push(duplicateCheck);
+          continue;
+        }
+
         const calendarEntry = new ContentCalendar({
           userId,
           companyName,
@@ -58,7 +99,7 @@ class ContentCalendarController {
           description: item.description,
           keywords: item.keywords,
           targetAudience: item.targetAudience,
-          status: 'approved',
+          status: item.status || 'draft',
           cmsPlatform: item.cmsPlatform || 'wordpress'
         });
 
@@ -165,22 +206,138 @@ class ContentCalendarController {
     }
   }
 
-  async generateContentPlan(companyName, userId, req) {
+  async generateContentPlan(companyName, userId, req, brandProfile = null, brandCategories = []) {
     const startTime = Date.now();
     
-    const prompt = `can you give 30 days content calender for ${companyName}  
+    // Step 1: Fetch keywords from DataForSEO if domain is available
+    let keywordData = null;
+    let keywordContext = '';
     
-    Return the response as a JSON array with 30 objects, each containing:
-    {
-      "title": "Blog post title",
-      "description": "Detailed description",
-      "keywords": "keyword1, keyword2, keyword3",
-      "targetAudience": "Target audience description"
-    };}`;
+    console.log('🔍 DEBUG: Domain check in generateContentPlan:');
+    console.log('   brandProfile exists:', !!brandProfile);
+    console.log('   brandProfile type:', typeof brandProfile);
+    console.log('   brandProfile.domain exists:', !!brandProfile?.domain);
+    console.log('   brandProfile.domain value:', brandProfile?.domain);
+    
+    if (brandProfile && brandProfile.domain) {
+      try {
+        console.log(`🔍 Starting keyword research for domain: ${brandProfile.domain}`);
+        keywordData = await dataForSeoService.getComprehensiveKeywords(
+          brandProfile.domain, 
+          brandCategories
+        );
+        
+        if (keywordData.success && keywordData.keywords.length > 0) {
+          const formattedKeywords = dataForSeoService.formatKeywordsForContentGeneration(
+            keywordData.keywords, 
+            20
+          );
+          
+          keywordContext = `
+SEO Keyword Research Results:
+- Domain: ${keywordData.domain}
+- Keywords found: ${keywordData.keywords.length}
+- Average monthly searches: ${keywordData.metadata?.averageSearchVolume || 'N/A'}
+- Data source: ${keywordData.source}
+
+Top Keywords to Target:
+${formattedKeywords.keywordString}
+
+High-Volume Keywords (>1000 searches):
+${formattedKeywords.keywordGroups.highVolume.map(kw => `- ${kw.keyword} (${kw.searchVolume} searches)`).join('\n')}
+
+Long-Tail Opportunities (3+ words):
+${formattedKeywords.keywordGroups.longTail.map(kw => `- ${kw.keyword} (${kw.searchVolume} searches)`).join('\n')}
+
+Low Competition Keywords:
+${formattedKeywords.keywordGroups.lowCompetition.map(kw => `- ${kw.keyword} (difficulty: ${kw.difficulty})`).join('\n')}
+
+`;
+          console.log(`✅ Keyword research completed: ${keywordData.keywords.length} keywords found`);
+        } else {
+          console.log(`⚠️ No keywords found for domain: ${brandProfile.domain}`);
+          keywordContext = `
+SEO Note: Keyword research was attempted but no relevant keywords were found for ${brandProfile.domain}. 
+Content will be generated based on brand context and industry best practices.
+
+`;
+        }
+      } catch (error) {
+        console.error('❌ Keyword research failed:', error.message);
+        keywordContext = `
+SEO Note: Keyword research was attempted but failed due to API limitations. 
+Content will be generated based on brand context and industry best practices.
+
+`;
+      }
+    } else {
+      console.log('ℹ️ No domain provided, skipping keyword research');
+      keywordContext = `
+SEO Note: No domain provided for keyword research. 
+Content will be generated based on brand context and general industry topics.
+
+`;
+    }
+    
+    // Step 2: Build enhanced brand context
+    let brandContext = '';
+    if (brandProfile) {
+      brandContext += `
+Brand Information:
+- Company: ${companyName}
+- Domain: ${brandProfile.domain || 'Not specified'}
+- Brand Description: ${brandProfile.brandInformation || 'Not specified'}
+- Brand Tone: ${brandProfile.brandTonality || 'Professional and engaging'}
+
+`;
+    }
+
+    if (brandCategories && brandCategories.length > 0) {
+      brandContext += `Brand Categories:
+`;
+      brandCategories.forEach(category => {
+        brandContext += `- ${category.categoryName}
+`;
+      });
+      brandContext += `
+`;
+    }
+
+    const prompt = `You are an expert content strategist creating a personalized 30-day SEO-optimized content calendar.
+
+${brandContext}${keywordContext}Company: ${companyName}
+
+IMPORTANT INSTRUCTIONS:
+${keywordData && keywordData.keywords.length > 0 ? 
+`You MUST create content topics that incorporate the researched keywords above. Each blog post should target at least one primary keyword from the research data. Prioritize high-volume keywords and long-tail opportunities.` : 
+`Since no keyword research data is available, focus on industry-relevant topics and include naturally SEO-friendly keywords based on the brand categories and business type.`}
+
+Create a 30-day content calendar that:
+1. Aligns with the brand's tone and messaging style
+2. ${keywordData?.keywords.length > 0 ? 'Strategically incorporates the researched keywords into content topics' : 'Uses industry-relevant SEO keywords'}
+3. Targets the appropriate audience for this brand
+4. Uses SEO-friendly titles optimized for search engines
+5. Provides diverse content types and topics
+6. Maintains consistency with the brand's voice
+7. ${keywordData?.keywords.length > 0 ? 'Balances high-volume keywords with long-tail opportunities' : 'Includes both competitive and niche keyword opportunities'}
+
+Return the response as a JSON array with 30 objects, each containing:
+{
+  "title": "SEO-optimized blog post title incorporating target keywords",
+  "description": "Detailed description that matches brand tone and explains the content value",
+  "keywords": "primary_keyword, secondary_keyword, long_tail_keyword",
+  "targetAudience": "Specific target audience description"
+}
+
+${keywordData?.keywords.length > 0 ? 
+`Focus on creating content that targets the researched keywords while providing value for ${companyName}'s audience. Use the high-volume and long-tail keywords as inspiration for content topics.` : 
+`Focus on creating content that would be valuable for ${companyName}'s audience and reflects their brand identity with strong SEO potential.`}`;
 
     // Prepare request payload for logging
     const requestPayload = {
       companyName,
+      brandProfile: brandProfile ? 'Included' : 'Not provided',
+      brandCategories: brandCategories.length,
       prompt,
       model: "gpt-3.5-turbo",
       temperature: 0.4,
@@ -228,24 +385,95 @@ class ContentCalendarController {
 
       let parsedResult;
       try {
-        // Extract JSON from the response
-        const jsonMatch = response.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          parsedResult = JSON.parse(jsonMatch[0]);
+        console.log('🔍 DEBUG: OpenAI Response Content (first 500 chars):');
+        console.log(response.substring(0, 500));
+        console.log('🔍 DEBUG: OpenAI Response Content (last 500 chars):');
+        console.log(response.substring(Math.max(0, response.length - 500)));
+        
+        // Try multiple JSON extraction methods
+        let jsonString = null;
+        
+        // Method 1: Look for array pattern
+        const arrayMatch = response.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+          jsonString = arrayMatch[0];
+          console.log('✅ Found JSON array using method 1');
+        }
+        
+        // Method 2: Look between ```json blocks
+        if (!jsonString) {
+          const codeBlockMatch = response.match(/```json\s*([\s\S]*?)\s*```/i);
+          if (codeBlockMatch) {
+            jsonString = codeBlockMatch[1].trim();
+            console.log('✅ Found JSON in code block using method 2');
+          }
+        }
+        
+        // Method 3: Look for object array pattern more loosely
+        if (!jsonString) {
+          const looseArrayMatch = response.match(/(\[\s*\{[\s\S]*\}\s*\])/);
+          if (looseArrayMatch) {
+            jsonString = looseArrayMatch[1];
+            console.log('✅ Found JSON using loose array pattern method 3');
+          }
+        }
+        
+        // Method 4: Try to extract everything between first [ and last ]
+        if (!jsonString) {
+          const firstBracket = response.indexOf('[');
+          const lastBracket = response.lastIndexOf(']');
+          if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+            jsonString = response.substring(firstBracket, lastBracket + 1);
+            console.log('✅ Found JSON using bracket extraction method 4');
+          }
+        }
+        
+        if (jsonString) {
+          console.log('🔍 DEBUG: Attempting to parse JSON string (first 200 chars):');
+          console.log(jsonString.substring(0, 200));
+          
+          // Remove JSON comments before parsing
+          const cleanedJsonString = jsonString
+            .replace(/\/\/.*$/gm, '')  // Remove // comments
+            .replace(/\/\*[\s\S]*?\*\//g, '')  // Remove /* */ comments
+            .replace(/,\s*([}\]])/g, '$1')  // Remove trailing commas
+            .trim();
+          
+          console.log('🔍 DEBUG: Cleaned JSON string (first 200 chars):');
+          console.log(cleanedJsonString.substring(0, 200));
+          
+          parsedResult = JSON.parse(cleanedJsonString);
+          
+          // Validate that it's an array
+          if (!Array.isArray(parsedResult)) {
+            throw new Error('Parsed result is not an array');
+          }
           
           // Log successful parsing
           console.log(`✅ Content plan parsed successfully`);
           console.log(`   Generated ${parsedResult.length} content ideas`);
           
+          // Attach keyword data to the result for later use
+          if (keywordData && keywordData.success) {
+            parsedResult.keywordResearchData = {
+              domain: keywordData.domain,
+              keywords: keywordData.keywords,
+              source: keywordData.source,
+              metadata: keywordData.metadata
+            };
+          }
+          
           return parsedResult;
         }
-        throw new Error('No valid JSON found in response');
+        
+        throw new Error('No valid JSON found in response using any extraction method');
       } catch (parseError) {
         console.error('❌ Error parsing OpenAI response:', parseError);
+        console.log('🔍 DEBUG: Parse error details:', parseError.message);
         
         // Fallback: generate a basic plan
         console.log(`🔄 Using fallback content plan`);
-        return this.generateFallbackPlan(companyName);
+        return this.generateFallbackPlan(companyName, brandProfile);
       }
     } catch (error) {
       const responseTime = Date.now() - startTime;
@@ -253,12 +481,13 @@ class ContentCalendarController {
       
       // Fallback: generate a basic plan
       console.log(`🔄 Using fallback content plan due to API error`);
-      return this.generateFallbackPlan(companyName);
+      return this.generateFallbackPlan(companyName, brandProfile);
     }
   }
 
-  generateFallbackPlan(companyName) {
-    const fallbackTitles = [
+  generateFallbackPlan(companyName, brandProfile = null) {
+    // Enhance fallback titles based on brand context if available
+    const baseFallbackTitles = [
       "10 Ways to Improve Your Business Strategy",
       "The Future of Digital Marketing",
       "Building Strong Customer Relationships",
@@ -291,11 +520,19 @@ class ContentCalendarController {
       "Business Model Innovation"
     ];
 
-    return fallbackTitles.map((title, index) => ({
+    // Customize description and keywords based on brand context
+    const brandTone = brandProfile?.brandTonality || 'Professional and informative';
+    const brandDescription = brandProfile?.brandInformation || 'business operations';
+    
+    return baseFallbackTitles.map((title, index) => ({
       title,
-      description: `This comprehensive guide explores ${title.toLowerCase()} and provides actionable insights for ${companyName} and similar businesses looking to improve their operations and achieve sustainable growth.`,
-      keywords: "business strategy, growth, optimization, best practices",
-      targetAudience: "Business owners, managers, and professionals seeking to improve their business performance"
+      description: `This comprehensive guide explores ${title.toLowerCase()} and provides actionable insights for ${companyName}. Written in a ${brandTone.toLowerCase()} style, this content focuses on ${brandDescription} and delivers valuable information to help your business achieve sustainable growth.`,
+      keywords: brandProfile?.domain ? 
+        `${brandProfile.domain.split('.')[0]}, business strategy, growth, optimization, best practices` : 
+        "business strategy, growth, optimization, best practices",
+      targetAudience: brandProfile?.brandInformation ? 
+        `${companyName} customers and prospects interested in ${brandDescription}` :
+        "Business owners, managers, and professionals seeking to improve their business performance"
     }));
   }
 
@@ -317,13 +554,17 @@ class ContentCalendarController {
       console.log('Could not determine user CMS platform, defaulting to Shopify');
     }
 
+    // Extract keyword research data if available
+    const keywordResearchData = contentPlan.keywordResearchData || null;
+    
     for (let i = 0; i < 30; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
 
       const content = contentPlan[i] || contentPlan[contentPlan.length - 1];
       
-      formattedPlan.push({
+      // Prepare formatted entry
+      const formattedEntry = {
         date: date.toISOString().split('T')[0],
         title: content.title,
         description: content.description,
@@ -331,7 +572,34 @@ class ContentCalendarController {
         targetAudience: content.targetAudience,
         status: 'draft',
         cmsPlatform: userCmsPlatform
-      });
+      };
+
+      // Add keyword research data if available
+      if (keywordResearchData) {
+        formattedEntry.keywordResearchData = {
+          domain: keywordResearchData.domain,
+          researchDate: new Date(),
+          totalKeywordsFound: keywordResearchData.keywords?.length || 0,
+          averageSearchVolume: keywordResearchData.metadata?.averageSearchVolume || 0,
+          keywordSource: keywordResearchData.source || 'none'
+        };
+
+        // Add source keywords if available (first few relevant keywords)
+        if (keywordResearchData.keywords && keywordResearchData.keywords.length > 0) {
+          const relevantKeywords = keywordResearchData.keywords.slice(0, 5).map(kw => ({
+            keyword: kw.keyword,
+            searchVolume: kw.searchVolume,
+            difficulty: kw.difficulty,
+            cpc: kw.cpc || 0,
+            competition: kw.competition || 0,
+            source: kw.source
+          }));
+          
+          formattedEntry.sourceKeywords = relevantKeywords;
+        }
+      }
+      
+      formattedPlan.push(formattedEntry);
     }
 
     return formattedPlan;
@@ -393,6 +661,25 @@ class ContentCalendarController {
       const userId = req.user.id;
 
       console.log('generateOutline called with:', { id, title, description, keywords, targetAudience, userId });
+
+      // Validate that id is provided and is a valid ObjectId
+      if (!id || id === 'undefined' || id === 'null') {
+        console.error('❌ Invalid or missing id parameter:', id);
+        return res.status(400).json({ 
+          error: 'Valid entry ID is required to generate outline',
+          details: `Received id: ${id}`
+        });
+      }
+
+      // Import mongoose to use ObjectId validation
+      const mongoose = require('mongoose');
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        console.error('❌ Invalid ObjectId format:', id);
+        return res.status(400).json({ 
+          error: 'Invalid entry ID format',
+          details: `ID must be a valid ObjectId, received: ${id}`
+        });
+      }
 
       if (!title) {
         return res.status(400).json({ error: 'Title is required to generate outline' });
@@ -533,11 +820,27 @@ When provided with brand context, ensure that:
       console.log('Generated outline with brand context:', outline);
 
       // Update the entry with the generated outline
+      console.log('🔍 Attempting to update ContentCalendar entry:', { id, outlineLength: outline?.length });
+      
       const updatedEntry = await ContentCalendar.findByIdAndUpdate(
         id, 
         { outline },
         { new: true, runValidators: true }
       );
+      
+      if (!updatedEntry) {
+        console.error('❌ ContentCalendar entry not found for id:', id);
+        return res.status(404).json({ 
+          error: 'Content calendar entry not found',
+          details: `No entry found with id: ${id}`
+        });
+      }
+      
+      console.log('✅ Successfully updated ContentCalendar entry:', { 
+        id: updatedEntry._id,
+        title: updatedEntry.title,
+        hasOutline: !!updatedEntry.outline
+      });
 
       console.log('Updated entry:', updatedEntry);
 
@@ -638,25 +941,30 @@ Description: ${description || 'Not specified'}
 Keywords: ${keywords || 'Not specified'}
 Target Audience: ${targetAudience || 'General audience'}
 
+
+You are a skilled blog writer. Write a blog post in a natural, human voice based on the content outline provided.
+
+The blog should:
+	•	Sound conversational, clear, and approachable (8th–9th grade reading level).
+	•	Avoid robotic phrases, repetitive structures, or formulaic transitions (e.g., “In conclusion,” “It’s important to note”).
+	•	Vary sentence length and rhythm to mimic human writing. Use contractions where natural (“you’ll,” “don’t,” “we’re”).
+	•	Add rhetorical questions, mini-examples, and casual asides to make it feel like a creator sharing real advice.
+	•	Integrate long-tail keywords naturally within the flow (do not keyword-stuff).
+	•	Include bold CTAs in relevant sections (pointing to {brand} features and homepage).
+	•	Write in an energetic, motivating, yet friendly tone that empowers creators and entrepreneurs.
+	•	FAQs section at the end: clear, straightforward, and helpful answers (include long-tail queries as FAQ headers).
+	•	Target word count: ~1500 words.
+
+Instruction:
+“Please generate a blog post with FAQs optimized for long-tail keywords using the content outline below
+
 ${brandContext}Outline:
 ${outline}
 
-Requirements:
-- Write in a tone that matches the brand's established voice and style
-- Incorporate brand information naturally where relevant and appropriate
-- Include proper headings (H1, H2, H3) based on the outline
-- Use the keywords naturally throughout the content
-- Target the specified audience
-- Include practical examples and actionable insights
-- Write 800-1200 words
-- Format in HTML with proper tags
-- Make it SEO-friendly and engaging
-- Ensure the content flows logically from the outline structure
-- Maintain consistency with the brand's messaging and values
-
-Important: The writing style, tone, and approach should align with the brand's established voice and communication style.
-
-Please provide the complete blog post in HTML format.`;
+Additional Brand Notes for Style (must be followed):
+	•	Content style = actionable, short-form friendly, practical, with occasional playful language (e.g., “Zero editing. Zero stress.”).
+	•	Language = bold, conversational, motivating — like a creative teammate, not a corporate manual.
+	•	Audience = ${targetAudience}`;
 
       console.log('OpenAI prompt for blog creation with brand context:', prompt);
 
@@ -674,7 +982,7 @@ When provided with brand context, ensure that:
 - Content maintains consistency with brand values and messaging
 - The voice remains authentic to the brand's identity
 
-Always respond with properly formatted HTML content that follows the provided outline structure.`
+IMPORTANT: Always respond with ONLY the article content in HTML format. Do NOT include DOCTYPE, html, head, or body tags. Start directly with the article content using proper HTML tags like <article>, <h1>, <h2>, <p>, etc.`
           },
           {
             role: "user",
@@ -685,13 +993,64 @@ Always respond with properly formatted HTML content that follows the provided ou
         temperature: 0.7
       });
 
-      const blogContent = completion.choices[0].message.content;
+      let blogContent = completion.choices[0].message.content;
       console.log('Generated blog content with brand context, length:', blogContent.length);
+      
+      // Clean up any full HTML document structure that might have been generated
+      blogContent = blogContent
+        .replace(/<!DOCTYPE[^>]*>/gi, '')
+        .replace(/<html[^>]*>/gi, '')
+        .replace(/<\/html>/gi, '')
+        .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+        .replace(/<body[^>]*>/gi, '')
+        .replace(/<\/body>/gi, '')
+        .replace(/<meta[^>]*>/gi, '')
+        .replace(/<title[^>]*>[\s\S]*?<\/title>/gi, '')
+        .trim();
+      
+      console.log('Cleaned blog content length:', blogContent.length);
 
-      // Update the entry with the generated blog content
+      // Generate banner image using Unsplash (safe - won't break if it fails)
+      let bannerData = null;
+      let bannerHTML = '';
+      
+      try {
+        console.log('🖼️ Attempting to generate banner for blog post...');
+        bannerData = await unsplashService.generateBlogBanner(title, Array.isArray(keywords) ? keywords.join(' ') : keywords);
+        
+        if (bannerData) {
+          bannerHTML = unsplashService.generateBannerHTML(bannerData, title);
+          console.log('✅ Banner generated successfully, adding to blog content');
+          
+          // Prepend banner to blog content
+          blogContent = bannerHTML + '\n\n' + blogContent;
+        } else {
+          console.log('ℹ️ No banner generated - continuing without banner');
+        }
+      } catch (bannerError) {
+        console.warn('⚠️ Banner generation failed, continuing without banner:', bannerError.message);
+        // Don't throw - blog creation should continue even if banner fails
+      }
+
+      // Prepare update data
+      const updateData = { content: blogContent };
+      
+      // Include banner data if generated
+      if (bannerData) {
+        updateData.bannerUrl = bannerData.url;
+        updateData.bannerData = {
+          photographer: bannerData.photographer,
+          photographerUrl: bannerData.photographerUrl,
+          unsplashUrl: bannerData.unsplashUrl,
+          altText: bannerData.altText
+        };
+        console.log('💾 Saving banner data to database');
+      }
+
+      // Update the entry with the generated blog content and banner data
       const updatedEntry = await ContentCalendar.findByIdAndUpdate(
         id, 
-        { content: blogContent },
+        updateData,
         { new: true, runValidators: true }
       );
 
@@ -699,8 +1058,15 @@ Always respond with properly formatted HTML content that follows the provided ou
 
       res.json({
         success: true,
-        data: { blogContent },
-        message: 'Blog created successfully from outline with brand context',
+        data: { 
+          blogContent,
+          banner: bannerData ? {
+            url: bannerData.url,
+            photographer: bannerData.photographer,
+            hasAutoBanner: true
+          } : { hasAutoBanner: false }
+        },
+        message: bannerData ? 'Blog created successfully with auto-generated banner' : 'Blog created successfully from outline with brand context',
         brandContext: brandContext ? 'Applied' : 'Not available'
       });
 

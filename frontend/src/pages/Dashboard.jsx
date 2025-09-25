@@ -6,8 +6,15 @@ import { Input } from '../components/ui/input';
 import DomainAnalysis from './DomainAnalysis';
 import BlogAnalysis from './BlogAnalysis';
 import ContentCalendarView from './ContentCalendarView';
+import PublishedBlogsView from './PublishedBlogsView';
 import BrandSettings from '../components/BrandSettings';
+import ShopifySettings from '../components/ShopifySettings';
+import WebflowSettings from '../components/WebflowSettings';
+import WordPressSettings from '../components/WordPressSettings';
 import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
+import Analytics from '../components/Analytics';
+import StripePaymentSettings from '../components/StripePaymentSettings';
+import CMSConnectionSelector from '../components/CMSConnectionSelector';
 
 import { apiService } from '../utils/api';
 import { getUserName, isSuperuser } from '../utils/auth';
@@ -21,7 +28,9 @@ import {
   Activity,
   ArrowLeft,
   Calendar,
-  Building2
+  Building2,
+  TrendingUp,
+  CheckCircle
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -36,6 +45,8 @@ const Dashboard = () => {
   const [shouldAutoLoadContent, setShouldAutoLoadContent] = useState(false);
   const [userBrands, setUserBrands] = useState([]);
   const [isUserSuperuser, setIsUserSuperuser] = useState(isSuperuser());
+  const [showCMSSelector, setShowCMSSelector] = useState(false);
+  const [cmsFocus, setCmsFocus] = useState(null);
 
   // Handle navigation state from blog editor
   useEffect(() => {
@@ -51,6 +62,36 @@ const Dashboard = () => {
       }, 800);
     }
   }, [location.state]);
+
+  // Handle URL parameters for direct navigation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const section = urlParams.get('section');
+    const focus = urlParams.get('focus');
+    
+    if (section === 'settings') {
+      setActiveSection('settings');
+      if (focus === 'cms') {
+        setShowCMSSelector(true);
+      }
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (section === 'analytics') {
+      setActiveSection('dashboard');
+      setActiveTool('analytics');
+      // Delay URL cleanup to ensure state is set properly
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 100);
+    } else if (section === 'content-calendar') {
+      setActiveSection('dashboard');
+      setActiveTool('content-calendar');
+      // Delay URL cleanup to ensure state is set properly
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 100);
+    }
+  }, [location.search]);
 
   // Check onboarding status and fetch user's brands
   useEffect(() => {
@@ -222,6 +263,13 @@ const Dashboard = () => {
         </div>
       );
     }
+    if (activeTool === 'published-blogs') {
+      return <PublishedBlogsView inline onClose={() => setActiveTool(null)} />;
+    }
+
+    if (activeTool === 'analytics') {
+      return <Analytics onClose={() => setActiveTool(null)} />;
+    }
 
     return null;
   };
@@ -300,20 +348,44 @@ const Dashboard = () => {
              </button>
            )}
 
-          {/* Content Calendar - only for superusers */}
-          {isUserSuperuser && (
-            <button
-              onClick={() => { setActiveSection('dashboard'); setActiveTool('content-calendar'); }}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeSection === 'content-calendar' || activeTool === 'content-calendar'
-                  ? 'nav-active'
-                  : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              <span>Content Calendar</span>
-            </button>
-          )}
+          {/* Content Calendar - visible to all users */}
+          <button
+            onClick={() => { setActiveSection('dashboard'); setActiveTool('content-calendar'); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeSection === 'content-calendar' || activeTool === 'content-calendar'
+                ? 'nav-active'
+                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Content Calendar</span>
+          </button>
+
+          {/* Published Blogs - visible to all users */}
+          <button
+            onClick={() => { setActiveSection('dashboard'); setActiveTool('published-blogs'); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeSection === 'published-blogs' || activeTool === 'published-blogs'
+                ? 'nav-active'
+                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+            }`}
+          >
+            <CheckCircle className="w-4 h-4" />
+            <span>Published Blogs</span>
+          </button>
+
+          {/* Analytics - visible to all users */}
+          <button
+            onClick={() => { setActiveSection('dashboard'); setActiveTool('analytics'); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeSection === 'analytics' || activeTool === 'analytics'
+                ? 'nav-active'
+                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>Analytics</span>
+          </button>
 
           {/* Shopify Integration - only for superusers
           {isUserSuperuser && (
@@ -337,20 +409,18 @@ const Dashboard = () => {
             </button>
           )} */}
 
-          {/* Settings - only for superusers
-          {isUserSuperuser && (
-            <button
-              onClick={() => setActiveSection('settings')}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeSection === 'settings'
-                  ? 'nav-active'
-                  : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              <span>Settings</span>
-            </button>
-          )} */}
+          {/* Settings - now available for all users */}
+          <button
+            onClick={() => setActiveSection('settings')}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeSection === 'settings'
+                ? 'nav-active'
+                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Settings</span>
+          </button>
 
 
 
@@ -455,32 +525,55 @@ const Dashboard = () => {
                       </CardContent>
                     </Card>
 
-                                         {/* Content Calendar Card - Only for superusers */}
-                     {isUserSuperuser && (
-                       <Card 
-                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
-                         onClick={() => setActiveTool('content-calendar')}
-                       >
-                         <CardContent className="p-6">
-                           <div className="flex items-center space-x-4 mb-4">
-                             <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                               <Calendar className="w-6 h-6 text-white" />
-                             </div>
-                             <div>
-                               <h3 className="text-lg font-semibold text-[#000000]">
-                                 Content Calendar
-                               </h3>
-                               <p className="text-sm text-[#4a4a6a]">
-                                 AI-powered content planning
-                               </p>
-                             </div>
+                                         {/* Content Calendar Card - Available for all users */}
+                     <Card 
+                       className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
+                       onClick={() => setActiveTool('content-calendar')}
+                     >
+                       <CardContent className="p-6">
+                         <div className="flex items-center space-x-4 mb-4">
+                           <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
+                             <Calendar className="w-6 h-6 text-white" />
                            </div>
-                           <p className="text-sm text-[#4a4a6a]">
-                             Generate 30-day content plans and auto-publish to your CMS platforms.
-                           </p>
-                         </CardContent>
-                       </Card>
-                     )}
+                           <div>
+                             <h3 className="text-lg font-semibold text-[#000000]">
+                               Content Calendar
+                             </h3>
+                             <p className="text-sm text-[#4a4a6a]">
+                               AI-powered content planning
+                             </p>
+                           </div>
+                         </div>
+                         <p className="text-sm text-[#4a4a6a]">
+                           Generate 30-day content plans and auto-publish to your CMS platforms.
+                         </p>
+                       </CardContent>
+                     </Card>
+
+                     {/* Analytics Card - Available for all users */}
+                     <Card 
+                       className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
+                       onClick={() => setActiveTool('analytics')}
+                     >
+                       <CardContent className="p-6">
+                         <div className="flex items-center space-x-4 mb-4">
+                           <div className="w-12 h-12 bg-[#34d399] rounded-lg flex items-center justify-center">
+                             <TrendingUp className="w-6 h-6 text-white" />
+                           </div>
+                           <div>
+                             <h3 className="text-lg font-semibold text-[#000000]">
+                               Analytics
+                             </h3>
+                             <p className="text-sm text-[#4a4a6a]">
+                               Google Analytics & Search Console
+                             </p>
+                           </div>
+                         </div>
+                         <p className="text-sm text-[#4a4a6a]">
+                           Track website performance and published blog analytics from your dashboard.
+                         </p>
+                       </CardContent>
+                     </Card>
 
                      {/* Shopify Integration Card - Only for superusers
                      {isUserSuperuser && (
@@ -739,6 +832,88 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
+              {/* CMS Platform Selector */}
+              {showCMSSelector ? (
+                <CMSConnectionSelector 
+                  onBack={() => setShowCMSSelector(false)}
+                  focusPlatform={cmsFocus}
+                />
+              ) : (
+                <>
+                  {/* CMS Integration Overview */}
+                  <Card className="border border-[#b0b0d8] bg-gradient-to-r from-purple-50 to-blue-50">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-[#7765e3] rounded-lg flex items-center justify-center">
+                          <span className="text-sm font-bold text-white">🌐</span>
+                        </div>
+                        <span>CMS Platform Connection</span>
+                      </CardTitle>
+                      <CardDescription className="text-[#4a4a6a]">
+                        Connect to your preferred content management system for seamless publishing
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-[#6b7280]">
+                        Choose from Shopify, Webflow, or WordPress to publish your AI-generated content directly to your website.
+                      </p>
+                      <Button
+                        onClick={() => setShowCMSSelector(true)}
+                        className="bg-[#7765e3] hover:bg-[#6658f4] text-white"
+                      >
+                        Choose CMS Platform
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Individual CMS Settings - Advanced Configuration */}
+                  <Card className="border border-[#b0b0d8] bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] text-lg">Advanced CMS Configuration</CardTitle>
+                      <CardDescription className="text-[#4a4a6a]">
+                        Configure specific settings for each platform (for advanced users)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Shopify Integration */}
+                      <div>
+                        <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
+                          <div className="w-6 h-6 bg-[#95BF47] rounded flex items-center justify-center">
+                            <span className="text-xs font-bold text-white">🛍️</span>
+                          </div>
+                          <span>Shopify Settings</span>
+                        </h4>
+                        <ShopifySettings />
+                      </div>
+                      
+                      {/* Webflow Integration */}
+                      <div className="border-t border-gray-200 pt-6">
+                        <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
+                          <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
+                            <span className="text-xs font-bold text-white">🌐</span>
+                          </div>
+                          <span>Webflow Settings</span>
+                        </h4>
+                        <WebflowSettings />
+                      </div>
+                      
+                      {/* WordPress Integration */}
+                      <div className="border-t border-gray-200 pt-6">
+                        <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
+                          <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center">
+                            <span className="text-xs font-bold text-white">📝</span>
+                          </div>
+                          <span>WordPress Settings</span>
+                        </h4>
+                        <WordPressSettings />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+
+
               {/* Analysis Preferences */}
               <Card className="border border-[#b0b0d8] bg-white">
                 <CardHeader>
@@ -885,6 +1060,24 @@ const Dashboard = () => {
                   <div className="flex justify-end">
                     <Button className="gradient-primary">Save Integrations</Button>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Payment & Billing */}
+              <Card className="border border-[#b0b0d8] bg-white">
+                <CardHeader>
+                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-[#7765e3] rounded-lg flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">💳</span>
+                    </div>
+                    <span>Payment & Billing</span>
+                  </CardTitle>
+                  <CardDescription className="text-[#4a4a6a]">
+                    Manage your subscription and billing information
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StripePaymentSettings />
                 </CardContent>
               </Card>
 

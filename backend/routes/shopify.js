@@ -1,16 +1,20 @@
 const express = require('express');
 const axios = require('axios');
+const crypto = require('crypto');
 const router = express.Router();
+const { authenticationMiddleware: auth } = require('../middleware/auth');
+const CMSCredentials = require('../models/CMSCredentials');
+const cmsIntegration = require('../utils/cmsIntegration');
 
-// Global variable to store Shopify access token (in production, use database)
-let shopifyAccessToken = null;
-let shopifyShopDomain = null;
+// Apply auth middleware to all routes except callback (Shopify needs to access it)
+// Note: We'll apply auth directly to each route instead of using router.use
 
 // Step 1: Redirect user to Shopify OAuth authorization URL
-router.get('/connect-shopify', (req, res) => {
+router.get('/connect', auth, (req, res) => {
   const { shop } = req.query;
   const shopifyApiKey = process.env.SHOPIFY_API_KEY;
   const appUrl = process.env.APP_URL || 'http://localhost:5000';
+  const userId = req.user.id;
   
   if (!shopifyApiKey) {
     console.error('❌ SHOPIFY_API_KEY environment variable is not set');
@@ -24,12 +28,14 @@ router.get('/connect-shopify', (req, res) => {
     });
   }
 
-  // Log the API key for debugging (only first few characters for security)
-  console.log(`🔑 Shopify API Key: ${shopifyApiKey.substring(0, 8)}...`);
+  console.log(`🔑 Shopify OAuth initiated for user: ${userId}`);
   console.log(`🌐 App URL: ${appUrl}`);
 
   // Required scopes for content management
   const scopes = 'read_content,write_content';
+  
+  // Generate state parameter for CSRF protection (user ID + random)
+  const state = crypto.createHash('sha256').update(`${userId}-${Date.now()}-${Math.random()}`).digest('hex');
   
   if (shop) {
     // If shop parameter is provided, validate and redirect to specific shop
@@ -39,28 +45,26 @@ router.get('/connect-shopify', (req, res) => {
       });
     }
     
-         // Build OAuth authorization URL for specific shop
-     const authUrl = `https://${shop}/admin/oauth/authorize?client_id=${shopifyApiKey}&scope=${scopes}&redirect_uri=${appUrl}/api/v1/shopify/auth/shopify/callback&state=${shop}&response_type=code`;
+    // Build OAuth authorization URL for specific shop
+    const authUrl = `https://${shop}/admin/oauth/authorize?client_id=${shopifyApiKey}&scope=${scopes}&redirect_uri=${appUrl}/api/v1/shopify/callback&state=${state}&response_type=code`;
     
-    console.log(`🔗 Redirecting to Shopify OAuth for specific shop: ${shop}`);
-    console.log(`📝 Authorization URL: ${authUrl}`);
+    console.log(`🔗 Providing Shopify OAuth URL for specific shop: ${shop}`);
     
-    res.redirect(authUrl);
-          } else {
-      // No shop parameter - redirect to Shopify's app installation page
-      // This will let Shopify handle the shop selection automatically
-      const appInstallUrl = `https://accounts.shopify.com/oauth/authorize?client_id=${shopifyApiKey}&scope=${scopes}&redirect_uri=${appUrl}/api/v1/shopify/auth/shopify/callback&response_type=code`;
-      
-      console.log(`🔗 Redirecting to Shopify app installation page`);
-      console.log(`📝 App Installation URL: ${appInstallUrl}`);
-      
-      res.redirect(appInstallUrl);
-    }
+    res.json({ authUrl });
+  } else {
+    // No shop parameter - redirect to Shopify's app installation page
+    // This will let Shopify handle the shop selection automatically
+    const appInstallUrl = `https://accounts.shopify.com/oauth/authorize?client_id=${shopifyApiKey}&scope=${scopes}&redirect_uri=${appUrl}/api/v1/shopify/callback&state=${state}&response_type=code`;
+    
+    console.log(`🔗 Providing Shopify app installation URL`);
+    
+    res.json({ authUrl: appInstallUrl });
+  }
 });
 
 // Step 2: Handle Shopify OAuth callback
-router.get('/auth/shopify/callback', async (req, res) => {
-  const { code, shop, state } = req.query;
+router.get('/callback', async (req, res) => {
+  const { code, shop, state, hmac, timestamp } = req.query;
   
   if (!code || !shop || !state) {
     return res.status(400).json({ 
@@ -70,6 +74,27 @@ router.get('/auth/shopify/callback', async (req, res) => {
 
   console.log(`🔄 Shopify OAuth callback received for shop: ${shop}`);
   console.log(`📝 Authorization code: ${code.substring(0, 10)}...`);
+  
+  // HMAC verification for security
+  const shopifyApiSecret = process.env.SHOPIFY_API_SECRET;
+  if (hmac && shopifyApiSecret) {
+    const queryString = Object.keys(req.query)
+      .filter(key => key !== 'hmac')
+      .sort()
+      .map(key => `${key}=${req.query[key]}`)
+      .join('&');
+    
+    const computedHmac = crypto
+      .createHmac('sha256', shopifyApiSecret)
+      .update(queryString)
+      .digest('hex');
+    
+    if (computedHmac !== hmac) {
+      console.error('❌ HMAC verification failed');
+      return res.status(401).json({ error: 'HMAC verification failed' });
+    }
+    console.log('✅ HMAC verification successful');
+  }
 
   try {
     const shopifyApiKey = process.env.SHOPIFY_API_KEY;
@@ -92,143 +117,219 @@ router.get('/auth/shopify/callback', async (req, res) => {
       throw new Error('No access token received from Shopify');
     }
 
-    // Store token and shop domain in memory (in production, store in database)
-    shopifyAccessToken = access_token;
-    shopifyShopDomain = shop;
-    
+    // Extract user ID from state (for now, we'll redirect to frontend to handle auth)
     console.log(`✅ Successfully obtained Shopify access token for shop: ${shop}`);
     console.log(`🔑 Access token: ${access_token.substring(0, 10)}...`);
-
-    // Return success response
-    res.json({
-      status: 'connected',
-      message: `Successfully connected to Shopify store: ${shop}`,
-      shop: shop,
-      scopes: 'read_content,write_content'
-    });
+    
+    // Since this is a callback route without user context, we'll redirect to frontend
+    // The frontend will need to make an authenticated request to save the credentials
+    const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?shopify_success=1&shop=${encodeURIComponent(shop)}&access_token=${encodeURIComponent(access_token)}`;
+    
+    res.redirect(redirectUrl);
 
   } catch (error) {
     console.error('❌ Error during Shopify OAuth callback:', error);
     
+    const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?shopify_error=1&error=${encodeURIComponent(error.message)}`;
+    res.redirect(redirectUrl);
+  }
+});
+
+// Route to save Shopify credentials after OAuth (called by frontend)
+router.post('/save-credentials', auth, async (req, res) => {
+  try {
+    const { shop, accessToken } = req.body;
+    const userId = req.user.id;
+    
+    if (!shop || !accessToken) {
+      return res.status(400).json({ error: 'Shop domain and access token are required' });
+    }
+    
+    // Test the connection before saving
+    const testResult = await cmsIntegration.testShopifyConnection({
+      authDetails: {
+        shopDomain: shop,
+        accessToken: accessToken,
+        apiVersion: '2024-10'
+      }
+    });
+    
+    if (!testResult.success) {
+      return res.status(400).json({ 
+        error: 'Failed to connect to Shopify store',
+        details: testResult.error 
+      });
+    }
+    
+    // Save credentials to database
+    const credentials = await CMSCredentials.findOneAndUpdate(
+      { userId, platform: 'shopify' },
+      { 
+        authDetails: {
+          shopDomain: shop,
+          accessToken: accessToken,
+          apiVersion: '2024-10'
+        },
+        isActive: true 
+      },
+      { upsert: true, new: true, runValidators: true }
+    );
+    
+    console.log(`✅ Shopify credentials saved for user ${userId} and shop ${shop}`);
+    
+    res.json({
+      success: true,
+      message: `Successfully connected to Shopify store: ${shop}`,
+      data: {
+        shop: shop,
+        platform: 'shopify',
+        isActive: true,
+        connectedAt: credentials.createdAt
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error saving Shopify credentials:', error);
     res.status(500).json({
-      error: 'Failed to complete Shopify OAuth',
+      error: 'Failed to save Shopify credentials',
       details: error.message
     });
   }
 });
 
-// Step 3: Test publish endpoint
-router.post('/publish', async (req, res) => {
-  if (!shopifyAccessToken || !shopifyShopDomain) {
-    return res.status(401).json({ 
-      error: 'Not connected to Shopify. Please complete OAuth flow first.' 
-    });
-  }
-
-  console.log(`📝 Publishing test article to Shopify shop: ${shopifyShopDomain}`);
-
+// Step 3: Publish content to Shopify
+router.post('/publish', auth, async (req, res) => {
   try {
-    // Test blog post data
-    const testPostData = {
-      article: {
-        title: 'Hello from Node.js',
-        body_html: `
-          <div class="test-article">
-            <h1>Hello from Node.js!</h1>
-            <p>This is a test article published via the Shopify API integration.</p>
-            <p><strong>Published at:</strong> ${new Date().toLocaleString()}</p>
-            <p><strong>Integration:</strong> Snowball SEO Platform</p>
-            <p>This article was automatically generated and published to test the Shopify OAuth integration.</p>
-          </div>
-        `,
-        summary_html: 'A test article published via Node.js Shopify API integration',
-        tags: ['test', 'integration', 'nodejs', 'shopify'],
-        author: 'Test Publisher',
-        published: true
-      }
-    };
-
-    // First, check if we have a blog, create one if not
-    let blogId = 1;
-    try {
-      const blogsResponse = await axios.get(`https://${shopifyShopDomain}/admin/api/2024-10/blogs.json`, {
-        headers: {
-          'X-Shopify-Access-Token': shopifyAccessToken,
-          'Content-Type': 'application/json'
-        }
+    const userId = req.user.id;
+    const { title, content, keywords, targetAudience } = req.body;
+    
+    // Get user's Shopify credentials
+    const credentials = await CMSCredentials.findOne({ 
+      userId, 
+      platform: 'shopify', 
+      isActive: true 
+    });
+    
+    if (!credentials) {
+      return res.status(401).json({ 
+        error: 'Not connected to Shopify. Please connect your store first.' 
       });
-      
-      if (blogsResponse.data.blogs && blogsResponse.data.blogs.length > 0) {
-        blogId = blogsResponse.data.blogs[0].id;
-        console.log(`📚 Using existing blog with ID: ${blogId}`);
-      } else {
-        // Create a new blog if none exists
-        const createBlogResponse = await axios.post(`https://${shopifyShopDomain}/admin/api/2024-10/blogs.json`, {
-          blog: {
-            title: 'Test Blog',
-            handle: 'test-blog',
-            commentable: 'moderate'
-          }
-        }, {
-          headers: {
-            'X-Shopify-Access-Token': shopifyAccessToken,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        blogId = createBlogResponse.data.blog.id;
-        console.log(`📝 Created new blog with ID: ${blogId}`);
-      }
-    } catch (error) {
-      console.error('⚠️ Error checking/creating blog, using default ID:', error.message);
-      blogId = 1;
     }
 
-    // Publish the test article
-    const response = await axios.post(`https://${shopifyShopDomain}/admin/api/2024-10/blogs/${blogId}/articles.json`, testPostData, {
-      headers: {
-        'X-Shopify-Access-Token': shopifyAccessToken,
-        'Content-Type': 'application/json'
-      }
+    console.log(`📝 Publishing article to Shopify shop: ${credentials.authDetails.shopDomain}`);
+    console.log('📄 Content being published:', {
+      title: title,
+      contentLength: content ? content.length : 0,
+      contentPreview: content ? content.substring(0, 200) + '...' : 'NO CONTENT',
+      keywords: keywords,
+      targetAudience: targetAudience
     });
-
-    console.log(`✅ Successfully published test article to Shopify:`, response.data.article.id);
+    
+    // Validate required content
+    if (!title || !content) {
+      return res.status(400).json({
+        error: 'Title and content are required'
+      });
+    }
+    
+    // Use existing CMS integration service
+    const publishResult = await cmsIntegration.publishContent('shopify', credentials, {
+      title,
+      description: content,
+      keywords: keywords || [],
+      targetAudience: targetAudience || 'General Audience'
+    });
+    
+    if (!publishResult.success) {
+      return res.status(500).json({
+        error: 'Failed to publish to Shopify',
+        details: publishResult.error
+      });
+    }
 
     res.json({
-      status: 'published',
-      message: 'Test article published successfully to Shopify',
-      article: {
-        id: response.data.article.id,
-        title: response.data.article.title,
-        url: `https://${shopifyShopDomain}/blogs/test-blog/${response.data.article.handle}`,
-        published_at: response.data.article.published_at
+      success: true,
+      message: publishResult.message,
+      data: {
+        postId: publishResult.postId,
+        url: publishResult.url,
+        platform: 'shopify',
+        shop: credentials.authDetails.shopDomain
       }
     });
 
   } catch (error) {
-    console.error('❌ Error publishing test article:', error);
+    console.error('❌ Error publishing to Shopify:', error);
     
     res.status(500).json({
-      error: 'Failed to publish test article',
-      details: error.message,
-      shopify_response: error.response?.data
+      error: 'Failed to publish to Shopify',
+      details: error.message
     });
   }
 });
 
 // Get connection status
-router.get('/status', (req, res) => {
-  if (shopifyAccessToken && shopifyShopDomain) {
-    res.json({
-      status: 'connected',
-      shop: shopifyShopDomain,
-      scopes: 'read_content,write_content',
-      connected_at: 'In-memory storage (restart will disconnect)'
+router.get('/status', auth, async (req, res) => {
+  try {
+    console.log('🔍 Shopify status check for user:', req.user.id);
+    const userId = req.user.id;
+    
+    const credentials = await CMSCredentials.findOne({ 
+      userId, 
+      platform: 'shopify', 
+      isActive: true 
     });
-  } else {
-    res.json({
-      status: 'disconnected',
-      message: 'Not connected to Shopify. Complete OAuth flow to connect.'
+    
+    if (credentials) {
+      res.json({
+        status: 'connected',
+        shop: credentials.authDetails.shopDomain,
+        platform: 'shopify',
+        connectedAt: credentials.createdAt,
+        scopes: 'read_content,write_content'
+      });
+    } else {
+      res.json({
+        status: 'disconnected',
+        message: 'Not connected to Shopify. Complete OAuth flow to connect.'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error checking Shopify status:', error);
+    res.status(500).json({
+      error: 'Failed to check connection status',
+      details: error.message
+    });
+  }
+});
+
+// Disconnect Shopify store
+router.delete('/disconnect', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const result = await CMSCredentials.findOneAndDelete({ 
+      userId, 
+      platform: 'shopify' 
+    });
+    
+    if (result) {
+      console.log(`✅ Shopify disconnected for user ${userId}`);
+      res.json({
+        success: true,
+        message: 'Successfully disconnected from Shopify store'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'No Shopify connection found to disconnect'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error disconnecting Shopify:', error);
+    res.status(500).json({
+      error: 'Failed to disconnect Shopify store',
+      details: error.message
     });
   }
 });

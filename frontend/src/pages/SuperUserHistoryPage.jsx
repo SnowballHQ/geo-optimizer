@@ -42,14 +42,14 @@ const SuperUserHistoryPage = () => {
       return;
     }
 
+    // Use apiService to ensure correct base URL handling
+    const pdfEndpoint = `/api/v1/super-user/analysis/${analysisId}/download-pdf`;
+    
     try {
       setDownloadingPdfs(prev => new Set([...prev, analysisId]));
       console.log('📄 Downloading Super User PDF for analysis:', analysisId);
       
-      const token = localStorage.getItem('auth') || localStorage.getItem('token');
-      
-      // Use apiService to ensure correct base URL handling
-      const pdfEndpoint = `/api/v1/super-user/analysis/${analysisId}/download-pdf`;
+      // const token = localStorage.getItem('auth') || localStorage.getItem('token');
       console.log('📄 PDF Endpoint:', pdfEndpoint);
       console.log('📄 Analysis ID:', analysisId);
       console.log('📄 Using apiService base URL for PDF download');

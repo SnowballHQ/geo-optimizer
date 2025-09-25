@@ -11,7 +11,7 @@ router.get("/analysis/:brandId", auth, brandController.getBrandAnalysis);
 
 // User data endpoints with proper ownership validation
 router.get("/user/brands", auth, brandController.getUserBrands);
-router.get("/user/categories", auth, brandController.getCategoryPrompts);
+router.get("/user/categories", auth, brandController.getUserCategories);
 
 // Category prompts endpoint
 router.get("/categories/:categoryId/prompts", auth, brandController.getCategoryPrompts);
@@ -23,6 +23,7 @@ router.get("/prompts/:promptId/response", auth, brandController.getPromptRespons
 router.post("/prompts/custom", auth, brandController.addCustomPrompt);
 router.post("/prompts/enhance", auth, brandController.enhancePrompt);
 router.post("/prompts/:promptId/generate", auth, brandController.generateCustomResponse);
+router.delete("/prompts/:promptId", auth, brandController.deletePrompt);
 
 // Debug endpoint
 router.get("/debug/ai-responses", auth, brandController.debugAIResponses);

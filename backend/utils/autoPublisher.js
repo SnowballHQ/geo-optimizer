@@ -69,45 +69,96 @@ class AutoPublisher {
   }
 
   async publishContent(content) {
-    console.log(`Publishing content: ${content.title} for user ${content.userId}`);
+    console.log(`Publishing content: ${content.title} for user`, content.userId);
 
-    // Get CMS credentials for the user and platform
-    const credentials = await CMSCredentials.findOne({
+    // First, try to get CMS credentials for the specified platform
+    let credentials = await CMSCredentials.findOne({
       userId: content.userId,
       platform: content.cmsPlatform,
       isActive: true
     });
 
+    let targetPlatform = content.cmsPlatform;
+
+    // If no credentials found for specified platform, find ANY active CMS credentials for this user
     if (!credentials) {
-      throw new Error(`No active CMS credentials found for platform: ${content.cmsPlatform}`);
+      console.log(`No credentials found for ${content.cmsPlatform}, checking for any active CMS credentials...`);
+      
+      credentials = await CMSCredentials.findOne({
+        userId: content.userId,
+        isActive: true
+      });
+
+      if (credentials) {
+        targetPlatform = credentials.platform;
+        console.log(`Found active credentials for ${targetPlatform}, using that instead of ${content.cmsPlatform}`);
+      }
     }
 
-    // Publish to CMS
-    const result = await cmsIntegration.publishContent(
-      content.cmsPlatform,
-      credentials,
-      {
-        title: content.title,
-        description: content.description,
-        keywords: content.keywords,
-        targetAudience: content.targetAudience
+    if (!credentials) {
+      throw new Error(`No active CMS credentials found. Please connect a CMS platform (Shopify or Webflow) first.`);
+    }
+
+    // Prepare content data for publishing
+    const publishData = {
+      title: content.title,
+      description: content.content || content.description, // Prioritize full content over description
+      keywords: content.keywords,
+      targetAudience: content.targetAudience
+    };
+
+    // For Webflow, we need to get a siteId - for now, we'll try to get it from user's first site
+    if (targetPlatform === 'webflow') {
+      try {
+        // Get user's Webflow sites to use the first one as default
+        const axios = require('axios');
+        const sitesResponse = await axios.get('https://api.webflow.com/v2/sites', {
+          headers: {
+            'Authorization': `Bearer ${credentials.authDetails.accessToken}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        const sites = sitesResponse.data.sites || [];
+        if (sites.length > 0) {
+          publishData.siteId = sites[0].id;
+          console.log(`Using first Webflow site: ${sites[0].displayName} (${sites[0].id})`);
+        } else {
+          throw new Error('No Webflow sites found. Please create a site in Webflow first.');
+        }
+      } catch (siteError) {
+        console.error('Error fetching Webflow sites:', siteError);
+        throw new Error('Unable to fetch Webflow sites. Please check your Webflow connection.');
       }
+    }
+
+    // Publish to CMS using the detected target platform
+    const result = await cmsIntegration.publishContent(
+      targetPlatform,
+      credentials,
+      publishData
     );
 
     if (!result.success) {
       throw new Error(`CMS publishing failed: ${result.error}`);
     }
 
-    // Update content status to published
+    // Update content status to published and update platform
     await ContentCalendar.findByIdAndUpdate(content._id, {
       status: 'published',
       publishedAt: new Date(),
       cmsPostId: result.postId,
-      cmsUrl: result.url
+      publishedUrl: result.url, // Use publishedUrl to match the schema
+      cmsPlatform: targetPlatform // Update to the actual platform used
     });
 
-    console.log(`Successfully published: ${content.title} to ${content.cmsPlatform}`);
-    return result;
+    console.log(`Successfully published: ${content.title} to ${targetPlatform}`);
+    
+    // Return result with platform information
+    return {
+      ...result,
+      platform: targetPlatform
+    };
   }
 
   async publishSpecificContent(contentId, companyName) {
@@ -122,15 +173,29 @@ class AutoPublisher {
         throw new Error('Content not found for this company');
       }
 
-      if (content.status !== 'approved') {
-        throw new Error(`Content status is ${content.status}, must be approved to publish`);
+      // Allow publishing of draft or approved content, but not already published
+      if (content.status === 'published') {
+        console.log(`Content "${content.title}" is already published, skipping...`);
+        return {
+          success: true,
+          message: `Content "${content.title}" was already published`,
+          data: { alreadyPublished: true }
+        };
+      }
+      
+      // Content can be draft or approved to publish
+      if (!['draft', 'approved'].includes(content.status)) {
+        throw new Error(`Content status is ${content.status}, must be draft or approved to publish`);
       }
 
       const result = await this.publishContent(content);
       
+      // Get the platform that was actually used
+      const actualPlatform = result.platform || content.cmsPlatform;
+      
       return {
         success: true,
-        message: `Content "${content.title}" published successfully to ${content.cmsPlatform}`,
+        message: `Content "${content.title}" published successfully to ${actualPlatform}`,
         data: result
       };
     } catch (error) {

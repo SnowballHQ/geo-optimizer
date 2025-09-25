@@ -10,6 +10,9 @@ Create a `.env` file in the frontend directory with the following content:
 # API Configuration
 VITE_API_URL=https://snowball-u41l.onrender.com
 
+# Stripe Configuration
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key_here
+
 # Optional: Enable debug logging
 VITE_DEBUG=false
 ```

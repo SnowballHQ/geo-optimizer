@@ -131,6 +131,10 @@ export const apiService = {
     console.log('Getting user brands');
     return api.get('/api/v1/brand/user/brands');
   },
+  getUserCategories: () => {
+    console.log('Getting user categories');
+    return api.get('/api/v1/brand/user/categories');
+  },
   
   // Categories and Prompts
   getCategoryPrompts: (categoryId) => api.get(`/api/v1/brand/categories/${categoryId}/prompts`),
@@ -138,6 +142,7 @@ export const apiService = {
   
   // Custom Prompts
   addCustomPrompt: (data) => api.post('/api/v1/brand/prompts/custom', data),
+  deletePrompt: (promptId) => api.delete(`/api/v1/brand/prompts/${promptId}`),
   addCompetitor: (brandId, data) => api.post(`/api/v1/brand/${brandId}/competitors`, data),
   deleteCompetitor: (brandId, competitorName) => api.delete(`/api/v1/brand/${brandId}/competitors/${encodeURIComponent(competitorName)}`),
   enhancePrompt: (data) => api.post('/api/v1/brand/prompts/enhance', data),
@@ -241,10 +246,33 @@ export const apiService = {
   getHistory: () => api.get('/api/v1/history'),
   deleteHistory: (id) => api.delete(`/api/v1/history/${id}`),
   
+  // Analytics
+  getAnalyticsAuthUrl: () => api.get('/api/v1/analytics/auth/google'),
+  getAnalyticsStatus: () => api.get('/api/v1/analytics/status'),
+  getAnalyticsProperties: () => api.get('/api/v1/analytics/properties'),
+  getSearchConsoleSites: () => api.get('/api/v1/analytics/search-console-sites'),
+  saveAnalyticsConfiguration: (data) => api.post('/api/v1/analytics/configure', data),
+  getAnalyticsOverview: () => api.get('/api/v1/analytics/overview'),
+  getBlogPerformance: () => api.get('/api/v1/analytics/blog-performance'),
+  getTopPages: () => api.get('/api/v1/analytics/top-pages'),
+  getTopQueries: () => api.get('/api/v1/analytics/top-queries'),
+  getTrafficByCountry: () => api.get('/api/v1/analytics/traffic-by-country'),
+  getDeviceBreakdown: () => api.get('/api/v1/analytics/device-breakdown'),
+  // Advanced Analytics (Phase 2)
+  getQueryPageMatrix: () => api.get('/api/v1/analytics/query-page-matrix'),
+  getKeywordTrends: () => api.get('/api/v1/analytics/keyword-trends'),
+  getSearchAppearance: () => api.get('/api/v1/analytics/search-appearance'),
+  getPerformanceComparison: () => api.get('/api/v1/analytics/performance-comparison'),
+  getLowHangingFruit: () => api.get('/api/v1/analytics/low-hanging-fruit'),
+  disconnectAnalytics: () => api.delete('/api/v1/analytics/disconnect'),
+  
   // Brand Settings
   getBrandSettings: () => api.get('/api/v1/brand-settings'),
   saveBrandSettings: (data) => api.post('/api/v1/brand-settings', data),
   refreshBrandVoice: () => api.post('/api/v1/brand-settings/refresh'),
+
+  // Published Blogs Analytics
+  getPublishedBlogs: () => api.get('/api/v1/content-calendar/published-blogs'),
   
   // Auto-reload Brand Dashboard helper
   triggerBrandDashboardReload: () => {
@@ -298,6 +326,17 @@ export const apiService = {
       console.log('ℹ️ AUTO-RELOAD: User not on Brand Dashboard, skipping reload');
     }
   },
+  
+  // Super User Prompt Management
+  deleteSuperUserPrompt: (analysisId, promptId) => api.delete(`/api/v1/super-user/analysis/${analysisId}/prompts/${promptId}`),
+  
+  // Payment API methods
+  getPaymentInfo: () => api.get('/api/v1/payment/info'),
+  createPaymentIntent: (data) => api.post('/api/v1/payment/create-payment-intent', data),
+  handlePaymentSuccess: (data) => api.post('/api/v1/payment/success', data),
+  createSubscription: (data) => api.post('/api/v1/payment/create-subscription', data),
+  cancelSubscription: () => api.post('/api/v1/payment/cancel-subscription'),
+  updateBillingAddress: (data) => api.post('/api/v1/payment/billing-address', data),
   
   // Removed unused legacy endpoints
 };

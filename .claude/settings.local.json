@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(PORT=5001 npm start)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

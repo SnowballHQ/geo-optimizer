@@ -51,6 +51,88 @@ const contentCalendarSchema = new mongoose.Schema({
   publishedAt: {
     type: Date
   },
+  publishedUrl: {
+    type: String,
+    default: null
+  },
+  lastAnalyzedAt: {
+    type: Date,
+    default: null
+  },
+  // Banner image data from Unsplash
+  bannerUrl: {
+    type: String,
+    default: null
+  },
+  bannerData: {
+    photographer: {
+      type: String,
+      default: null
+    },
+    photographerUrl: {
+      type: String,
+      default: null
+    },
+    unsplashUrl: {
+      type: String,
+      default: null
+    },
+    altText: {
+      type: String,
+      default: null
+    }
+  },
+  // SEO Keywords from DataForSEO
+  sourceKeywords: [{
+    keyword: {
+      type: String,
+      required: true
+    },
+    searchVolume: {
+      type: Number,
+      default: 0
+    },
+    difficulty: {
+      type: Number,
+      default: 0
+    },
+    cpc: {
+      type: Number,
+      default: 0
+    },
+    competition: {
+      type: Number,
+      default: 0
+    },
+    source: {
+      type: String,
+      enum: ['dataforseo', 'fallback', 'manual'],
+      default: 'manual'
+    }
+  }],
+  keywordResearchData: {
+    domain: {
+      type: String,
+      default: null
+    },
+    researchDate: {
+      type: Date,
+      default: null
+    },
+    totalKeywordsFound: {
+      type: Number,
+      default: 0
+    },
+    averageSearchVolume: {
+      type: Number,
+      default: 0
+    },
+    keywordSource: {
+      type: String,
+      enum: ['dataforseo', 'fallback', 'none'],
+      default: 'none'
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

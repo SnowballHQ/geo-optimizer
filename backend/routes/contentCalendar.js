@@ -6,6 +6,8 @@ const autoPublisher = require('../utils/autoPublisher');
 const ContentCalendar = require('../models/ContentCalendar');
 const CMSCredentials = require('../models/CMSCredentials'); // Added missing import
 const cmsIntegration = require('../utils/cmsIntegration'); // Added missing import
+const googleAnalytics = require('../utils/googleAnalytics'); // Added for Search Console integration
+const dataForSeoService = require('../utils/dataForSeoService'); // Added for keyword research
 
 // Apply auth middleware to all routes
 router.use(auth);
@@ -25,6 +27,66 @@ router.put('/:id', contentCalendarController.updateEntry);
 // Delete specific calendar entry
 router.delete('/:id', contentCalendarController.deleteEntry);
 
+// Get published blogs with analytics data
+router.get('/published-blogs', async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get all published content with URLs
+    const publishedBlogs = await ContentCalendar.find({
+      userId,
+      status: 'published',
+      publishedUrl: { $ne: null }
+    }).sort({ publishedAt: -1 });
+
+    console.log(`Found ${publishedBlogs.length} published blogs for user ${userId}`);
+
+    // Fetch analytics data for each published blog
+    const blogsWithAnalytics = await Promise.all(
+      publishedBlogs.map(async (blog) => {
+        let analyticsData = {
+          position: 0,
+          clicks: 0,
+          impressions: 0,
+          ctr: 0
+        };
+
+        // Only fetch analytics if we have a valid URL
+        if (blog.publishedUrl) {
+          try {
+            console.log(`Fetching analytics for blog: ${blog.title}`);
+            analyticsData = await googleAnalytics.getURLSearchConsoleData(userId, blog.publishedUrl);
+          } catch (error) {
+            console.warn(`Failed to fetch analytics for blog ${blog.title}:`, error.message);
+            // Keep default zeros if analytics fetch fails
+          }
+        }
+
+        return {
+          id: blog._id,
+          title: blog.title,
+          publishedUrl: blog.publishedUrl,
+          publishedAt: blog.publishedAt,
+          cmsPlatform: blog.cmsPlatform,
+          keywords: blog.keywords,
+          targetAudience: blog.targetAudience,
+          analytics: analyticsData
+        };
+      })
+    );
+
+    console.log(`Fetched analytics data for ${blogsWithAnalytics.length} published blogs`);
+
+    res.json({
+      success: true,
+      data: blogsWithAnalytics
+    });
+  } catch (error) {
+    console.error('Error getting published blogs:', error);
+    res.status(500).json({ error: 'Failed to get published blogs' });
+  }
+});
+
 // Get specific calendar entry (for editor)
 router.get('/:id', contentCalendarController.getEntry);
 
@@ -34,6 +96,90 @@ router.post('/entry', contentCalendarController.createEntry);
 // Generate content outline using OpenAI
 router.post('/:id/generate-outline', contentCalendarController.generateOutline);
 router.post('/:id/create-blog', contentCalendarController.createBlogFromOutline);
+
+// Keyword research endpoints
+router.post('/keywords/research', async (req, res) => {
+  try {
+    const { domain, brandCategories } = req.body;
+    
+    if (!domain) {
+      return res.status(400).json({ error: 'Domain is required for keyword research' });
+    }
+
+    console.log(`🔍 Manual keyword research request for domain: ${domain}`);
+    
+    const keywordData = await dataForSeoService.getComprehensiveKeywords(domain, brandCategories || []);
+    
+    if (keywordData.success) {
+      const formattedKeywords = dataForSeoService.formatKeywordsForContentGeneration(keywordData.keywords, 30);
+      
+      res.json({
+        success: true,
+        data: {
+          domain: keywordData.domain,
+          keywords: keywordData.keywords,
+          formattedKeywords,
+          metadata: keywordData.metadata,
+          source: keywordData.source
+        },
+        message: `Found ${keywordData.keywords.length} keywords for ${domain}`
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: keywordData.error || 'No keywords found for this domain',
+        data: {
+          domain: keywordData.domain,
+          keywords: [],
+          source: keywordData.source
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in keyword research endpoint:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to perform keyword research',
+      details: error.message 
+    });
+  }
+});
+
+// Get keyword suggestions for a specific keyword
+router.post('/keywords/suggestions', async (req, res) => {
+  try {
+    const { keyword } = req.body;
+    
+    if (!keyword) {
+      return res.status(400).json({ error: 'Keyword is required for suggestions' });
+    }
+
+    console.log(`💡 Keyword suggestions request for: ${keyword}`);
+    
+    const suggestions = await dataForSeoService.getKeywordSuggestions(keyword, 25);
+    
+    if (suggestions.success) {
+      res.json({
+        success: true,
+        data: suggestions,
+        message: `Found ${suggestions.suggestions.length} keyword suggestions`
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: suggestions.error || 'No suggestions found',
+        data: suggestions
+      });
+    }
+  } catch (error) {
+    console.error('Error in keyword suggestions endpoint:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get keyword suggestions',
+      details: error.message 
+    });
+  }
+});
 
 // Debug route to check CMS credentials (remove in production)
 router.get('/debug/cms-credentials', async (req, res) => {
@@ -166,7 +312,7 @@ router.post('/:id/publish', async (req, res) => {
     // Prepare content for publishing
     const contentToPublish = {
       title: contentEntry.title,
-      description: contentEntry.description || contentEntry.content,
+      description: contentEntry.content || contentEntry.description, // Prioritize full content over description
       keywords: contentEntry.keywords,
       targetAudience: contentEntry.targetAudience,
       cmsPlatform: cmsCredentials.platform
@@ -176,25 +322,42 @@ router.post('/:id/publish', async (req, res) => {
       title: contentToPublish.title,
       platform: cmsCredentials.platform,
       userId: userId,
-      descriptionLength: contentToPublish.description?.length || 0
+      descriptionLength: contentToPublish.description?.length || 0,
+      hasFullContent: !!contentEntry.content,
+      hasDescription: !!contentEntry.description,
+      usingFullContent: !!(contentEntry.content && contentEntry.content.length > contentEntry.description?.length)
     });
 
     // Publish to CMS using cmsIntegration
+    console.log('📤 About to call cmsIntegration.publishContent');
     const publishResult = await cmsIntegration.publishContent(
       cmsCredentials.platform,
       cmsCredentials,
       contentToPublish
     );
+    console.log('📥 Received publishResult from CMS integration');
 
     console.log('Publish result:', publishResult);
+    console.log('Published URL from result:', publishResult.url);
 
     if (publishResult.success) {
-      // Update the entry with published status
-      await ContentCalendar.findByIdAndUpdate(id, {
+      // Update the entry with published status and URL
+      const updateData = {
         status: 'published',
         publishedAt: new Date(),
         lastPublished: new Date(),
+        publishedUrl: publishResult.url, // Store the published URL
         cmsPlatform: cmsCredentials.platform
+      };
+      
+      console.log('Updating content with data:', updateData);
+      
+      const updatedEntry = await ContentCalendar.findByIdAndUpdate(id, updateData, { new: true });
+      console.log('Updated entry result:', {
+        id: updatedEntry._id,
+        status: updatedEntry.status,
+        publishedUrl: updatedEntry.publishedUrl,
+        cmsPlatform: updatedEntry.cmsPlatform
       });
 
       res.json({

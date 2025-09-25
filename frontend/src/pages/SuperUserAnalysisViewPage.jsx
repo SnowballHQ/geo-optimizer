@@ -63,14 +63,14 @@ const SuperUserAnalysisViewPage = () => {
       return;
     }
 
+    // Use apiService to ensure correct base URL handling
+    const pdfEndpoint = `/api/v1/super-user/analysis/${analysisData.analysisId}/download-pdf`;
+    
     try {
       setDownloadingPdf(true);
       console.log('📄 Downloading Super User PDF for analysis:', analysisData.analysisId);
       
-      const token = localStorage.getItem('auth') || localStorage.getItem('token');
-      
-      // Use apiService to ensure correct base URL handling
-      const pdfEndpoint = `/api/v1/super-user/analysis/${analysisData.analysisId}/download-pdf`;
+      // const token = localStorage.getItem('auth') || localStorage.getItem('token');
       console.log('📄 PDF Endpoint:', pdfEndpoint);
       console.log('📄 Analysis ID:', analysisData.analysisId);
       console.log('📄 Using apiService base URL for PDF download');

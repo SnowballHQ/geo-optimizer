@@ -489,33 +489,117 @@ class SuperUserAnalysisController {
         try {
           // ✅ SUPER USER SOV FIX: Get fresh SOV data from database instead of cached analysisResults
           console.log(`🔄 Super User Analysis: Fetching fresh SOV data for analysis ${analysisId}`);
+          console.log(`🔍 Searching for SOV with userId: ${userId}, brandId: ${analysis.analysisResults.brandId}`);
           
           const BrandShareOfVoice = require('../models/BrandShareOfVoice');
-          const latestSOV = await BrandShareOfVoice.findOne({
+          
+          // ✅ FIX: Try multiple user ID formats and search strategies
+          let latestSOV = null;
+          
+          // Strategy 1: Search by exact userId match
+          latestSOV = await BrandShareOfVoice.findOne({
             brandId: analysis.analysisResults.brandId,
             userId: userId.toString()
           }).sort({ createdAt: -1 });
+          
+          if (!latestSOV) {
+            console.log(`⚠️ No SOV found with exact userId, trying alternative search strategies`);
+            
+            // Strategy 2: Search by brandId only (for Super User analyses)
+            latestSOV = await BrandShareOfVoice.findOne({
+              brandId: analysis.analysisResults.brandId
+            }).sort({ createdAt: -1 });
+            
+            if (latestSOV) {
+              console.log(`✅ Found SOV by brandId only: ${latestSOV._id}`);
+            }
+          }
+          
+          if (!latestSOV) {
+            // Strategy 3: Search by analysisSessionId if available
+            if (analysis.analysisId) {
+              latestSOV = await BrandShareOfVoice.findOne({
+                analysisSessionId: analysis.analysisId
+              }).sort({ createdAt: -1 });
+              
+              if (latestSOV) {
+                console.log(`✅ Found SOV by analysisSessionId: ${latestSOV._id}`);
+              }
+            }
+          }
           
           if (latestSOV) {
             console.log(`✅ Super User Analysis: Found fresh SOV data, updating analysisResults`);
             console.log(`📊 Fresh SOV data:`, {
               shareOfVoice: Object.keys(latestSOV.shareOfVoice || {}),
+              shareOfVoiceValues: latestSOV.shareOfVoice,
               mentionCounts: Object.keys(latestSOV.mentionCounts || {}),
+              mentionCountValues: latestSOV.mentionCounts,
               totalMentions: latestSOV.totalMentions,
+              brandShare: latestSOV.brandShare,
+              aiVisibilityScore: latestSOV.aiVisibilityScore,
               competitors: latestSOV.competitors?.length || 0
             });
             
-            // Override cached analysisResults with fresh SOV data
-            analysis.analysisResults.shareOfVoice = latestSOV.shareOfVoice;
-            analysis.analysisResults.mentionCounts = latestSOV.mentionCounts;
-            analysis.analysisResults.totalMentions = latestSOV.totalMentions;
-            analysis.analysisResults.brandShare = latestSOV.brandShare;
-            analysis.analysisResults.aiVisibilityScore = latestSOV.aiVisibilityScore;
-            analysis.analysisResults.competitors = latestSOV.competitors;
+            // ✅ FIX: Enhanced SOV data validation and normalization
+            const hasValidSOV = latestSOV.shareOfVoice && Object.keys(latestSOV.shareOfVoice).length > 0;
+            const hasValidMentions = latestSOV.mentionCounts && Object.keys(latestSOV.mentionCounts).length > 0;
             
-            console.log(`✅ Super User Analysis: SOV data updated in analysisResults`);
+            if (hasValidSOV || hasValidMentions) {
+              // ✅ CRITICAL FIX: Ensure SOV values are properly formatted for frontend
+              const normalizedSOV = {};
+              const normalizedMentions = {};
+              
+              // Normalize shareOfVoice to ensure numeric values
+              if (latestSOV.shareOfVoice) {
+                Object.entries(latestSOV.shareOfVoice).forEach(([brand, share]) => {
+                  // Ensure share is a valid number
+                  const numericShare = Number(share);
+                  normalizedSOV[brand] = !isNaN(numericShare) ? numericShare : 0;
+                });
+              }
+              
+              // Normalize mentionCounts to ensure integer values
+              if (latestSOV.mentionCounts) {
+                Object.entries(latestSOV.mentionCounts).forEach(([brand, count]) => {
+                  const numericCount = parseInt(count) || 0;
+                  normalizedMentions[brand] = numericCount;
+                });
+              }
+              
+              // Override cached analysisResults with normalized fresh SOV data
+              analysis.analysisResults.shareOfVoice = normalizedSOV;
+              analysis.analysisResults.mentionCounts = normalizedMentions;
+              analysis.analysisResults.totalMentions = parseInt(latestSOV.totalMentions) || 0;
+              analysis.analysisResults.brandShare = Number(latestSOV.brandShare) || 0;
+              analysis.analysisResults.aiVisibilityScore = Number(latestSOV.aiVisibilityScore) || 0;
+              analysis.analysisResults.competitors = latestSOV.competitors || [];
+              
+              console.log(`✅ Super User Analysis: SOV data updated in analysisResults`);
+              console.log(`📊 Updated analysis results SOV:`, {
+                shareOfVoice: analysis.analysisResults.shareOfVoice,
+                mentionCounts: analysis.analysisResults.mentionCounts,
+                totalMentions: analysis.analysisResults.totalMentions,
+                brandShare: analysis.analysisResults.brandShare,
+                aiVisibilityScore: analysis.analysisResults.aiVisibilityScore
+              });
+              
+              // ✅ ADDITIONAL DEBUG: Log the exact values being sent to frontend
+              console.log(`📊 DETAILED SOV VALUES FOR FRONTEND:`);
+              Object.entries(analysis.analysisResults.shareOfVoice || {}).forEach(([brand, share]) => {
+                console.log(`   ${brand}: ${share}% (mentions: ${analysis.analysisResults.mentionCounts?.[brand] || 0})`);
+              });
+            } else {
+              console.log(`⚠️ SOV data found but appears to be empty, keeping cached data`);
+            }
           } else {
-            console.log(`⚠️ Super User Analysis: No fresh SOV data found, using cached data`);
+            console.log(`⚠️ Super User Analysis: No fresh SOV data found with any strategy, using cached data`);
+            console.log(`📊 Cached SOV data:`, {
+              shareOfVoice: analysis.analysisResults.shareOfVoice,
+              mentionCounts: analysis.analysisResults.mentionCounts,
+              totalMentions: analysis.analysisResults.totalMentions,
+              brandShare: analysis.analysisResults.brandShare
+            });
           }
           
           // Get categories with prompts and responses for this specific analysis
@@ -540,6 +624,20 @@ class SuperUserAnalysisController {
             // Get AI responses for each prompt, filtered by analysisSessionId
             const promptsWithResponses = [];
             for (const prompt of prompts) {
+              console.log(`🔍 Processing prompt ${prompt._id}, promptText: ${prompt.promptText || prompt.prompt || 'NOT FOUND'}`);
+              
+              // ✅ FIX: Ensure prompt has proper text field populated
+              const enhancedPrompt = {
+                ...prompt,
+                // Ensure promptText field exists for frontend compatibility
+                promptText: prompt.promptText || prompt.prompt || prompt.question || prompt.text || prompt.content || `Prompt ${prompt._id}`,
+                // Keep original fields as fallback
+                text: prompt.text || prompt.promptText || prompt.prompt || prompt.question,
+                question: prompt.question || prompt.promptText || prompt.prompt || prompt.text
+              };
+              
+              console.log(`✅ Enhanced prompt text: ${enhancedPrompt.promptText}`);
+              
               // First try to get AI response for this specific analysis
               let aiResponse = await PromptAIResponse.findOne({
                 promptId: prompt._id,
@@ -561,10 +659,46 @@ class SuperUserAnalysisController {
               }
               
               if (aiResponse) {
-                promptsWithResponses.push({
-                  ...prompt,
-                  aiResponse: aiResponse
+                // ✅ FIX: Enhanced AI response structure validation and normalization
+                const enhancedResponse = {
+                  ...aiResponse,
+                  // Ensure responseText field exists with comprehensive fallback
+                  responseText: aiResponse.responseText || aiResponse.content || aiResponse.text || aiResponse.message || aiResponse.response || 'Response content not available',
+                  // Keep original fields as fallback
+                  content: aiResponse.content || aiResponse.responseText,
+                  text: aiResponse.text || aiResponse.responseText,
+                  message: aiResponse.message || aiResponse.responseText,
+                  // Add data validation flags for frontend debugging
+                  _dataValidation: {
+                    hasResponseText: !!(aiResponse.responseText),
+                    hasContent: !!(aiResponse.content),
+                    hasText: !!(aiResponse.text),
+                    hasMessage: !!(aiResponse.message),
+                    originalFields: Object.keys(aiResponse),
+                    responseLength: (aiResponse.responseText || aiResponse.content || aiResponse.text || '').length
+                  }
+                };
+                
+                console.log(`✅ Enhanced response found for prompt ${prompt._id}, response length: ${enhancedResponse.responseText.length}`);
+                
+                // ✅ DEBUG: Log exact response structure sent to frontend
+                console.log(`🔍 DEBUG: Response structure for prompt ${prompt._id}:`, {
+                  responseTextExists: !!enhancedResponse.responseText,
+                  contentExists: !!enhancedResponse.content,  
+                  textExists: !!enhancedResponse.text,
+                  messageExists: !!enhancedResponse.message,
+                  responseTextLength: enhancedResponse.responseText?.length || 0,
+                  responseFields: Object.keys(enhancedResponse)
                 });
+                
+                promptsWithResponses.push({
+                  ...enhancedPrompt,
+                  aiResponse: enhancedResponse
+                });
+              } else {
+                // ✅ FIX: Include prompts without responses but with proper text
+                console.log(`⚠️ No response found for prompt ${prompt._id}, including prompt without response`);
+                promptsWithResponses.push(enhancedPrompt);
               }
             }
             
@@ -584,6 +718,35 @@ class SuperUserAnalysisController {
         }
       }
       
+      // ✅ FINAL DEBUG: Log the complete response structure being sent to frontend
+      console.log('📤 COMPLETE RESPONSE TO FRONTEND:');
+      console.log('   - populatedCategories count:', populatedCategories?.length || 0);
+      console.log('   - analysisResults.shareOfVoice keys:', Object.keys(analysis.analysisResults?.shareOfVoice || {}));
+      console.log('   - analysisResults.mentionCounts keys:', Object.keys(analysis.analysisResults?.mentionCounts || {}));
+      console.log('   - analysisResults.totalMentions:', analysis.analysisResults?.totalMentions);
+      
+      // ✅ CRITICAL: Log exact SOV values being sent to frontend
+      console.log('📤 CRITICAL SOV VALUES BEING SENT:');
+      if (analysis.analysisResults?.shareOfVoice) {
+        Object.entries(analysis.analysisResults.shareOfVoice).forEach(([brand, share]) => {
+          console.log(`   ${brand}: ${share}% (type: ${typeof share}, isNumber: ${typeof share === 'number'})`);
+        });
+      }
+      
+      // ✅ CRITICAL: Log response validation for first few prompts
+      if (populatedCategories?.length > 0) {
+        console.log('   - First category prompts count:', populatedCategories[0]?.prompts?.length || 0);
+        if (populatedCategories[0]?.prompts?.[0]) {
+          const firstPrompt = populatedCategories[0].prompts[0];
+          console.log('   - First prompt text:', firstPrompt.promptText?.substring(0, 50) + '...');
+          console.log('   - First prompt has aiResponse:', !!firstPrompt.aiResponse);
+          if (firstPrompt.aiResponse) {
+            console.log('   - First prompt response length:', firstPrompt.aiResponse.responseText?.length || 0);
+            console.log('   - First prompt response validation:', firstPrompt.aiResponse._dataValidation || 'N/A');
+          }
+        }
+      }
+      
       res.json({
         success: true,
         analysis: {
@@ -599,7 +762,7 @@ class SuperUserAnalysisController {
           step3Data: analysis.step3Data,
           step4Data: analysis.step4Data,
           analysisResults: analysis.analysisResults,
-          // Add populated categories if available
+          // ✅ FIX: Add populated categories if available
           populatedCategories: populatedCategories
         }
       });
@@ -753,7 +916,7 @@ Return ONLY a JSON object with this exact format:
             model: "gpt-3.5-turbo",
             messages: [{ role: "user", content: mixedPrompt }],
             max_tokens: 500,
-            temperature: 0.1
+            temperature: 0.6,
           });
 
           const mixedContent = mixedResponse.choices[0].message.content;
@@ -1481,6 +1644,153 @@ Return ONLY a JSON object with this exact format:
     } catch (error) {
       console.error('Get Super User analysis mentions error:', error);
       res.status(500).json({ error: 'Failed to get brand mentions' });
+    }
+  }
+
+  // Delete prompt from super user analysis
+  async deletePrompt(req, res) {
+    try {
+      const userId = req.user.id;
+      const isSuperUser = req.user.role === 'superuser';
+      const { analysisId, promptId } = req.params;
+      
+      if (!isSuperUser) {
+        return res.status(403).json({ error: 'Access denied. Super user access required.' });
+      }
+      
+      console.log(`🗑️ Super User: Deleting prompt ${promptId} from analysis ${analysisId}`);
+      
+      // Find the analysis to ensure user has access
+      const analysis = await SuperUserAnalysis.findOne({
+        analysisId: analysisId,
+        superUserId: userId
+      });
+      
+      if (!analysis) {
+        return res.status(404).json({ error: 'Analysis not found or access denied' });
+      }
+      
+      if (!analysis.analysisResults?.brandId) {
+        return res.status(404).json({ error: 'No brand data available for this analysis' });
+      }
+      
+      // Find the prompt and validate it belongs to this analysis
+      const prompt = await CategorySearchPrompt.findById(promptId).populate('categoryId');
+      
+      if (!prompt) {
+        return res.status(404).json({ error: 'Prompt not found' });
+      }
+      
+      // Verify the prompt belongs to this analysis session
+      if (prompt.brandId.toString() !== analysis.analysisResults.brandId.toString()) {
+        return res.status(403).json({ error: 'Access denied: Prompt does not belong to this analysis' });
+      }
+      
+      const categoryId = prompt.categoryId._id;
+      const categoryName = prompt.categoryId.categoryName;
+      
+      console.log(`🔍 Super User: Prompt belongs to category: ${categoryName} (${categoryId})`);
+      
+      // Step 1: Find and delete AI responses for this prompt AND analysis session
+      const aiResponses = await PromptAIResponse.find({ 
+        promptId: prompt._id,
+        analysisSessionId: analysis.analysisId // Only delete responses from this analysis session
+      });
+      const responseIds = aiResponses.map(response => response._id);
+      
+      console.log(`🔍 Super User: Found ${aiResponses.length} AI responses to delete for this analysis`);
+      
+      // Step 2: Delete brand mentions linked to these responses
+      const CategoryPromptMention = require("../models/CategoryPromptMention");
+      const deletedMentions = await CategoryPromptMention.deleteMany({
+        responseId: { $in: responseIds },
+        analysisSessionId: analysis.analysisId // Only delete mentions from this analysis session
+      });
+      
+      console.log(`🗑️ Super User: Deleted ${deletedMentions.deletedCount} brand mentions`);
+      
+      // Step 3: Delete AI responses from this analysis session only
+      const deletedResponses = await PromptAIResponse.deleteMany({
+        promptId: prompt._id,
+        analysisSessionId: analysis.analysisId
+      });
+      
+      console.log(`🗑️ Super User: Deleted ${deletedResponses.deletedCount} AI responses`);
+      
+      // Step 4: Delete the prompt (it may be shared, but we remove it as it's part of isolated analysis)
+      await CategorySearchPrompt.findByIdAndDelete(promptId);
+      
+      console.log(`🗑️ Super User: Deleted prompt: ${promptId}`);
+      
+      // Step 5: Recalculate SOV for this specific analysis session
+      console.log(`📊 Super User: Recalculating SOV for analysis ${analysis.analysisId}`);
+      
+      // Get brand profile
+      const brandProfile = await BrandProfile.findById(analysis.analysisResults.brandId);
+      if (!brandProfile) {
+        throw new Error('Brand profile not found');
+      }
+      
+      // Get remaining AI responses for this analysis session only
+      const remainingResponses = await PromptAIResponse.find({ 
+        brandId: analysis.analysisResults.brandId,
+        analysisSessionId: analysis.analysisId
+      }).populate('promptId');
+      
+      console.log(`📊 Super User: Found ${remainingResponses.length} remaining responses for SOV calculation`);
+      
+      // Get competitors from analysis data
+      const competitors = analysis.step3Data?.competitors || [];
+      
+      // Recalculate SOV for this analysis session only
+      const { calculateShareOfVoice } = require("./brand/shareOfVoice");
+      const sovResult = await calculateShareOfVoice(
+        brandProfile,
+        competitors,
+        remainingResponses,
+        null, // categoryId - null for all categories
+        analysis.analysisId, // analysisSessionId - isolate to this analysis
+        true // preserveOldRecords - true for super user isolation
+      );
+      
+      // Update analysis results with new SOV data
+      analysis.analysisResults.shareOfVoice = sovResult.shareOfVoice || {};
+      analysis.analysisResults.mentionCounts = sovResult.mentionCounts || {};
+      analysis.analysisResults.totalMentions = sovResult.totalMentions || 0;
+      analysis.analysisResults.brandShare = sovResult.brandShare || 0;
+      analysis.analysisResults.aiVisibilityScore = sovResult.aiVisibilityScore || 0;
+      
+      await analysis.save();
+      
+      console.log(`✅ Super User: SOV recalculated for analysis ${analysis.analysisId}:`, {
+        totalMentions: sovResult.totalMentions,
+        brandShare: sovResult.brandShare,
+        competitors: Object.keys(sovResult.shareOfVoice || {})
+      });
+      
+      res.json({
+        success: true,
+        message: 'Prompt deleted and analysis SOV recalculated successfully',
+        analysisId: analysis.analysisId,
+        deletedData: {
+          promptId: promptId,
+          categoryId: categoryId,
+          categoryName: categoryName,
+          deletedResponses: deletedResponses.deletedCount,
+          deletedMentions: deletedMentions.deletedCount
+        },
+        updatedSOV: {
+          shareOfVoice: sovResult.shareOfVoice || {},
+          mentionCounts: sovResult.mentionCounts || {},
+          totalMentions: sovResult.totalMentions || 0,
+          brandShare: sovResult.brandShare || 0,
+          aiVisibilityScore: sovResult.aiVisibilityScore || 0
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Super User: Error deleting prompt:', error);
+      res.status(500).json({ error: 'Failed to delete prompt and recalculate analysis SOV' });
     }
   }
 
