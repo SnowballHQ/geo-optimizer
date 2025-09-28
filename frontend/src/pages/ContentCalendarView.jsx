@@ -12,7 +12,7 @@ import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
 import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, Upload, X, Eye, RefreshCw, ArrowLeft } from 'lucide-react';
 
-const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }) => {
+const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, onEditorStateChange }) => {
   const navigate = useNavigate();
   const [companyName, setCompanyName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -472,6 +472,11 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
       status: 'draft'
     });
     setContentRichText('');
+
+    // Notify Dashboard that we're exiting editor mode
+    if (onEditorStateChange) {
+      onEditorStateChange(false);
+    }
   };
 
   // Rich text editor handlers for content editor (legacy modal - now using inline editor)
@@ -571,6 +576,11 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
     });
     setContentRichText(content.content || '');
     setActiveEditorTool('content-editor');
+
+    // Notify Dashboard that we're entering editor mode
+    if (onEditorStateChange) {
+      onEditorStateChange(true);
+    }
   };
 
   const handleTemplateSelect = (template) => {
@@ -1053,85 +1063,138 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
   // Render inline content editor if active
   if (activeEditorTool === 'content-editor') {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold text-[#4a4a6a]">Content Editor</h2>
-            <p className="text-[#4a4a6a]">Edit and generate content for your calendar</p>
-          </div>
-          <Button variant="outline" onClick={handleCloseInlineEditor} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Calendar
-          </Button>
-        </div>
-        
-        <div className="space-y-8">
-          {/* Content Details Section - Row Layout */}
-          <Card className="border border-[#b0b0d8] bg-white">
-            <CardHeader>
-              <CardTitle className="text-[#4a4a6a]">Content Details</CardTitle>
-              <CardDescription>Edit the basic information for this content</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Title
-                  </label>
-                  <Input
-                    type="text"
-                    value={editorFormData.title}
-                    onChange={(e) => setEditorFormData(prev => ({ ...prev, title: e.target.value }))}
-                    className="border-[#b0b0d8] focus:border-[#6658f4]"
-                    placeholder="Enter blog title..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Keywords
-                  </label>
-                  <Input
-                    type="text"
-                    value={editorFormData.keywords}
-                    onChange={(e) => setEditorFormData(prev => ({ ...prev, keywords: e.target.value }))}
-                    className="border-[#b0b0d8] focus:border-[#6658f4]"
-                    placeholder="keyword1, keyword2, keyword3..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Target Audience
-                  </label>
-                  <Input
-                    type="text"
-                    value={editorFormData.targetAudience}
-                    onChange={(e) => setEditorFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
-                    className="border-[#b0b0d8] focus:border-[#6658f4]"
-                    placeholder="Who is this content for?"
-                  />
-                </div>
+      <div className="min-h-screen bg-gray-50">
+        {/* Shopify-style Header Bar */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                onClick={handleCloseInlineEditor}
+                className="text-gray-600 hover:text-gray-900 p-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">Content Editor</h1>
+                <p className="text-sm text-gray-500">Edit and generate content for your calendar</p>
               </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                  Description
-                </label>
-                <Textarea
-                  value={editorFormData.description}
-                  onChange={(e) => setEditorFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="border-[#b0b0d8] focus:border-[#6658f4] min-h-[100px]"
-                  placeholder="Brief description of the content..."
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleCloseInlineEditor}
+                className="border-gray-300 text-gray-600 hover:border-gray-400"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveInlineContent}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Shopify-style Two-Column Layout */}
+        <div className="flex flex-col lg:flex-row">
+          {/* Main Content Area (70%) */}
+          <div className="flex-1 lg:max-w-4xl p-6">
+            {/* Large Title Input - Shopify Style */}
+            <div className="mb-8">
+              <input
+                type="text"
+                value={editorFormData.title}
+                onChange={(e) => setEditorFormData(prev => ({ ...prev, title: e.target.value }))}
+                className="w-full text-3xl font-semibold text-gray-900 border-none focus:outline-none focus:ring-0 placeholder-gray-400 bg-transparent"
+                placeholder="Enter your blog title..."
+              />
+              <div className="h-px bg-gray-200 mt-2"></div>
+            </div>
+
+            {/* Content Outline Section */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Content Outline</h3>
+                <Button
+                  onClick={handleGenerateInlineOutline}
+                  disabled={isGeneratingOutline || !editorFormData.title.trim()}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isGeneratingOutline ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating...
+                    </>
+                  ) : editorFormData.outline ? '🔄 Regenerate' : '✨ Generate Outline'}
+                </Button>
+              </div>
+              <Textarea
+                value={editorFormData.outline || ''}
+                onChange={(e) => setEditorFormData(prev => ({ ...prev, outline: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 min-h-[150px] font-mono text-sm"
+                placeholder="Your content outline will appear here..."
+              />
+              {!editorFormData.outline && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Generate an AI-powered outline to structure your content
+                </p>
+              )}
+            </div>
+
+            {/* Main Content Editor */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Blog Content</h3>
+                <Button
+                  onClick={handleGenerateInlineBlog}
+                  disabled={isGeneratingBlog || !editorFormData.outline}
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {isGeneratingBlog ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : '📝 Generate Content'}
+                </Button>
+              </div>
+              <div className="bg-white border border-gray-300 rounded-lg overflow-hidden h-[400px] overflow-y-auto">
+                <InlineRichTextEditor
+                  content={contentRichText || editorFormData.content || ''}
+                  onChange={(htmlContent) => {
+                    setContentRichText(htmlContent);
+                    setEditorFormData(prev => ({ ...prev, content: htmlContent }));
+                  }}
+                  placeholder="Start writing your blog post here, or generate content from your outline..."
                 />
               </div>
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+              {!contentRichText && !editorFormData.content && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Create an outline first, then generate full blog content
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Settings Sidebar (30%) */}
+          <div className="w-full lg:w-80 bg-white lg:border-l border-gray-200 lg:border-t-0 border-t p-6 overflow-y-auto lg:max-h-screen">
+            {/* Publishing Card */}
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Publishing</h4>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Status
                   </label>
                   <select
                     value={editorFormData.status}
                     onChange={(e) => setEditorFormData(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
                   >
                     <option value="draft">Draft</option>
                     <option value="approved">Approved</option>
@@ -1139,123 +1202,51 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
                   </select>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Outline Generation Section */}
-          <Card className="border border-[#b0b0d8] bg-white">
-            <CardHeader>
-              <CardTitle className="text-[#4a4a6a] flex items-center justify-between">
-                Content Outline Editor
-                <Button
-                  onClick={handleGenerateInlineOutline}
-                  disabled={isGeneratingOutline || !editorFormData.title.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
-                >
-                  {isGeneratingOutline ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Generating...
-                    </>
-                  ) : editorFormData.outline ? '🔄 Regenerate Outline' : '✨ Generate Outline'}
-                </Button>
-              </CardTitle>
-              <CardDescription>AI-generated content structure and outline - directly editable</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            {/* SEO Card */}
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">SEO & Targeting</h4>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Content Outline
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
                   </label>
                   <Textarea
-                    value={editorFormData.outline || ''}
-                    onChange={(e) => setEditorFormData(prev => ({ ...prev, outline: e.target.value }))}
-                    className="border-[#b0b0d8] focus:border-[#6658f4] min-h-[200px] font-mono text-sm"
-                    placeholder="Click 'Generate Outline' to create an AI-powered content structure, or type your own outline here..."
+                    value={editorFormData.description}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    rows={3}
+                    placeholder="Brief description..."
                   />
                 </div>
-                {!editorFormData.outline && (
-                  <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-md">
-                    <p className="text-sm">No outline generated yet.</p>
-                    <p className="text-xs mt-1">Fill in the content details above, then click "Generate Outline" to create the content structure.</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Blog Content Editor Section */}
-          <Card className="border border-[#b0b0d8] bg-white">
-            <CardHeader>
-              <CardTitle className="text-[#4a4a6a] flex items-center justify-between">
-                Blog Content Editor
-                <Button
-                  onClick={handleGenerateInlineBlog}
-                  disabled={isGeneratingBlog || !editorFormData.outline}
-                  className="bg-[#7765e3] hover:bg-[#6658f4] text-white text-sm px-4 py-2"
-                >
-                  {isGeneratingBlog ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating...
-                    </>
-                  ) : '📝 Generate Blog'}
-                </Button>
-              </CardTitle>
-              <CardDescription>AI-generated blog content that you can edit and customize directly in the editor below</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Blog Content
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Keywords
                   </label>
-                  <InlineRichTextEditor
-                    content={contentRichText || editorFormData.content || ''}
-                    onChange={(htmlContent) => {
-                      setContentRichText(htmlContent);
-                      setEditorFormData(prev => ({ ...prev, content: htmlContent }));
-                    }}
-                    placeholder="Click 'Generate Blog' to create AI-powered content, or start writing your blog post here..."
+                  <Input
+                    type="text"
+                    value={editorFormData.keywords}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, keywords: e.target.value }))}
+                    className="border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    placeholder="keyword1, keyword2..."
                   />
                 </div>
-                {!contentRichText && !editorFormData.content && (
-                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-                    <p className="text-sm">No blog content generated yet.</p>
-                    <p className="text-xs mt-1">Generate an outline first, then click "Generate Blog" to create the full content.</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Save Options Section */}
-          <Card className="border border-[#b0b0d8] bg-white">
-            <CardContent className="pt-6">
-              <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="text-lg font-semibold text-[#4a4a6a] mb-2">Save Your Content</h4>
-                  <p className="text-sm text-[#4a4a6a]">Save your outline and blog content to the content calendar</p>
-                </div>
-                <div className="flex space-x-3">
-                  <Button
-                    variant="outline"
-                    onClick={handleCloseInlineEditor}
-                    className="border-gray-300 text-gray-600 hover:border-gray-400"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSaveInlineContent}
-                    className="bg-[#7765e3] hover:bg-[#6658f4] text-white"
-                  >
-                    💾 Save Content
-                  </Button>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Audience
+                  </label>
+                  <Input
+                    type="text"
+                    value={editorFormData.targetAudience}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
+                    className="border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    placeholder="Who is this for?"
+                  />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1266,12 +1257,8 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
       {/* Header Actions */}
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold text-[#4a4a6a]">
-            Content Calendar for {companyName}
-          </h3>
-          <p className="text-sm text-[#4a4a6a]">
-            {contentPlan.filter(item => item.status === 'approved').length} of {contentPlan.length} posts approved
-          </p>
+        
+         
         </div>
         <div className="flex space-x-3">
         

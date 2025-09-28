@@ -47,6 +47,7 @@ const Dashboard = () => {
   const [isUserSuperuser, setIsUserSuperuser] = useState(isSuperuser());
   const [showCMSSelector, setShowCMSSelector] = useState(false);
   const [cmsFocus, setCmsFocus] = useState(null);
+  const [isInContentEditor, setIsInContentEditor] = useState(false);
 
   // Handle navigation state from blog editor
   useEffect(() => {
@@ -239,16 +240,18 @@ const Dashboard = () => {
     if (activeTool === 'content-calendar') {
       return (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold text-[#4a4a6a]">Content Calendar</h2>
-              <p className="text-[#4a4a6a]">AI-powered content planning and auto-publishing</p>
+          {!isInContentEditor && (
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold text-[#4a4a6a]">Content Calendar</h2>
+                <p className="text-[#4a4a6a]">AI-powered content planning and auto-publishing</p>
+              </div>
+              <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
+                <ArrowLeft className="w-4 h-4 mr-2" /> Back
+              </Button>
             </div>
-            <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back
-            </Button>
-          </div>
-          
+          )}
+
           {isLoadingContentCalendar ? (
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
@@ -258,7 +261,12 @@ const Dashboard = () => {
               </div>
             </div>
           ) : (
-            <ContentCalendarView inline onClose={() => setActiveTool(null)} shouldAutoLoad={shouldAutoLoadContent} />
+            <ContentCalendarView
+              inline
+              onClose={() => setActiveTool(null)}
+              shouldAutoLoad={shouldAutoLoadContent}
+              onEditorStateChange={setIsInContentEditor}
+            />
           )}
         </div>
       );
