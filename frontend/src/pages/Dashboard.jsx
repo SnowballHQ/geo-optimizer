@@ -283,9 +283,9 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="h-screen bg-white flex overflow-hidden">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-50 border-r border-[#ffffff] flex flex-col">
+      <div className="w-64 bg-gray-50 border-r border-[#ffffff] flex flex-col flex-shrink-0">
         {/* Logo */}
         <div className="p-6 border-b border-[#ffffff]">
           <div className="flex items-center space-x-3">
@@ -474,7 +474,7 @@ const Dashboard = () => {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-8 overflow-y-auto min-h-0 bg-white">
+        <main className="flex-1 p-8 overflow-y-auto bg-white">
           {activeSection === 'dashboard' && (
             <div className="space-y-8">
               {!activeTool && (
