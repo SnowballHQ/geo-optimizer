@@ -330,17 +330,6 @@ const WebflowSettings = () => {
         </div>
       )}
 
-      {/* Information Card */}
-      <div className="p-4 border rounded-lg bg-purple-50 border-purple-200">
-        <h4 className="font-medium text-purple-900 mb-2">How it works</h4>
-        <ul className="text-sm text-purple-700 space-y-1">
-          <li>• Connect your Webflow site using OAuth (secure authentication)</li>
-          <li>• Publish blog content directly from our platform to your site's CMS</li>
-          <li>• Content will be added to your site's blog collection automatically</li>
-          <li>• Your access token is encrypted and securely stored</li>
-          <li>• You can disconnect anytime from this settings page</li>
-        </ul>
-      </div>
     </div>
   );
 };

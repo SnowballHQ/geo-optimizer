@@ -66,8 +66,8 @@ const BrandSettings = () => {
     return (
       <div className="flex justify-center items-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#6658f4] mx-auto mb-2"></div>
-          <p className="text-sm text-gray-600">Loading brand settings...</p>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-small text-muted-foreground">Loading brand settings...</p>
         </div>
       </div>
     );
@@ -79,20 +79,17 @@ const BrandSettings = () => {
         {/* Brand Tonality */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+            <label className="block text-base font-medium text-foreground mb-2">
               Brand Tonality
             </label>
-            <p className="text-xs text-gray-600 mb-2">
-              Define your brand's voice, tone, and personality (max 500 characters)
-            </p>
             <Textarea
               value={brandTonality}
               onChange={(e) => setBrandTonality(e.target.value)}
               placeholder="e.g., Professional yet approachable, innovative, customer-focused, trustworthy..."
-              className="min-h-[100px] resize-none border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]/20"
+              className="min-h-[100px] resize-none border-input focus:border-primary focus:ring-primary/20"
               maxLength={500}
             />
-            <div className="text-xs text-gray-500 text-right mt-1">
+            <div className="text-tiny text-muted-foreground text-right mt-1">
               {brandTonality.length}/500 characters
             </div>
           </div>
@@ -101,20 +98,17 @@ const BrandSettings = () => {
         {/* Brand Information */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+            <label className="block text-base font-medium text-foreground mb-2">
               Brand Information
             </label>
-            <p className="text-xs text-gray-600 mb-2">
-              Share key details about your brand, products, and services (max 2000 characters)
-            </p>
             <Textarea
               value={brandInformation}
               onChange={(e) => setBrandInformation(e.target.value)}
               placeholder="e.g., We are a B2B SaaS company specializing in AI-powered sales automation. Our platform helps sales teams increase productivity through intelligent lead scoring, automated outreach, and data-driven insights..."
-              className="min-h-[100px] resize-none border-[#b0b0d8] focus:border-[#6658f4] focus:ring-[#6658f4]/20"
+              className="min-h-[100px] resize-none border-input focus:border-primary focus:ring-primary/20"
               maxLength={2000}
             />
-            <div className="text-xs text-gray-500 text-right mt-1">
+            <div className="text-tiny text-muted-foreground text-right mt-1">
               {brandInformation.length}/2000 characters
             </div>
           </div>
@@ -122,8 +116,8 @@ const BrandSettings = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between items-center pt-4 border-t border-gray-200">
-        <div className="text-sm text-gray-600">
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-center pt-4 border-t border-border">
+        <div className="text-small text-muted-foreground">
           {lastUpdated && (
             <span>Last updated: {lastUpdated}</span>
           )}
@@ -133,30 +127,20 @@ const BrandSettings = () => {
           <Button
             onClick={handleReset}
             variant="outline"
-            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
+            className="border-input text-muted-foreground hover:border-primary"
           >
             Reset Changes
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-[#6658f4] hover:bg-[#6658f4]/90 text-white"
+            className="bg-primary hover:bg-primary/90 text-white"
           >
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
       </div>
 
-      {/* Help Text */}
-      <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-md">
-        <h4 className="font-medium text-gray-800 mb-2">💡 How this helps:</h4>
-        <ul className="space-y-1 list-disc list-inside">
-          <li>Your brand tonality will be used to generate more personalized AI responses</li>
-          <li>Brand information helps AI understand your business context better</li>
-          <li>These settings are used across all AI-powered features in the platform</li>
-          <li>You can update these anytime to refine your brand's AI interactions</li>
-        </ul>
-      </div>
     </div>
   );
 };

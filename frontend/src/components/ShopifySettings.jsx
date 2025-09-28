@@ -325,16 +325,6 @@ const ShopifySettings = () => {
         </div>
       )}
 
-      {/* Information Card */}
-      <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
-        <h4 className="font-medium text-blue-900 mb-2">How it works</h4>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>• Connect your Shopify store using OAuth (secure authentication)</li>
-          <li>• Publish blog content directly from our platform to your store</li>
-          <li>• Maintain full control - you can disconnect anytime</li>
-          <li>• Your store credentials are encrypted and securely stored</li>
-        </ul>
-      </div>
     </div>
   );
 };

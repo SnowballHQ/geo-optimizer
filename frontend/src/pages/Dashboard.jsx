@@ -1019,49 +1019,6 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* API & Integrations */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">🔗</span>
-                    </div>
-                    <span>API & Integrations</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Manage your external service connections and API keys
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">OpenAI API Key</label>
-                      <Input 
-                        type="password" 
-                        placeholder="sk-..." 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Google Search Console</label>
-                      <Input 
-                        placeholder="Enter your GSC property URL" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">WordPress Site URL</label>
-                      <Input 
-                        placeholder="https://yoursite.com" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button className="gradient-primary">Save Integrations</Button>
-                  </div>
-                </CardContent>
-              </Card>
 
               {/* Payment & Billing */}
               <Card className="border border-[#b0b0d8] bg-white">
@@ -1081,47 +1038,6 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Export & Data */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="text-2xl">📊</div>
-                    <span>Export & Data</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Manage your data exports and report preferences
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Default Export Format</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>PDF</option>
-                        <option>Excel</option>
-                        <option>CSV</option>
-                        <option>PowerPoint</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Auto-Export Frequency</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>Never</option>
-                        <option>Weekly</option>
-                        <option>Monthly</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex space-x-3">
-                    <Button variant="outline" className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]">
-                      Export All Data
-                    </Button>
-                    <Button variant="outline" className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]">
-                      Clear Analysis History
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           )}
 

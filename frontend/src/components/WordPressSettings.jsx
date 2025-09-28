@@ -331,17 +331,6 @@ const WordPressSettings = () => {
         </div>
       )}
 
-      {/* Information Card */}
-      <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
-        <h4 className="font-medium text-blue-900 mb-2">How it works</h4>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>• Connect your WordPress.com account using secure OAuth authentication</li>
-          <li>• Publish blog content directly from our platform to your WordPress.com sites</li>
-          <li>• Access all your WordPress.com sites from one connected account</li>
-          <li>• Your access tokens are encrypted and securely stored</li>
-          <li>• You can disconnect anytime from this settings page</li>
-        </ul>
-      </div>
     </div>
   );
 };

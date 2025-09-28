@@ -1274,22 +1274,8 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowCmsSetup(true)}
-            className="border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]"
-          >
-            CMS Setup
-          </Button>
-
-          <Button
-            onClick={handleApproveCalendar}
-            disabled={isApproving}
-            className="gradient-primary"
-          >
-            {isApproving ? 'Approving...' : 'Approve Calendar'}
-          </Button>
-
+        
+          
           <Button
             onClick={handlePublishNow}
             disabled={!contentPlan || !contentPlan.some(item => item.status === 'approved')}
@@ -1298,13 +1284,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
             Publish Now
           </Button>
 
-          <Button
-            onClick={handleUpdatePlatformToShopify}
-            disabled={!contentPlan}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            Update to Shopify
-          </Button>
+        
         </div>
       </div>
 
@@ -1337,15 +1317,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button
-            variant={currentView === 'week' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setCurrentView('week')}
-            className={currentView === 'week' ? 'gradient-primary' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
-          >
-            <Grid className="w-4 h-4 mr-1" />
-            Week
-          </Button>
+         
           <Button
             variant={currentView === 'month' ? 'default' : 'outline'}
             size="sm"
@@ -1375,15 +1347,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
             <RefreshCw className="w-4 h-4" />
           </Button>
           
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/editor/new')}
-            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4] ml-2"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            New Post
-          </Button>
+          
         </div>
       </div>
 
@@ -1419,30 +1383,8 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
                
                {/* Hover Actions - Only show on hover */}
                <div className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg flex items-center justify-center space-x-2 z-10">
-                 <Button
-                   size="sm"
-                   variant="outline"
-                   onClick={(e) => {
-                     e.stopPropagation();
-                     handleEditContent(item);
-                   }}
-                   className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                 >
-                   <Edit className="w-3 h-3 mr-1" />
-                   Edit
-                 </Button>
-                 <Button
-                   size="sm"
-                   variant="outline"
-                   onClick={(e) => {
-                     e.stopPropagation();
-                     handleViewContent(item);
-                   }}
-                   className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                 >
-                   <Eye className="w-3 h-3 mr-1" />
-                   View
-                 </Button>
+                 
+                
                  
                  {/* Publish Button - Only show for approved content */}
                  {item.status === 'approved' && (
