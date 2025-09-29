@@ -443,19 +443,10 @@ const Analytics = ({ onClose }) => {
 
   // Main Analytics Dashboard
   return (
-    <div className="space-y-6">
+    <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-[#4a4a6a]">Analytics Dashboard</h2>
-          <p className="text-[#4a4a6a]">Last 28 days performance overview</p>
-        </div>
+      
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={() => setShowSetup(true)} className="border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-            <Settings className="w-4 h-4 mr-1" /> Settings
-          </Button>
-          <Button variant="outline" onClick={onClose} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back
-          </Button>
         </div>
       </div>
 

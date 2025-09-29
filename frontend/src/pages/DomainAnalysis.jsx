@@ -36,13 +36,16 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
 
   // Check for existing analysis first, then auto-start if needed
   useEffect(() => {
-    if (initialDomain && initialDomain.trim() && !hasStartedAnalysis) {
-      setDomain(initialDomain);
+    if (!hasStartedAnalysis) {
       setHasStartedAnalysis(true);
-      checkExistingAnalysisOrStart(initialDomain);
-    } else if (!initialDomain && !hasStartedAnalysis) {
-      // No initial domain - check if user has existing analysis to display
-      checkForExistingAnalysis();
+      if (initialDomain && initialDomain.trim()) {
+        setDomain(initialDomain);
+        // Always use the comprehensive data loading path that includes prompts/responses
+        checkForExistingAnalysis();
+      } else {
+        // No initial domain - check if user has existing analysis to display
+        checkForExistingAnalysis();
+      }
     }
   }, [initialDomain, hasStartedAnalysis]);
 
@@ -671,27 +674,9 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
       )}
 
       {result && (
-        <div className="mt-8 space-y-6">
+        <div className="mt-2 space-y-3">
           {/* Header */}
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <h3 className="text-2xl font-bold text-foreground">Brand Analysis Result</h3>
-              <Button
-                onClick={handleRegenerateAnalysis}
-                disabled={isRegenerating || loading}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 hover:bg-primary/10 hover:border-primary"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                {isRegenerating ? 'Regenerating...' : 'Refresh Analysis'}
-              </Button>
-            </div>
-            <p className="text-muted-foreground">
-              Comprehensive analysis for {result.domain}
-              {isRegenerating && <span className="ml-2 text-primary">• Generating fresh responses...</span>}
-            </p>
-          </div>
+          
 
           {/* Main Analysis Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">

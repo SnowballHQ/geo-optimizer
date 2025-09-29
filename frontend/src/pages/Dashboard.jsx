@@ -55,6 +55,34 @@ const Dashboard = () => {
 
   // Function to get dynamic welcome message based on content calendar state
   const getWelcomeMessage = () => {
+    if (activeSection === 'brand-dashboard') {
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: (
+          <div className="space-y-1">
+            <span className="flex items-center space-x-1">
+              <Globe className="w-4 h-4 text-[#6658f4]" />
+              <span><strong>Brand Dashboard</strong></span>
+            </span>
+          </div>
+        )
+      };
+    }
+
+    if (activeTool === 'analytics') {
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: (
+          <div className="space-y-1">
+            <span className="flex items-center space-x-1">
+              <TrendingUp className="w-4 h-4 text-[#6658f4]" />
+              <span><strong>Analytics Dashboard</strong></span>
+            </span>
+          </div>
+        )
+      };
+    }
+
     if (activeTool === 'content-calendar' || activeSection === 'content-calendar') {
       let dynamicSubtitle = (
         <span className="flex items-center space-x-1">
@@ -755,66 +783,13 @@ const Dashboard = () => {
 
            {activeSection === 'brand-dashboard' && (
              <div className="space-y-6">
-               <div>
-                 <h2 className="text-2xl font-semibold text-[#4a4a6a] mb-2">Brand Dashboard</h2>
-                 <p className="text-[#4a4a6a]">View your complete brand analysis, AI responses, and Share of Voice metrics</p>
-               </div>
+              
                
-               {/* Brand Dashboard Content */}
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                 {/* Brand Summary */}
-                 <Card className="border border-[#b0b0d8] bg-white">
-                   <CardHeader>
-                     <CardTitle className="text-[#4a4a6a]">Brand Summary</CardTitle>
-                   </CardHeader>
-                   <CardContent>
-                     <div className="space-y-4">
-                       <div className="flex items-center space-x-2">
-                         <Globe className="w-4 h-4 text-[#6658f4]" />
-                         <span className="text-sm font-medium">Domain</span>
-                       </div>
-                       <p className="text-sm text-[#4a4a6a]">
-                         {userBrands.length > 0 ? userBrands[0].domain : 'No brand configured'}
-                       </p>
-                       <div className="pt-2">
-                                                 <Button 
-                          onClick={() => navigate('/domain-analysis')}
-                          className="w-full gradient-primary"
-                        >
-                          View Full Analysis
-                        </Button>
-                       </div>
-                     </div>
-                   </CardContent>
-                 </Card>
-
-                 {/* Quick Actions */}
-                 <Card className="border border-[#b0b0d8] bg-white">
-                   <CardHeader>
-                     <CardTitle className="text-[#4a4a6a]">Quick Actions</CardTitle>
-                   </CardHeader>
-                   <CardContent>
-                     <div className="space-y-3">
-                       <Button 
-                         onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
-                         variant="outline"
-                         className="w-full border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                       >
-                         <FileText className="w-4 h-4 mr-2" />
-                         Blog Analysis
-                       </Button>
-                                               <Button 
-                          onClick={() => navigate('/domain-analysis')}
-                          variant="outline"
-                          className="w-full border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                        >
-                          <BarChart3 className="w-4 h-4 mr-2" />
-                          View Complete Analysis
-                        </Button>
-                     </div>
-                   </CardContent>
-                 </Card>
-               </div>
+               {/* Direct Domain Analysis Integration */}
+               <DomainAnalysis
+                 initialDomain={userBrands.length > 0 ? userBrands[0].domain : ""}
+                 onClose={() => setActiveSection('dashboard')}
+               />
              </div>
            )}
 
