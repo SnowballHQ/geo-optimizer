@@ -457,8 +457,8 @@ const Dashboard = () => {
             </button>
           )} */}
 
-                     {/* Brand Dashboard - visible to all users with brands */}
-           {userBrands.length > 0 && (
+                     {/* Brand Dashboard - visible to all users with brands except superusers */}
+           {userBrands.length > 0 && !isSuperuser() && (
              <button
                onClick={() => { setActiveSection('brand-dashboard'); setActiveTool(null); }}
                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -740,8 +740,8 @@ const Dashboard = () => {
                        </Card>
                      )} */}
 
-                                         {/* Brand Dashboard Card - Available for all users with brands */}
-                     {userBrands.length > 0 && (
+                                         {/* Brand Dashboard Card - Available for all users with brands except superusers */}
+                     {userBrands.length > 0 && !isSuperuser() && (
                        <Card 
                          className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
                          onClick={() => { setActiveSection('brand-dashboard'); setActiveTool(null); }}

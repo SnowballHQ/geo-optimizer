@@ -94,17 +94,19 @@ const DomainAnalysisDashboard = () => {
             </button>
           )}
 
-          <button
-            onClick={() => handleNavigate('/domain-analysis', 'domain-analysis')}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'domain-analysis'
-                ? 'nav-active'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span>Brand Dashboard</span>
-          </button>
+          {!isSuperuser() && (
+            <button
+              onClick={() => handleNavigate('/domain-analysis', 'domain-analysis')}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeSection === 'domain-analysis'
+                  ? 'nav-active'
+                  : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Brand Dashboard</span>
+            </button>
+          )}
 
           {isSuperuser() && (
             <button
