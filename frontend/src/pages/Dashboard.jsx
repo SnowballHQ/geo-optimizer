@@ -197,6 +197,17 @@ const Dashboard = () => {
         window.history.replaceState({}, document.title, window.location.pathname);
       }, 100);
     }
+
+    // Handle brand-dashboard redirect from login
+    const redirectParam = urlParams.get('redirect');
+    if (redirectParam === 'brand-dashboard') {
+      setActiveSection('brand-dashboard');
+      setActiveTool(null);
+      // Clean up the URL parameter
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 100);
+    }
   }, [location.search]);
 
   // Check onboarding status and fetch user's brands
@@ -407,18 +418,6 @@ const Dashboard = () => {
             </button>
           )} */}
 
-          {/* Blog Analysis - visible to all users */}
-          <button
-            onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'blog-analysis' || activeTool === 'blog'
-                ? 'nav-active'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Blog Analysis</span>
-          </button>
 
           {/* Domain Analysis - only for superusers
           {isUserSuperuser && (
@@ -487,6 +486,19 @@ const Dashboard = () => {
           >
             <TrendingUp className="w-4 h-4" />
             <span>Analytics</span>
+          </button>
+
+          {/* Blog Analysis - visible to all users */}
+          <button
+            onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeSection === 'blog-analysis' || activeTool === 'blog'
+                ? 'nav-active'
+                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Blog Analysis</span>
           </button>
 
           {/* Shopify Integration - only for superusers

@@ -468,22 +468,53 @@ const Analytics = ({ onClose }) => {
 
       {overviewData && (
         <>
-          {/* Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          {/* Primary Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <Card className="border-[#b0b0d8]">
-              <CardContent className="p-4">
+              <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-[#4a4a6a] font-medium">Total Users</p>
-                    <p className="text-2xl font-bold text-[#4a4a6a]">
+                    <p className="text-3xl font-bold text-[#4a4a6a]">
                       {formatNumber(overviewData.analytics?.totalUsers)}
                     </p>
                   </div>
-                  <Users className="w-8 h-8 text-blue-500" />
+                  <Users className="w-10 h-10 text-[#6658f4]" />
                 </div>
               </CardContent>
             </Card>
 
+            <Card className="border-[#b0b0d8]">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[#4a4a6a] font-medium">Total Clicks</p>
+                    <p className="text-3xl font-bold text-[#4a4a6a]">
+                      {formatNumber(overviewData.searchConsole?.totalClicks)}
+                    </p>
+                  </div>
+                  <MousePointer className="w-10 h-10 text-[#6658f4]" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-[#b0b0d8]">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[#4a4a6a] font-medium">Impressions</p>
+                    <p className="text-3xl font-bold text-[#4a4a6a]">
+                      {formatNumber(overviewData.searchConsole?.totalImpressions)}
+                    </p>
+                  </div>
+                  <Eye className="w-10 h-10 text-[#7c77ff]" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Secondary Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card className="border-[#b0b0d8]">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -493,35 +524,7 @@ const Analytics = ({ onClose }) => {
                       {formatNumber(overviewData.analytics?.totalSessions)}
                     </p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-green-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-[#b0b0d8]">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[#4a4a6a] font-medium">Total Clicks</p>
-                    <p className="text-2xl font-bold text-[#4a4a6a]">
-                      {formatNumber(overviewData.searchConsole?.totalClicks)}
-                    </p>
-                  </div>
-                  <MousePointer className="w-8 h-8 text-purple-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-[#b0b0d8]">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[#4a4a6a] font-medium">Impressions</p>
-                    <p className="text-2xl font-bold text-[#4a4a6a]">
-                      {formatNumber(overviewData.searchConsole?.totalImpressions)}
-                    </p>
-                  </div>
-                  <Eye className="w-8 h-8 text-[#7c77ff]" />
+                  <TrendingUp className="w-8 h-8 text-[#8b87ff]" />
                 </div>
               </CardContent>
             </Card>
@@ -535,7 +538,7 @@ const Analytics = ({ onClose }) => {
                       {overviewData.searchConsole?.avgCTR ? (overviewData.searchConsole.avgCTR * 100).toFixed(2) + '%' : '0%'}
                     </p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-green-600" />
+                  <TrendingUp className="w-8 h-8 text-[#8b87ff]" />
                 </div>
               </CardContent>
             </Card>
@@ -549,7 +552,7 @@ const Analytics = ({ onClose }) => {
                       {overviewData.searchConsole?.avgPosition ? overviewData.searchConsole.avgPosition.toFixed(1) : '0'}
                     </p>
                   </div>
-                  <Eye className="w-8 h-8 text-indigo-500" />
+                  <Eye className="w-8 h-8 text-[#8b87ff]" />
                 </div>
               </CardContent>
             </Card>

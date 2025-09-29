@@ -29,12 +29,27 @@ const Login = () => {
     // Check onboarding status and redirect accordingly
     try {
       const onboardingResponse = await apiService.getOnboardingStatus();
-      
+
       if (onboardingResponse.data.isCompleted) {
-        // User has completed onboarding, always go to main dashboard first
-        // From there they can access Brand Dashboard or other features
-        console.log('User completed onboarding, going to main dashboard');
-        navigate('/dashboard');
+        // User has completed onboarding, check if they have brands
+        try {
+          const brandsResponse = await apiService.getUserBrands();
+          const userBrands = brandsResponse.data.brands || [];
+
+          if (userBrands.length > 0) {
+            // User has brands, redirect to dashboard with brand-dashboard state
+            console.log('User has brands, going to brand dashboard');
+            navigate('/dashboard?redirect=brand-dashboard');
+          } else {
+            // User has no brands, go to regular dashboard
+            console.log('User has no brands, going to main dashboard');
+            navigate('/dashboard');
+          }
+        } catch (brandsError) {
+          console.error('Error fetching user brands:', brandsError);
+          // If brands fetch fails, go to regular dashboard
+          navigate('/dashboard');
+        }
       } else {
         // User needs to complete onboarding
         navigate('/onboarding');
