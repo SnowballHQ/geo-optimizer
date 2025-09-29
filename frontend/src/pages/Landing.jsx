@@ -289,8 +289,14 @@ const Landing = () => {
       </motion.nav>
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-primary-50/20 to-white">
-        <div className="max-w-7xl mx-auto">
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-primary-50/20 to-white overflow-hidden" style={{ contain: 'layout style paint' }}>
+        {/* Background Orbs - Reduced to 1 */}
+        <div className="gradient-orb gradient-orb-purple w-[500px] h-[500px] -top-48 -right-24" />
+
+        {/* Dot Grid */}
+        <div className="dot-grid-subtle" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
           <motion.div
             className="text-center space-y-8 max-w-4xl mx-auto"
             variants={staggerContainer}
@@ -442,8 +448,11 @@ const Landing = () => {
       </section>
 
       {/* Key Features - Icon Based */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50/20 via-white to-primary-50/20">
-        <div className="max-w-7xl mx-auto">
+      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50/20 via-white to-primary-50/20 relative overflow-hidden" style={{ contain: 'layout style paint' }}>
+        {/* Subtle Orb */}
+        <div className="gradient-orb gradient-orb-pink w-[400px] h-[400px] top-0 right-0" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
           <motion.div
             className="text-center space-y-4 mb-16"
             initial={{ opacity: 0, y: 30 }}
@@ -468,8 +477,11 @@ const Landing = () => {
       </section>
 
       {/* Visual Product Showcase */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-24">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ contain: 'layout style paint' }}>
+        {/* Background Effects */}
+        <div className="gradient-orb gradient-orb-blue w-[450px] h-[450px] top-1/2 left-0" />
+
+        <div className="max-w-7xl mx-auto space-y-24 relative z-10">
           {showcaseSections.map((section, index) => (
             <ShowcaseSection key={index} section={section} index={index} reversed={index % 2 !== 0} />
           ))}
@@ -477,7 +489,7 @@ const Landing = () => {
       </section>
 
       {/* Statistics Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-900 to-primary-700 text-white relative overflow-hidden">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-900 to-primary-700 text-white relative overflow-hidden" style={{ contain: 'layout style paint' }}>
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
         </div>
@@ -535,8 +547,11 @@ const Landing = () => {
       </section>
 
       {/* Use Cases */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50/20 via-white to-primary-50/20">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50/20 via-white to-primary-50/20 relative overflow-hidden" style={{ contain: 'layout style paint' }}>
+        {/* Background Effects */}
+        <div className="gradient-orb gradient-orb-purple w-[400px] h-[400px] bottom-0 right-0" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
           <motion.div
             className="text-center space-y-4 mb-16"
             initial={{ opacity: 0, y: 30 }}
@@ -682,8 +697,11 @@ const Landing = () => {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50/20 via-white to-primary-50/20">
-        <div className="max-w-4xl mx-auto">
+      <section id="faq" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50/20 via-white to-primary-50/20 relative overflow-hidden" style={{ contain: 'layout style paint' }}>
+        {/* Background Effects */}
+        <div className="gradient-orb gradient-orb-blue w-[400px] h-[400px] top-0 left-0" />
+
+        <div className="max-w-4xl mx-auto relative z-10">
           <motion.div
             className="text-center space-y-4 mb-16"
             initial={{ opacity: 0, y: 30 }}
@@ -714,8 +732,11 @@ const Landing = () => {
       </section>
 
       {/* Final CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden" style={{ contain: 'layout style paint' }}>
+        {/* Background Effects */}
+        <div className="gradient-orb gradient-orb-purple w-[400px] h-[400px] top-1/2 right-0" />
+
+        <div className="max-w-4xl mx-auto text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}

@@ -432,6 +432,79 @@
   background: linear-gradient(135deg, #4a4a6a, #6658f4);
 }
 
+/* SaaS-style background patterns */
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.gradient-orb-purple {
+  background: radial-gradient(circle, rgba(102, 88, 244, 0.6), transparent 70%);
+}
+
+.gradient-orb-blue {
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.5), transparent 70%);
+}
+
+.gradient-orb-pink {
+  background: radial-gradient(circle, rgba(219, 39, 119, 0.2), transparent 70%);
+}
+
+/* Dot grid pattern */
+.dot-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(102, 88, 244, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dot-grid-subtle {
+  background-image: radial-gradient(circle, rgba(102, 88, 244, 0.03) 5px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Simplified noise texture - removed expensive SVG filter */
+.noise-texture {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(102, 88, 244, 0.01) 2px,
+    rgba(102, 88, 244, 0.01) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.3;
+}
+
+/* Radial gradient overlays */
+.radial-gradient-center {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(102, 88, 244, 0.05) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.radial-gradient-top {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(102, 88, 244, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Text gradients */
 .text-gradient-primary {
   background: linear-gradient(135deg, #6658f4, #7c77ff);
