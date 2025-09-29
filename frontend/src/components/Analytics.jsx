@@ -521,7 +521,7 @@ const Analytics = ({ onClose }) => {
                       {formatNumber(overviewData.searchConsole?.totalImpressions)}
                     </p>
                   </div>
-                  <Eye className="w-8 h-8 text-orange-500" />
+                  <Eye className="w-8 h-8 text-[#7c77ff]" />
                 </div>
               </CardContent>
             </Card>
@@ -581,8 +581,8 @@ const Analytics = ({ onClose }) => {
                               style={{ height: `${clickHeight}px` }}
                               title={`Clicks: ${day.clicks}`}
                             ></div>
-                            <div 
-                              className="w-4 bg-orange-400 rounded-t" 
+                            <div
+                              className="w-4 bg-[#7c77ff] rounded-t"
                               style={{ height: `${impressionHeight}px` }}
                               title={`Impressions: ${day.impressions}`}
                             ></div>
@@ -600,7 +600,7 @@ const Analytics = ({ onClose }) => {
                       <span className="text-sm text-gray-600">Clicks</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 bg-orange-400 rounded"></div>
+                      <div className="w-4 h-4 bg-[#7c77ff] rounded"></div>
                       <span className="text-sm text-gray-600">Impressions</span>
                     </div>
                   </div>
@@ -728,7 +728,7 @@ const Analytics = ({ onClose }) => {
                         </div>
                         <div className="flex items-center space-x-4 text-sm">
                           <span className="text-purple-600">{country.clicks} clicks</span>
-                          <span className="text-orange-600">{country.impressions} views</span>
+                          <span className="text-[#7c77ff]">{country.impressions} views</span>
                         </div>
                       </div>
                     ))}
@@ -762,7 +762,7 @@ const Analytics = ({ onClose }) => {
                         </div>
                         <div className="flex items-center space-x-4 text-sm">
                           <span className="text-purple-600">{device.clicks} clicks</span>
-                          <span className="text-orange-600">{device.impressions} views</span>
+                          <span className="text-[#7c77ff]">{device.impressions} views</span>
                         </div>
                       </div>
                     ))}
@@ -972,8 +972,8 @@ const Analytics = ({ onClose }) => {
                                         style={{ height: `${clickHeight}px` }}
                                         title={`${day.date}: ${day.clicks || 0} clicks`}
                                       ></div>
-                                      <div 
-                                        className="w-3 bg-orange-400 rounded-t" 
+                                      <div
+                                        className="w-3 bg-[#7c77ff] rounded-t"
                                         style={{ height: `${impressionHeight}px` }}
                                         title={`${day.date}: ${day.impressions || 0} impressions`}
                                       ></div>
