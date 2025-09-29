@@ -33,7 +33,14 @@ import {
   CheckCircle,
   Sparkles,
   Brain,
-  Zap
+  Zap,
+  User,
+  Palette,
+  CreditCard,
+  Bell,
+  Sliders,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -52,6 +59,8 @@ const Dashboard = () => {
   const [cmsFocus, setCmsFocus] = useState(null);
   const [isInContentEditor, setIsInContentEditor] = useState(false);
   const [contentCalendarData, setContentCalendarData] = useState(null);
+  const [activeSettingsTab, setActiveSettingsTab] = useState('account');
+  const [showCMSAdvanced, setShowCMSAdvanced] = useState(false);
 
   // Function to get dynamic welcome message based on content calendar state
   const getWelcomeMessage = () => {
@@ -63,6 +72,20 @@ const Dashboard = () => {
             <span className="flex items-center space-x-1">
               <Globe className="w-4 h-4 text-[#6658f4]" />
               <span><strong>Brand Dashboard</strong></span>
+            </span>
+          </div>
+        )
+      };
+    }
+
+    if (activeSection === 'settings') {
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: (
+          <div className="space-y-1">
+            <span className="flex items-center space-x-1">
+              <Settings className="w-4 h-4 text-[#6658f4]" />
+              <span><strong>Settings</strong></span>
             </span>
           </div>
         )
@@ -525,7 +548,7 @@ const Dashboard = () => {
 
           {/* Settings - now available for all users */}
           <button
-            onClick={() => setActiveSection('settings')}
+            onClick={() => { setActiveSection('settings'); setActiveTool(null); }}
             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeSection === 'settings'
                 ? 'nav-active'
@@ -818,287 +841,367 @@ const Dashboard = () => {
           )}
 
           {activeSection === 'settings' && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-2xl font-semibold text-[#4a4a6a] mb-2">Settings</h2>
-                <p className="text-[#4a4a6a]">Manage your account and preferences</p>
+            <div className="space-y-6">
+            
+
+              {/* Tab Navigation */}
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => setActiveSettingsTab('account')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                      activeSettingsTab === 'account'
+                        ? 'border-[#6658f4] text-[#6658f4]'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <User className="w-4 h-4" />
+                    <span>Account</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveSettingsTab('brand')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                      activeSettingsTab === 'brand'
+                        ? 'border-[#6658f4] text-[#6658f4]'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Palette className="w-4 h-4" />
+                    <span>Brand & Content</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveSettingsTab('integrations')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                      activeSettingsTab === 'integrations'
+                        ? 'border-[#6658f4] text-[#6658f4]'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4" />
+                    <span>Integrations</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveSettingsTab('payment')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                      activeSettingsTab === 'payment'
+                        ? 'border-[#6658f4] text-[#6658f4]'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>Payment</span>
+                  </button>
+                </nav>
               </div>
               
-              {/* Profile Settings */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">👤</span>
-                    </div>
-                    <span>Profile Settings</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Update your personal information and account details
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Full Name</label>
-                      <Input 
-                        placeholder="Enter your full name" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                        defaultValue={userName}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Email</label>
-                      <Input 
-                        type="email" 
-                        placeholder="your@email.com" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Company</label>
-                      <Input 
-                        placeholder="Your company name" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Role</label>
-                      <Input 
-                        placeholder="Your job title" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button className="gradient-primary">Save Profile</Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Brand Settings */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">🎨</span>
-                    </div>
-                    <span>Brand Settings</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Customize your brand's voice and information for personalized AI responses
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <BrandSettings />
-                </CardContent>
-              </Card>
-
-              {/* CMS Platform Selector */}
-              {showCMSSelector ? (
-                <CMSConnectionSelector 
-                  onBack={() => setShowCMSSelector(false)}
-                  focusPlatform={cmsFocus}
-                />
-              ) : (
-                <>
-                  {/* CMS Integration Overview */}
-                  <Card className="border border-[#b0b0d8] bg-gradient-to-r from-purple-50 to-blue-50">
+              {/* Account Tab */}
+              {activeSettingsTab === 'account' && (
+                <div className="space-y-6">
+                  {/* Profile Settings */}
+                  <Card className="border border-[#b0b0d8] bg-white">
                     <CardHeader>
                       <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-[#7765e3] rounded-lg flex items-center justify-center">
-                          <span className="text-sm font-bold text-white">🌐</span>
-                        </div>
-                        <span>CMS Platform Connection</span>
+                        <User className="w-5 h-5 text-[#6658f4]" />
+                        <span>Profile Settings</span>
                       </CardTitle>
                       <CardDescription className="text-[#4a4a6a]">
-                        Connect to your preferred content management system for seamless publishing
+                        Update your personal information and account details
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <p className="text-sm text-[#6b7280]">
-                        Choose from Shopify, Webflow, or WordPress to publish your AI-generated content directly to your website.
-                      </p>
-                      <Button
-                        onClick={() => setShowCMSSelector(true)}
-                        className="bg-[#7765e3] hover:bg-[#6658f4] text-white"
-                      >
-                        Choose CMS Platform
-                      </Button>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Full Name</label>
+                          <Input
+                            placeholder="Enter your full name"
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                            defaultValue={userName}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Email</label>
+                          <Input
+                            type="email"
+                            placeholder="your@email.com"
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Company</label>
+                          <Input
+                            placeholder="Your company name"
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Role</label>
+                          <Input
+                            placeholder="Your job title"
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button className="gradient-primary">Save Profile</Button>
+                      </div>
                     </CardContent>
                   </Card>
 
-                  {/* Individual CMS Settings - Advanced Configuration */}
+                  {/* Notification Settings */}
                   <Card className="border border-[#b0b0d8] bg-white">
                     <CardHeader>
-                      <CardTitle className="text-[#4a4a6a] text-lg">Advanced CMS Configuration</CardTitle>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <Bell className="w-5 h-5 text-[#6658f4]" />
+                        <span>Notification Preferences</span>
+                      </CardTitle>
                       <CardDescription className="text-[#4a4a6a]">
-                        Configure specific settings for each platform (for advanced users)
+                        Choose how and when you want to be notified
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Shopify Integration */}
-                      <div>
-                        <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
-                          <div className="w-6 h-6 bg-[#95BF47] rounded flex items-center justify-center">
-                            <span className="text-xs font-bold text-white">🛍️</span>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between py-2">
+                          <div>
+                            <label className="text-sm font-medium text-[#4a4a6a]">Analysis Completion</label>
+                            <p className="text-xs text-gray-500">Get notified when analysis is ready</p>
                           </div>
-                          <span>Shopify Settings</span>
-                        </h4>
-                        <ShopifySettings />
+                          <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" defaultChecked />
+                        </div>
+                        <div className="flex items-center justify-between py-2">
+                          <div>
+                            <label className="text-sm font-medium text-[#4a4a6a]">Weekly Reports</label>
+                            <p className="text-xs text-gray-500">Receive weekly analysis summaries</p>
+                          </div>
+                          <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" />
+                        </div>
+                        <div className="flex items-center justify-between py-2">
+                          <div>
+                            <label className="text-sm font-medium text-[#4a4a6a]">Content Calendar Reminders</label>
+                            <p className="text-xs text-gray-500">Get reminded about content deadlines</p>
+                          </div>
+                          <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" defaultChecked />
+                        </div>
+                        <div className="flex items-center justify-between py-2">
+                          <div>
+                            <label className="text-sm font-medium text-[#4a4a6a]">Competitor Alerts</label>
+                            <p className="text-xs text-gray-500">Notify when competitors make changes</p>
+                          </div>
+                          <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" />
+                        </div>
                       </div>
-                      
-                      {/* Webflow Integration */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
-                          <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
-                            <span className="text-xs font-bold text-white">🌐</span>
-                          </div>
-                          <span>Webflow Settings</span>
-                        </h4>
-                        <WebflowSettings />
-                      </div>
-                      
-                      {/* WordPress Integration */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
-                          <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center">
-                            <span className="text-xs font-bold text-white">📝</span>
-                          </div>
-                          <span>WordPress Settings</span>
-                        </h4>
-                        <WordPressSettings />
+                      <div className="flex justify-end pt-4">
+                        <Button className="gradient-primary">Save Notifications</Button>
                       </div>
                     </CardContent>
                   </Card>
-                </>
+                </div>
+              )}
+
+              {/* Brand & Content Tab */}
+              {activeSettingsTab === 'brand' && (
+                <div className="space-y-6">
+                  {/* Brand Settings */}
+                  <Card className="border border-[#b0b0d8] bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <Palette className="w-5 h-5 text-[#6658f4]" />
+                        <span>Brand Settings</span>
+                      </CardTitle>
+                      <CardDescription className="text-[#4a4a6a]">
+                        Customize your brand's voice and information for personalized AI responses
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <BrandSettings />
+                    </CardContent>
+                  </Card>
+
+                  {/* Analysis Preferences */}
+                  <Card className="border border-[#b0b0d8] bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <Sliders className="w-5 h-5 text-[#6658f4]" />
+                        <span>Analysis Preferences</span>
+                      </CardTitle>
+                      <CardDescription className="text-[#4a4a6a]">
+                        Configure default settings for your analysis tools
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Default Analysis Depth</label>
+                          <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
+                            <option>Basic Analysis</option>
+                            <option>Standard Analysis</option>
+                            <option>Comprehensive Analysis</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Blog Scoring Threshold</label>
+                          <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
+                            <option>70% (Strict)</option>
+                            <option>60% (Standard)</option>
+                            <option>50% (Lenient)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Content Calendar Planning</label>
+                          <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
+                            <option>30 Days</option>
+                            <option>60 Days</option>
+                            <option>90 Days</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Data Retention</label>
+                          <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
+                            <option>3 Months</option>
+                            <option>6 Months</option>
+                            <option>1 Year</option>
+                            <option>Forever</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button className="gradient-primary">Save Preferences</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Integrations Tab */}
+              {activeSettingsTab === 'integrations' && (
+                <div className="space-y-6">
+                  {showCMSSelector ? (
+                    <CMSConnectionSelector
+                      onClose={() => setShowCMSSelector(false)}
+                      focus={cmsFocus}
+                    />
+                  ) : (
+                    <>
+                      {/* CMS Integration Hub */}
+                      <Card className="border border-[#b0b0d8] bg-white">
+                        <CardHeader>
+                          <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                            <Building2 className="w-5 h-5 text-[#6658f4]" />
+                            <span>CMS Integrations</span>
+                          </CardTitle>
+                          <CardDescription className="text-[#4a4a6a]">
+                            Connect and configure your content management platforms
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div className="flex flex-wrap gap-3">
+                            <Button
+                              onClick={() => {
+                                setCmsFocus('shopify');
+                                setShowCMSSelector(true);
+                              }}
+                              variant="outline"
+                              className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
+                            >
+                              <Building2 className="w-4 h-4 mr-2" />
+                              Connect Shopify
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setCmsFocus('webflow');
+                                setShowCMSSelector(true);
+                              }}
+                              variant="outline"
+                              className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
+                            >
+                              <Globe className="w-4 h-4 mr-2" />
+                              Connect Webflow
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setCmsFocus('wordpress');
+                                setShowCMSSelector(true);
+                              }}
+                              variant="outline"
+                              className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
+                            >
+                              <FileText className="w-4 h-4 mr-2" />
+                              Connect WordPress
+                            </Button>
+                          </div>
+
+                          {/* Advanced CMS Configuration - Collapsible */}
+                          <div className="pt-4">
+                            <button
+                              onClick={() => setShowCMSAdvanced(!showCMSAdvanced)}
+                              className="w-full flex items-center justify-between p-3 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <Sliders className="w-4 h-4 text-[#6658f4]" />
+                                <span className="font-medium text-[#4a4a6a]">Advanced CMS Configuration</span>
+                              </div>
+                              {showCMSAdvanced ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                            </button>
+
+                            {showCMSAdvanced && (
+                              <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-white space-y-6">
+                                {/* Shopify Integration */}
+                                <div>
+                                  <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
+                                    <Building2 className="w-4 h-4 text-green-600" />
+                                    <span>Shopify Settings</span>
+                                  </h4>
+                                  <ShopifySettings />
+                                </div>
+
+                                {/* Webflow Integration */}
+                                <div className="border-t border-gray-200 pt-6">
+                                  <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
+                                    <Globe className="w-4 h-4 text-blue-600" />
+                                    <span>Webflow Settings</span>
+                                  </h4>
+                                  <WebflowSettings />
+                                </div>
+
+                                {/* WordPress Integration */}
+                                <div className="border-t border-gray-200 pt-6">
+                                  <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
+                                    <FileText className="w-4 h-4 text-purple-600" />
+                                    <span>WordPress Settings</span>
+                                  </h4>
+                                  <WordPressSettings />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </>
+                  )}
+                </div>
               )}
 
 
 
-              {/* Analysis Preferences */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">⚙️</span>
-                    </div>
-                    <span>Analysis Preferences</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Configure default settings for your analysis tools
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Default Analysis Depth</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>Basic Analysis</option>
-                        <option>Standard Analysis</option>
-                        <option>Comprehensive Analysis</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Blog Scoring Threshold</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>70% (Strict)</option>
-                        <option>60% (Standard)</option>
-                        <option>50% (Lenient)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Content Calendar Planning</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>30 Days</option>
-                        <option>60 Days</option>
-                        <option>90 Days</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Data Retention</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>3 Months</option>
-                        <option>6 Months</option>
-                        <option>1 Year</option>
-                        <option>Forever</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button className="gradient-primary">Save Preferences</Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Notification Settings */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">🔔</span>
-                    </div>
-                    <span>Notification Preferences</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Choose how and when you want to be notified
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-sm font-medium text-[#4a4a6a]">Analysis Completion</label>
-                        <p className="text-xs text-[#4a4a6a]">Get notified when analysis is ready</p>
-                      </div>
-                      <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-sm font-medium text-[#4a4a6a]">Weekly Reports</label>
-                        <p className="text-xs text-[#4a4a6a]">Receive weekly analysis summaries</p>
-                      </div>
-                      <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-sm font-medium text-[#4a4a6a]">Content Calendar Reminders</label>
-                        <p className="text-xs text-[#4a4a6a]">Get reminded about content deadlines</p>
-                      </div>
-                      <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-sm font-medium text-[#4a4a6a]">Competitor Alerts</label>
-                        <p className="text-xs text-[#4a4a6a]">Notify when competitors make changes</p>
-                      </div>
-                      <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button className="gradient-primary">Save Notifications</Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-
-              {/* Payment & Billing */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7765e3] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">💳</span>
-                    </div>
-                    <span>Payment & Billing</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Manage your subscription and billing information
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <StripePaymentSettings />
-                </CardContent>
-              </Card>
+              {/* Payment Tab */}
+              {activeSettingsTab === 'payment' && (
+                <div className="space-y-6">
+                  {/* Payment & Billing */}
+                  <Card className="border border-[#b0b0d8] bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <CreditCard className="w-5 h-5 text-[#6658f4]" />
+                        <span>Payment & Billing</span>
+                      </CardTitle>
+                      <CardDescription className="text-[#4a4a6a]">
+                        Manage your subscription and billing information
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <StripePaymentSettings />
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
             </div>
           )}

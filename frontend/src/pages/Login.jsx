@@ -169,7 +169,7 @@ const Login = () => {
               </div>
 
               {/* Form Options */}
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center text-sm">
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -178,9 +178,6 @@ const Login = () => {
                   />
                   <span className="text-[#4a4a6a]">Remember for 30 days</span>
                 </label>
-                <a href="#" className="text-[#6658f4] hover:underline">
-                  Forgot password?
-                </a>
               </div>
 
               {/* Submit Button */}
