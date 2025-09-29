@@ -1395,7 +1395,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
             </div>
                
                {/* Hover Actions - Only show on hover */}
-               <div className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg flex items-center justify-center space-x-2 z-10">
+               <div className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-90 transition-all duration-200 rounded-lg flex items-center justify-center space-x-2 z-10">
                  
                 
                  

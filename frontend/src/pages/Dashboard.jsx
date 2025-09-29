@@ -56,39 +56,46 @@ const Dashboard = () => {
   // Function to get dynamic welcome message based on content calendar state
   const getWelcomeMessage = () => {
     if (activeTool === 'content-calendar' || activeSection === 'content-calendar') {
+      let dynamicSubtitle = (
+        <span className="flex items-center space-x-1">
+         
+      
+        </span>
+      );
+
       if (contentCalendarData && contentCalendarData.length > 0) {
         const draftCount = contentCalendarData.filter(item => item.status === 'draft').length;
         const approvedCount = contentCalendarData.filter(item => item.status === 'approved').length;
 
         if (approvedCount > 0) {
-          return {
-            title: `Welcome back, ${userName}!`,
-            subtitle: (
-              <span className="flex items-center space-x-1">
-                <Sparkles className="w-4 h-4 text-[#6658f4]" />
-                <span>Your <strong>AI content pipeline</strong> has {approvedCount} ready to publish!</span>
-              </span>
-            )
-          };
+          dynamicSubtitle = (
+            <span className="flex items-center space-x-1">
+              <Sparkles className="w-4 h-4 text-[#6658f4]" />
+              <span>Your <strong>AI content pipeline</strong> has {approvedCount} ready to publish!</span>
+            </span>
+          );
         } else if (draftCount > 0) {
-          return {
-            title: `Welcome back, ${userName}!`,
-            subtitle: (
-              <span className="flex items-center space-x-1">
-                <Brain className="w-4 h-4 text-[#6658f4]" />
-                <span>Your <strong>AI calendar</strong> has {draftCount} drafts ready for review</span>
-              </span>
-            )
-          };
+          dynamicSubtitle = (
+            <span className="flex items-center space-x-1">
+              <Brain className="w-4 h-4 text-[#6658f4]" />
+              <span>Your <strong>AI calendar</strong> has {draftCount} drafts ready for review</span>
+            </span>
+          );
         }
       }
+
       return {
         title: `Welcome back, ${userName}!`,
         subtitle: (
-          <span className="flex items-center space-x-1">
-            <Zap className="w-4 h-4 text-[#6658f4]" />
-            <span>Ready to create <strong>AI-powered content</strong> today?</span>
-          </span>
+          <div className="space-y-1">
+            {dynamicSubtitle}
+            <div className="mt-3">
+              <h2 className="text-lg font-semibold text-[#4a4a6a] flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-[#6658f4]" />
+                <span>Content Calendar</span>
+              </h2>
+            </div>
+          </div>
         )
       };
     }
@@ -310,17 +317,6 @@ const Dashboard = () => {
     if (activeTool === 'content-calendar') {
       return (
         <div className="space-y-6">
-          {!isInContentEditor && (
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold text-[#4a4a6a]">Content Calendar</h2>
-                <p className="text-[#4a4a6a]">AI-powered content planning and auto-publishing</p>
-              </div>
-              <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-                <ArrowLeft className="w-4 h-4 mr-2" /> Back
-              </Button>
-            </div>
-          )}
 
           {isLoadingContentCalendar ? (
             <div className="flex items-center justify-center py-16">
