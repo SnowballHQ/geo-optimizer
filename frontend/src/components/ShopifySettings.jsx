@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { ShoppingBag, ExternalLink, Check, AlertCircle, Loader2 } from 'lucide-react';
 
-const ShopifySettings = () => {
+const ShopifySettings = ({ onConnectionChange }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [shopInfo, setShopInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -140,13 +140,16 @@ const ShopifySettings = () => {
           'Authorization': `Bearer ${localStorage.getItem('auth')}`
         }
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         toast.success(data.message);
         setConnectionStatus('disconnected');
         setShopInfo(null);
+        if (onConnectionChange) {
+          onConnectionChange('shopify', 'disconnected');
+        }
       } else {
         toast.error(data.message || 'Failed to disconnect');
       }

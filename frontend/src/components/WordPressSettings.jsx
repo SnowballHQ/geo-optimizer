@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Globe, ExternalLink, Check, AlertCircle, Loader2, FileText } from 'lucide-react';
 
-const WordPressSettings = () => {
+const WordPressSettings = ({ onConnectionChange }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [wordpressInfo, setWordpressInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -123,6 +123,9 @@ const WordPressSettings = () => {
         toast.success('WordPress disconnected successfully');
         setConnectionStatus('disconnected');
         setWordpressInfo(null);
+        if (onConnectionChange) {
+          onConnectionChange('wordpress', 'disconnected');
+        }
       } else {
         toast.error('Failed to disconnect WordPress');
       }

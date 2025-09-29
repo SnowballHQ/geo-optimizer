@@ -61,6 +61,11 @@ const Dashboard = () => {
   const [contentCalendarData, setContentCalendarData] = useState(null);
   const [activeSettingsTab, setActiveSettingsTab] = useState('account');
   const [showCMSAdvanced, setShowCMSAdvanced] = useState(false);
+  const [cmsConnectionStatus, setCmsConnectionStatus] = useState({
+    shopify: 'checking',
+    webflow: 'checking',
+    wordpress: 'checking'
+  });
 
   // Function to get dynamic welcome message based on content calendar state
   const getWelcomeMessage = () => {
@@ -109,8 +114,8 @@ const Dashboard = () => {
     if (activeTool === 'content-calendar' || activeSection === 'content-calendar') {
       let dynamicSubtitle = (
         <span className="flex items-center space-x-1">
-         
-      
+
+
         </span>
       );
 
@@ -151,11 +156,73 @@ const Dashboard = () => {
       };
     }
 
+    if (activeTool === 'published-blogs') {
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: "Published Blogs"
+      };
+    }
+
     // Default message for other sections
     return {
       title: `Welcome back, ${userName}!`,
       subtitle: "Ready to analyze your next project?"
     };
+  };
+
+  // Check CMS connection status
+  const checkCmsConnections = async () => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const auth = localStorage.getItem('auth');
+
+    const platforms = ['shopify', 'webflow', 'wordpress'];
+    const statuses = {};
+
+    for (const platform of platforms) {
+      try {
+        const response = await fetch(`${API_URL}/api/v1/${platform}/status`, {
+          headers: { 'Authorization': `Bearer ${auth}` }
+        });
+        const data = await response.json();
+        statuses[platform] = response.ok && data.status === 'connected' ? 'connected' : 'disconnected';
+      } catch (error) {
+        statuses[platform] = 'disconnected';
+      }
+    }
+
+    setCmsConnectionStatus(statuses);
+  };
+
+  // Direct CMS connection handler
+  const handleDirectCmsConnect = async (platform) => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const auth = localStorage.getItem('auth');
+
+    try {
+      const response = await fetch(`${API_URL}/api/v1/${platform}/connect?shop=testingsnowball.myshopify.com`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${auth}` }
+      });
+
+      if (response.redirected) {
+        window.location.href = response.url;
+      } else if (response.ok) {
+        const data = await response.json();
+        if (data.authUrl) {
+          window.location.href = data.authUrl;
+        }
+      }
+    } catch (error) {
+      console.error(`Error connecting to ${platform}:`, error);
+    }
+  };
+
+  // Handle connection status changes from integration components
+  const handleConnectionChange = (platform, status) => {
+    setCmsConnectionStatus(prev => ({
+      ...prev,
+      [platform]: status
+    }));
   };
 
   // Load content calendar data for dynamic messaging
@@ -176,6 +243,13 @@ const Dashboard = () => {
 
     loadContentCalendarData();
   }, [activeTool, activeSection]);
+
+  // Check CMS connections when integrations tab is active
+  useEffect(() => {
+    if (activeSection === 'settings' && activeSettingsTab === 'integrations') {
+      checkCmsConnections();
+    }
+  }, [activeSection, activeSettingsTab]);
 
   // Handle navigation state from blog editor
   useEffect(() => {
@@ -1074,60 +1148,79 @@ const Dashboard = () => {
               {/* Integrations Tab */}
               {activeSettingsTab === 'integrations' && (
                 <div className="space-y-6">
-                  {showCMSSelector ? (
-                    <CMSConnectionSelector
-                      onClose={() => setShowCMSSelector(false)}
-                      focus={cmsFocus}
-                    />
-                  ) : (
-                    <>
-                      {/* CMS Integration Hub */}
-                      <Card className="border border-[#b0b0d8] bg-white">
-                        <CardHeader>
-                          <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                            <Building2 className="w-5 h-5 text-[#6658f4]" />
-                            <span>CMS Integrations</span>
-                          </CardTitle>
-                          <CardDescription className="text-[#4a4a6a]">
-                            Connect and configure your content management platforms
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                          <div className="flex flex-wrap gap-3">
-                            <Button
-                              onClick={() => {
-                                setCmsFocus('shopify');
-                                setShowCMSSelector(true);
-                              }}
-                              variant="outline"
-                              className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
-                            >
-                              <Building2 className="w-4 h-4 mr-2" />
-                              Connect Shopify
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                setCmsFocus('webflow');
-                                setShowCMSSelector(true);
-                              }}
-                              variant="outline"
-                              className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
-                            >
-                              <Globe className="w-4 h-4 mr-2" />
-                              Connect Webflow
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                setCmsFocus('wordpress');
-                                setShowCMSSelector(true);
-                              }}
-                              variant="outline"
-                              className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
-                            >
-                              <FileText className="w-4 h-4 mr-2" />
-                              Connect WordPress
-                            </Button>
-                          </div>
+                  {/* CMS Integration Hub */}
+                  <Card className="border border-[#b0b0d8] bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <Building2 className="w-5 h-5 text-[#6658f4]" />
+                        <span>CMS Integrations</span>
+                      </CardTitle>
+                      <CardDescription className="text-[#4a4a6a]">
+                        Connect and configure your content management platforms
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="flex flex-wrap gap-3">
+                        {cmsConnectionStatus.shopify === 'connected' ? (
+                          <Button
+                            variant="outline"
+                            className="border-green-300 bg-green-50 text-green-700 cursor-default"
+                            disabled
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Shopify Connected
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleDirectCmsConnect('shopify')}
+                            variant="outline"
+                            className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
+                          >
+                            <Building2 className="w-4 h-4 mr-2" />
+                            Connect Shopify
+                          </Button>
+                        )}
+
+                        {cmsConnectionStatus.webflow === 'connected' ? (
+                          <Button
+                            variant="outline"
+                            className="border-green-300 bg-green-50 text-green-700 cursor-default"
+                            disabled
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Webflow Connected
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleDirectCmsConnect('webflow')}
+                            variant="outline"
+                            className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
+                          >
+                            <Globe className="w-4 h-4 mr-2" />
+                            Connect Webflow
+                          </Button>
+                        )}
+
+                        {cmsConnectionStatus.wordpress === 'connected' ? (
+                          <Button
+                            variant="outline"
+                            className="border-green-300 bg-green-50 text-green-700 cursor-default"
+                            disabled
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            WordPress Connected
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleDirectCmsConnect('wordpress')}
+                            variant="outline"
+                            className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            Connect WordPress
+                          </Button>
+                        )}
+                      </div>
 
                           {/* Advanced CMS Configuration - Collapsible */}
                           <div className="pt-4">
@@ -1150,7 +1243,7 @@ const Dashboard = () => {
                                     <Building2 className="w-4 h-4 text-green-600" />
                                     <span>Shopify Settings</span>
                                   </h4>
-                                  <ShopifySettings />
+                                  <ShopifySettings onConnectionChange={handleConnectionChange} />
                                 </div>
 
                                 {/* Webflow Integration */}
@@ -1159,7 +1252,7 @@ const Dashboard = () => {
                                     <Globe className="w-4 h-4 text-blue-600" />
                                     <span>Webflow Settings</span>
                                   </h4>
-                                  <WebflowSettings />
+                                  <WebflowSettings onConnectionChange={handleConnectionChange} />
                                 </div>
 
                                 {/* WordPress Integration */}
@@ -1168,15 +1261,13 @@ const Dashboard = () => {
                                     <FileText className="w-4 h-4 text-purple-600" />
                                     <span>WordPress Settings</span>
                                   </h4>
-                                  <WordPressSettings />
+                                  <WordPressSettings onConnectionChange={handleConnectionChange} />
                                 </div>
                               </div>
                             )}
                           </div>
                         </CardContent>
                       </Card>
-                    </>
-                  )}
                 </div>
               )}
 

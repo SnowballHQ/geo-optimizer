@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Layers, ExternalLink, Check, AlertCircle, Loader2 } from 'lucide-react';
 
-const WebflowSettings = () => {
+const WebflowSettings = ({ onConnectionChange }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [webflowInfo, setWebflowInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -151,6 +151,9 @@ const WebflowSettings = () => {
         toast.success(data.message);
         setConnectionStatus('disconnected');
         setWebflowInfo(null);
+        if (onConnectionChange) {
+          onConnectionChange('webflow', 'disconnected');
+        }
       } else {
         toast.error(data.message || 'Failed to disconnect');
       }

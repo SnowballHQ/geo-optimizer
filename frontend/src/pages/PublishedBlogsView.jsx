@@ -215,30 +215,6 @@ const PublishedBlogsView = ({ inline = false, onClose }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-[#4a4a6a]">Published Blogs</h2>
-          <p className="text-[#4a4a6a]">Track your published content and analytics</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          {bothConnected && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => checkAllConnections()}
-              className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-            >
-              <RefreshCw className="w-4 h-4 mr-1" />
-              Refresh
-            </Button>
-          )}
-          {inline && onClose && (
-            <Button variant="outline" onClick={onClose} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back
-            </Button>
-          )}
-        </div>
-      </div>
 
       {/* Connection Status Bar */}
       <Card className="border-[#b0b0d8] bg-gradient-to-r from-blue-50 to-purple-50">
