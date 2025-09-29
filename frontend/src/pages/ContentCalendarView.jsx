@@ -10,7 +10,7 @@ import InlineRichTextEditor from '../components/InlineRichTextEditor';
 
 import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
-import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, Upload, X, Eye, RefreshCw, ArrowLeft } from 'lucide-react';
+import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, Upload, X, Eye, RefreshCw, ArrowLeft, Sparkles, Brain, Zap } from 'lucide-react';
 
 const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, onEditorStateChange }) => {
   const navigate = useNavigate();
@@ -977,19 +977,32 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
           <Card className="border border-[#ffffff] bg-white">
             <CardHeader>
               <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                <CalendarIcon className="w-6 h-6 text-[#7c77ff]" />
-                <span>Content Calendar</span>
+                <div className="w-8 h-8 bg-gradient-to-r from-[#7c77ff] to-[#6658f4] rounded-lg flex items-center justify-center">
+                  <Brain className="w-5 h-5 text-white animate-pulse" />
+                </div>
+                <span className="bg-gradient-to-r from-[#7c77ff] to-[#6658f4] bg-clip-text text-transparent font-semibold">
+                  AI Content Calendar
+                </span>
               </CardTitle>
               <CardDescription className="text-[#4a4a6a]">
-                Setting up your personalized content calendar...
+                <span className="flex items-center space-x-1">
+                  <Zap className="w-4 h-4 text-[#6658f4]" />
+                  <span>Setting up your <strong>AI-powered</strong> personalized content calendar...</span>
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#7765e3] mx-auto mb-4"></div>
-                  <p className="text-lg font-medium text-[#4a4a6a]">Creating Your Content Calendar...</p>
-                  <p className="text-sm text-[#6b7280] mt-2">Using your brand profile to generate personalized content</p>
+                  <p className="text-lg font-medium text-[#4a4a6a] flex items-center space-x-2">
+                    <Brain className="w-5 h-5 text-[#6658f4] animate-pulse" />
+                    <span>AI Creating Your Content Calendar...</span>
+                  </p>
+                  <p className="text-sm text-[#6b7280] mt-2 flex items-center space-x-1">
+                    <Sparkles className="w-4 h-4 text-[#6658f4]" />
+                    <span>Using your brand profile to generate <strong>AI-powered</strong> personalized content</span>
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -1003,11 +1016,15 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
         <Card className="border border-[#ffffff] bg-white">
           <CardHeader>
             <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-              <CalendarIcon className="w-6 h-6 text-[#7c77ff]" />
-              <span>Content Calendar Generator</span>
+              <div className="w-8 h-8 bg-gradient-to-r from-[#7c77ff] to-[#6658f4] rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-[#7c77ff] to-[#6658f4] bg-clip-text text-transparent font-semibold">
+                🚀 AI-Powered Content Calendar
+              </span>
             </CardTitle>
             <CardDescription className="text-[#4a4a6a]">
-              Generate a 30-day AI-powered content plan for your company
+              Generate a <span className="font-semibold text-[#6658f4]">30-day AI-powered</span> content plan tailored to your company
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1042,7 +1059,17 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
               disabled={!companyName.trim() || isGenerating}
               className="w-full gradient-primary"
             >
-              {isGenerating ? 'Generating...' : 'Generate Calendar'}
+              {isGenerating ? (
+                <>
+                  <Brain className="w-4 h-4 mr-2 animate-pulse" />
+                  AI Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate AI-Powered Calendar
+                </>
+              )}
             </Button>
                 
                 <Button 
@@ -1126,10 +1153,20 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                 >
                   {isGeneratingOutline ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Generating...
+                      <Brain className="w-4 h-4 mr-2 animate-pulse" />
+                      AI Generating...
                     </>
-                  ) : editorFormData.outline ? '🔄 Regenerate' : '✨ Generate Outline'}
+                  ) : editorFormData.outline ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-1" />
+                      🔄 Regenerate AI Outline
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-1" />
+                      ✨ Generate AI Outline
+                    </>
+                  )}
                 </Button>
               </div>
               <Textarea
@@ -1139,8 +1176,9 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                 placeholder="Your content outline will appear here..."
               />
               {!editorFormData.outline && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Generate an AI-powered outline to structure your content
+                <p className="text-sm text-gray-500 mt-2 flex items-center space-x-1">
+                  <Sparkles className="w-4 h-4 text-[#6658f4]" />
+                  <span>Generate an <strong>AI-powered</strong> outline to structure your content</span>
                 </p>
               )}
             </div>
@@ -1157,10 +1195,15 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                 >
                   {isGeneratingBlog ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating...
+                      <Brain className="w-4 h-4 mr-2 animate-pulse" />
+                      AI Creating...
                     </>
-                  ) : '📝 Generate Content'}
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 mr-1" />
+                      📝 Generate AI Content
+                    </>
+                  )}
                 </Button>
               </div>
               <div className="bg-white border border-gray-300 rounded-lg overflow-hidden h-[400px] overflow-y-auto">
@@ -1174,8 +1217,9 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                 />
               </div>
               {!contentRichText && !editorFormData.content && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Create an outline first, then generate full blog content
+                <p className="text-sm text-gray-500 mt-2 flex items-center space-x-1">
+                  <Brain className="w-4 h-4 text-[#6658f4]" />
+                  <span>Create an outline first, then generate <strong>AI-powered</strong> blog content</span>
                 </p>
               )}
             </div>
@@ -1255,25 +1299,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
   return (
     <div className="space-y-6">
       {/* Header Actions */}
-      <div className="flex justify-between items-center">
-        <div>
-        
-         
-        </div>
-        <div className="flex space-x-3">
-        
-          
-          <Button
-            onClick={handlePublishNow}
-            disabled={!contentPlan || !contentPlan.some(item => item.status === 'approved')}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Publish Now
-          </Button>
-
-        
-        </div>
-      </div>
+     
 
       {/* Calendar Navigation */}
       <div className="flex items-center justify-between bg-white border border-[#b0b0d8] rounded-lg p-3">

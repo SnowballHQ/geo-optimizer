@@ -18,19 +18,22 @@ import CMSConnectionSelector from '../components/CMSConnectionSelector';
 
 import { apiService } from '../utils/api';
 import { getUserName, isSuperuser } from '../utils/auth';
-import { 
-  BarChart3, 
-  Globe, 
-  FileText, 
-  Settings, 
-  LogOut, 
+import {
+  BarChart3,
+  Globe,
+  FileText,
+  Settings,
+  LogOut,
   Link as LinkIcon,
   Activity,
   ArrowLeft,
   Calendar,
   Building2,
   TrendingUp,
-  CheckCircle
+  CheckCircle,
+  Sparkles,
+  Brain,
+  Zap
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -48,6 +51,73 @@ const Dashboard = () => {
   const [showCMSSelector, setShowCMSSelector] = useState(false);
   const [cmsFocus, setCmsFocus] = useState(null);
   const [isInContentEditor, setIsInContentEditor] = useState(false);
+  const [contentCalendarData, setContentCalendarData] = useState(null);
+
+  // Function to get dynamic welcome message based on content calendar state
+  const getWelcomeMessage = () => {
+    if (activeTool === 'content-calendar' || activeSection === 'content-calendar') {
+      if (contentCalendarData && contentCalendarData.length > 0) {
+        const draftCount = contentCalendarData.filter(item => item.status === 'draft').length;
+        const approvedCount = contentCalendarData.filter(item => item.status === 'approved').length;
+
+        if (approvedCount > 0) {
+          return {
+            title: `Welcome back, ${userName}!`,
+            subtitle: (
+              <span className="flex items-center space-x-1">
+                <Sparkles className="w-4 h-4 text-[#6658f4]" />
+                <span>Your <strong>AI content pipeline</strong> has {approvedCount} ready to publish!</span>
+              </span>
+            )
+          };
+        } else if (draftCount > 0) {
+          return {
+            title: `Welcome back, ${userName}!`,
+            subtitle: (
+              <span className="flex items-center space-x-1">
+                <Brain className="w-4 h-4 text-[#6658f4]" />
+                <span>Your <strong>AI calendar</strong> has {draftCount} drafts ready for review</span>
+              </span>
+            )
+          };
+        }
+      }
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: (
+          <span className="flex items-center space-x-1">
+            <Zap className="w-4 h-4 text-[#6658f4]" />
+            <span>Ready to create <strong>AI-powered content</strong> today?</span>
+          </span>
+        )
+      };
+    }
+
+    // Default message for other sections
+    return {
+      title: `Welcome back, ${userName}!`,
+      subtitle: "Ready to analyze your next project?"
+    };
+  };
+
+  // Load content calendar data for dynamic messaging
+  useEffect(() => {
+    const loadContentCalendarData = async () => {
+      try {
+        const storedCompanyName = localStorage.getItem('companyName') || getUserName()?.companyName;
+        if (storedCompanyName) {
+          const response = await apiService.getContentCalendar({ companyName: storedCompanyName });
+          if (response.data.data && response.data.data.length > 0) {
+            setContentCalendarData(response.data.data);
+          }
+        }
+      } catch (error) {
+        console.log('Could not load content calendar data for welcome message:', error);
+      }
+    };
+
+    loadContentCalendarData();
+  }, [activeTool, activeSection]);
 
   // Handle navigation state from blog editor
   useEffect(() => {
@@ -464,11 +534,11 @@ const Dashboard = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-xl font-semibold text-[#000000]">
-                Welcome back, {userName}!
+                {getWelcomeMessage().title}
               </h1>
-              <p className="text-[#000000] mt-1">
-                Ready to analyze your next project?
-              </p>
+              <div className="text-[#000000] mt-1">
+                {getWelcomeMessage().subtitle}
+              </div>
             </div>
           </div>
         </header>
@@ -540,20 +610,21 @@ const Dashboard = () => {
                      >
                        <CardContent className="p-6">
                          <div className="flex items-center space-x-4 mb-4">
-                           <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                             <Calendar className="w-6 h-6 text-white" />
+                           <div className="w-12 h-12 bg-gradient-to-r from-[#7c77ff] to-[#6658f4] rounded-lg flex items-center justify-center">
+                             <Sparkles className="w-6 h-6 text-white" />
                            </div>
                            <div>
-                             <h3 className="text-lg font-semibold text-[#000000]">
-                               Content Calendar
+                             <h3 className="text-lg font-semibold text-[#000000] flex items-center space-x-2">
+                               <span>🚀 AI Content Calendar</span>
                              </h3>
-                             <p className="text-sm text-[#4a4a6a]">
-                               AI-powered content planning
+                             <p className="text-sm text-[#4a4a6a] flex items-center space-x-1">
+                               <Brain className="w-4 h-4 text-[#6658f4]" />
+                               <span><strong>AI-powered</strong> content planning</span>
                              </p>
                            </div>
                          </div>
                          <p className="text-sm text-[#4a4a6a]">
-                           Generate 30-day content plans and auto-publish to your CMS platforms.
+                           Generate <span className="font-semibold text-[#6658f4]">AI-powered 30-day</span> content plans and auto-publish to your CMS platforms.
                          </p>
                        </CardContent>
                      </Card>
