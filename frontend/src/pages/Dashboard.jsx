@@ -1079,7 +1079,7 @@ const Dashboard = () => {
 
                 <TabsContent value="account" className="mt-6 space-y-6">
                   {/* Profile Settings */}
-                  <Card className="border border-[#b0b0d8] bg-white">
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
                     <CardHeader>
                       <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
                         <User className="w-5 h-5 text-[#6658f4]" />
@@ -1133,7 +1133,7 @@ const Dashboard = () => {
                           />
                         </div>
                       </div>
-                      <div className="flex justify-end pt-2">
+                      <div className="flex justify-end pt-2 text-white">
                         <Button
                           onClick={handleSaveAccountSettings}
                           disabled={isSavingAccount}
@@ -1146,7 +1146,7 @@ const Dashboard = () => {
                   </Card>
 
                   {/* Notification Settings */}
-                  <Card className="border border-[#b0b0d8] bg-white">
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
                     <CardHeader>
                       <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
                         <Bell className="w-5 h-5 text-[#6658f4]" />
@@ -1231,7 +1231,7 @@ const Dashboard = () => {
                           />
                         </div>
                       </div>
-                      <div className="flex justify-end pt-4">
+                      <div className="flex justify-end pt-4 text-white">
                         <Button
                           onClick={handleSaveAccountSettings}
                           disabled={isSavingAccount}
@@ -1246,15 +1246,13 @@ const Dashboard = () => {
 
                 <TabsContent value="brand" className="mt-6 space-y-6">
                   {/* Brand Settings */}
-                  <Card className="border border-[#b0b0d8] bg-white">
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
                     <CardHeader>
                       <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
                         <Palette className="w-5 h-5 text-[#6658f4]" />
                         <span>Brand Settings</span>
                       </CardTitle>
-                      <CardDescription className="text-[#4a4a6a]">
-                        Customize your brand's voice and information for personalized AI responses
-                      </CardDescription>
+                     
                     </CardHeader>
                     <CardContent>
                       <BrandSettings />
@@ -1262,15 +1260,13 @@ const Dashboard = () => {
                   </Card>
 
                   {/* Analysis Preferences */}
-                  <Card className="border border-[#b0b0d8] bg-white">
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
                     <CardHeader>
                       <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
                         <Sliders className="w-5 h-5 text-[#6658f4]" />
                         <span>Analysis Preferences</span>
                       </CardTitle>
-                      <CardDescription className="text-[#4a4a6a]">
-                        Configure default settings for your analysis tools
-                      </CardDescription>
+                      
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1344,7 +1340,7 @@ const Dashboard = () => {
                           </Select>
                         </div>
                       </div>
-                      <div className="flex justify-end pt-2">
+                      <div className="flex justify-end pt-2 text-white">
                         <Button
                           onClick={handleSaveAnalysisPreferences}
                           disabled={isSavingPreferences}
@@ -1359,15 +1355,13 @@ const Dashboard = () => {
 
                 <TabsContent value="integrations" className="mt-6 space-y-6">
                   {/* CMS Integration Hub */}
-                  <Card className="border border-[#b0b0d8] bg-white">
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
                     <CardHeader>
                       <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
                         <Building2 className="w-5 h-5 text-[#6658f4]" />
                         <span>CMS Integrations</span>
                       </CardTitle>
-                      <CardDescription className="text-[#4a4a6a]">
-                        Connect and configure your content management platforms
-                      </CardDescription>
+                   
                     </CardHeader>
                     <CardContent className="space-y-6">
                       <div className="flex flex-wrap gap-3">
@@ -1482,15 +1476,13 @@ const Dashboard = () => {
 
                 <TabsContent value="payment" className="mt-6 space-y-6">
                   {/* Payment & Billing */}
-                  <Card className="border border-[#b0b0d8] bg-white">
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
                     <CardHeader>
                       <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
                         <CreditCard className="w-5 h-5 text-[#6658f4]" />
                         <span>Payment & Billing</span>
                       </CardTitle>
-                      <CardDescription className="text-[#4a4a6a]">
-                        Manage your subscription and billing information
-                      </CardDescription>
+                     
                     </CardHeader>
                     <CardContent>
                       <StripePaymentSettings />

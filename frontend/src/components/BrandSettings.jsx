@@ -135,14 +135,14 @@ const BrandSettings = () => {
           <Button
             onClick={handleReset}
             variant="outline"
-            className="border-input text-muted-foreground hover:border-primary"
+            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
           >
             Reset Changes
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-primary hover:bg-primary/90 text-white"
+            className="gradient-primary text-white"
           >
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>

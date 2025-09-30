@@ -1267,22 +1267,30 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
               </Button>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">Content Editor</h1>
-                <p className="text-sm text-gray-500">Edit and generate content for your calendar</p>
+                <div className="flex items-center space-x-3">
+                  <p className="text-sm text-gray-500">Edit and generate content for your calendar</p>
+                  {selectedContent?.date && (
+                    <span className="text-xs text-gray-500">
+                      {new Date(selectedContent.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center space-x-3">
               <Button
                 variant="outline"
                 onClick={handleCloseInlineEditor}
-                className="border-gray-300 text-gray-600 hover:border-gray-400"
+                className="border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSaveInlineContent}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="gradient-primary shadow-md hover:shadow-lg transition-shadow"
               >
-                Save
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Save Changes
               </Button>
             </div>
           </div>
@@ -1302,6 +1310,16 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                 placeholder="Enter your blog title..."
               />
               <div className="h-px bg-gray-200 mt-2"></div>
+              <div className="flex items-center justify-between mt-2">
+                <p className={`text-xs font-medium ${
+                  editorFormData.title.length === 0 ? 'text-gray-400' :
+                  editorFormData.title.length < 40 ? 'text-yellow-600' :
+                  editorFormData.title.length <= 60 ? 'text-green-600' :
+                  'text-red-600'
+                }`}>
+                  {editorFormData.title.length} / 60
+                </p>
+              </div>
             </div>
 
             {/* Content Outline Section */}
@@ -1312,7 +1330,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                   onClick={handleGenerateInlineOutline}
                   disabled={isGeneratingOutline || !editorFormData.title.trim()}
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-[#6658f4] hover:bg-[#5547e3] text-white"
                 >
                   {isGeneratingOutline ? (
                     <>
@@ -1322,12 +1340,12 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                   ) : editorFormData.outline ? (
                     <>
                       <RefreshCw className="w-4 h-4 mr-1" />
-                      🔄 Regenerate AI Outline
+                      Regenerate
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 mr-1" />
-                      ✨ Generate AI Outline
+                      Generate Outline
                     </>
                   )}
                 </Button>
@@ -1335,13 +1353,12 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
               <Textarea
                 value={editorFormData.outline || ''}
                 onChange={(e) => setEditorFormData(prev => ({ ...prev, outline: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 min-h-[150px] font-mono text-sm"
+                className="w-full border border-gray-300 rounded-lg focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 min-h-[150px] font-mono text-sm"
                 placeholder="Your content outline will appear here..."
               />
               {!editorFormData.outline && (
-                <p className="text-sm text-gray-500 mt-2 flex items-center space-x-1">
-                  <Sparkles className="w-4 h-4 text-[#6658f4]" />
-                  <span>Generate an <strong>AI-powered</strong> outline to structure your content</span>
+                <p className="text-sm text-gray-500 mt-2">
+                  Generate an AI-powered outline to structure your content
                 </p>
               )}
             </div>
@@ -1354,7 +1371,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                   onClick={handleGenerateInlineBlog}
                   disabled={isGeneratingBlog || !editorFormData.outline}
                   size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  className="gradient-primary"
                 >
                   {isGeneratingBlog ? (
                     <>
@@ -1364,7 +1381,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                   ) : (
                     <>
                       <Zap className="w-4 h-4 mr-1" />
-                      📝 Generate AI Content
+                      Generate Content
                     </>
                   )}
                 </Button>
@@ -1379,12 +1396,17 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                   placeholder="Start writing your blog post here, or generate content from your outline..."
                 />
               </div>
-              {!contentRichText && !editorFormData.content && (
-                <p className="text-sm text-gray-500 mt-2 flex items-center space-x-1">
-                  <Brain className="w-4 h-4 text-[#6658f4]" />
-                  <span>Create an outline first, then generate <strong>AI-powered</strong> blog content</span>
-                </p>
-              )}
+              <div className="mt-2">
+                {contentRichText || editorFormData.content ? (
+                  <p className="text-xs text-gray-500">
+                    {(contentRichText || editorFormData.content || '').replace(/<[^>]*>/g, '').split(/\s+/).filter(w => w).length} words • ~{Math.ceil((contentRichText || editorFormData.content || '').replace(/<[^>]*>/g, '').split(/\s+/).filter(w => w).length / 200)} min read
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    Create an outline first, then generate content
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1392,16 +1414,18 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
           <div className="w-full lg:w-80 bg-white lg:border-l border-gray-200 lg:border-t-0 border-t p-6 overflow-y-auto lg:max-h-screen">
             {/* Publishing Card */}
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Publishing</h4>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                Publishing
+              </h4>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Status
                   </label>
                   <select
                     value={editorFormData.status}
                     onChange={(e) => setEditorFormData(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 text-sm"
                   >
                     <option value="draft">Draft</option>
                     <option value="approved">Approved</option>
@@ -1413,8 +1437,10 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
 
             {/* SEO Card */}
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">SEO & Targeting</h4>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                SEO & Targeting
+              </h4>
+              <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Description
@@ -1422,10 +1448,18 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                   <Textarea
                     value={editorFormData.description}
                     onChange={(e) => setEditorFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    className="w-full border border-gray-300 rounded-md focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 text-sm"
                     rows={3}
-                    placeholder="Brief description..."
+                    placeholder="Brief description for SEO..."
                   />
+                  <p className={`text-xs mt-1 font-medium ${
+                    editorFormData.description.length === 0 ? 'text-gray-400' :
+                    editorFormData.description.length < 120 ? 'text-yellow-600' :
+                    editorFormData.description.length <= 160 ? 'text-green-600' :
+                    'text-red-600'
+                  }`}>
+                    {editorFormData.description.length} / 160
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1435,8 +1469,8 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                     type="text"
                     value={editorFormData.keywords}
                     onChange={(e) => setEditorFormData(prev => ({ ...prev, keywords: e.target.value }))}
-                    className="border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-                    placeholder="keyword1, keyword2..."
+                    className="border-gray-300 focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 text-sm"
+                    placeholder="keyword1, keyword2, keyword3..."
                   />
                 </div>
                 <div>
@@ -1447,7 +1481,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                     type="text"
                     value={editorFormData.targetAudience}
                     onChange={(e) => setEditorFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
-                    className="border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    className="border-gray-300 focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 text-sm"
                     placeholder="Who is this for?"
                   />
                 </div>
