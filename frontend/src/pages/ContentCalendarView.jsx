@@ -10,7 +10,7 @@ import InlineRichTextEditor from '../components/InlineRichTextEditor';
 
 import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
-import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, Upload, X, Eye, RefreshCw, ArrowLeft, Sparkles, Brain, Zap } from 'lucide-react';
+import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, ChevronDown, Upload, X, Eye, RefreshCw, ArrowLeft, Sparkles, Brain, Zap } from 'lucide-react';
 
 const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, onEditorStateChange }) => {
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   
   // New state variables for enhanced features
-  const [currentView, setCurrentView] = useState('week'); // week, month, list
+  const [currentView, setCurrentView] = useState('month'); // week, month, list - default is month
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showContentEditor, setShowContentEditor] = useState(false);
   const [editingContent, setEditingContent] = useState(null);
@@ -48,7 +48,10 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
   const [selectedContent, setSelectedContent] = useState(null);
   const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
-  
+
+  // Status dropdown state
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(null); // stores item _id
+
   const [editorFormData, setEditorFormData] = useState({
     title: '',
     description: '',
@@ -476,6 +479,60 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
     // Notify Dashboard that we're exiting editor mode
     if (onEditorStateChange) {
       onEditorStateChange(false);
+    }
+  };
+
+  // Handle clicking empty date cell to create new content
+  const handleCreateContentForDate = (date) => {
+    const newContent = {
+      _id: `temp-${Date.now()}`, // Temporary ID
+      date: date.toISOString().split('T')[0],
+      title: '',
+      description: '',
+      keywords: [],
+      targetAudience: '',
+      content: '',
+      outline: '',
+      status: 'draft'
+    };
+
+    setSelectedContent(newContent);
+    setEditorFormData({
+      title: '',
+      description: '',
+      keywords: '',
+      targetAudience: '',
+      content: '',
+      outline: '',
+      status: 'draft'
+    });
+    setContentRichText('');
+    setActiveEditorTool('content-editor');
+
+    // Notify Dashboard that we're entering editor mode
+    if (onEditorStateChange) {
+      onEditorStateChange(true);
+    }
+  };
+
+  // Handle quick status change
+  const handleQuickStatusChange = async (item, newStatus) => {
+    try {
+      // Update in backend
+      await apiService.updateContentCalendarEntry(item._id, { status: newStatus });
+
+      // Update local state
+      setContentPlan(prevPlan =>
+        prevPlan.map(content =>
+          content._id === item._id ? { ...content, status: newStatus } : content
+        )
+      );
+
+      setStatusDropdownOpen(null);
+      // toast.success(`Status updated to ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update status. Please try again.');
     }
   };
 
@@ -908,6 +965,112 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
     }
   };
 
+  // ============ Helper Functions for Calendar Date Calculations ============
+
+  // Helper function to get start of week (Sunday)
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+  };
+
+  // Helper function to get all dates for current week view
+  const getWeekDates = (date) => {
+    const startOfWeek = getStartOfWeek(date);
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      dates.push(day);
+    }
+    return dates;
+  };
+
+  // Helper function to get all dates for month calendar (including prev/next month padding)
+  const getMonthCalendarDates = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    const firstDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+    const lastDate = lastDay.getDate();
+
+    const dates = [];
+
+    // Add previous month's days to fill the first week
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const prevDate = new Date(year, month, -i);
+      dates.push({ date: prevDate, isCurrentMonth: false });
+    }
+
+    // Add current month's days
+    for (let i = 1; i <= lastDate; i++) {
+      const currentDate = new Date(year, month, i);
+      dates.push({ date: currentDate, isCurrentMonth: true });
+    }
+
+    // Add next month's days to fill the last week
+    const remainingDays = 42 - dates.length; // 6 rows × 7 days = 42
+    for (let i = 1; i <= remainingDays; i++) {
+      const nextDate = new Date(year, month + 1, i);
+      dates.push({ date: nextDate, isCurrentMonth: false });
+    }
+
+    return dates;
+  };
+
+  // Helper function to get content for a specific date
+  const getContentForDate = (date) => {
+    if (!contentPlan) return [];
+
+    const dateStr = date.toISOString().split('T')[0];
+    return contentPlan.filter(item => {
+      const itemDateStr = new Date(item.date).toISOString().split('T')[0];
+      return itemDateStr === dateStr;
+    });
+  };
+
+  // Helper function to check if date is today
+  const isToday = (date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  // Navigate to today
+  const navigateToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  // Navigate weeks/months
+  const navigateDate = (direction) => {
+    const newDate = new Date(currentDate);
+    if (currentView === 'week') {
+      newDate.setDate(newDate.getDate() + (direction * 35)); // Navigate by 5 weeks
+    } else if (currentView === 'month') {
+      newDate.setMonth(newDate.getMonth() + direction);
+    }
+    setCurrentDate(newDate);
+  };
+
+  // Helper function to get 5 weeks of dates (35 days total)
+  const getMultiWeekDates = (date) => {
+    const startOfWeek = getStartOfWeek(date);
+    const dates = [];
+    for (let i = 0; i < 35; i++) { // 5 weeks × 7 days = 35 days
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      dates.push(day);
+    }
+    return dates;
+  };
+
+  // ============ End Helper Functions ============
+
   const handleSaveCMSCredentials = async () => {
     if (!cmsPlatform) return;
     
@@ -1298,9 +1461,6 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
 
   return (
     <div className="space-y-6">
-      {/* Header Actions */}
-     
-
       {/* Calendar Navigation */}
       <div className="flex items-center justify-between bg-white border border-[#b0b0d8] rounded-lg p-3">
         <div className="flex items-center space-x-4">
@@ -1312,11 +1472,11 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          
+
           <div className="text-lg font-semibold text-[#4a4a6a]">
-            {currentView === 'week' && `Week of ${currentDate.toLocaleDateString()}`}
+            {currentView === 'week' && `Calendar View - Starting ${currentDate.toLocaleDateString()}`}
             {currentView === 'month' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            {currentView === 'list' && 'Content List View'}
+            {currentView === 'list' && 'All Content - List View'}
           </div>
           
           <Button
@@ -1330,7 +1490,15 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
         </div>
 
         <div className="flex items-center space-x-2">
-         
+          <Button
+            variant={currentView === 'week' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCurrentView('week')}
+            className={currentView === 'week' ? 'gradient-primary' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
+          >
+            <Grid className="w-4 h-4 mr-1" />
+            Calendar
+          </Button>
           <Button
             variant={currentView === 'month' ? 'default' : 'outline'}
             size="sm"
@@ -1349,88 +1517,312 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
             <List className="w-4 h-4 mr-1" />
             List
           </Button>
-          
+
+          <div className="w-px h-6 bg-gray-300 mx-1" />
+
           <Button
             variant="outline"
             size="sm"
             onClick={handleRefreshCalendar}
-            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4] ml-2"
+            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
             title="Refresh calendar data"
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
-          
-          
         </div>
       </div>
 
       {/* Calendar Grid */}
        {currentView === 'week' && (
       <div className="grid grid-cols-7 gap-2">
+        {/* Day Headers */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="text-center text-sm font-medium text-[#4a4a6a] p-2">
+          <div key={day} className="text-center text-sm font-medium text-[#4a4a6a] p-2 border-b border-[#e0e0e0]">
             {day}
           </div>
         ))}
-        
-        {contentPlan.map((item, index) => (
-             <div 
-               key={index} 
-               className="relative min-h-[120px] border border-[#b0b0d8] rounded-lg p-2 hover:border-[#6658f4] hover:shadow-md transition-all duration-200 cursor-pointer group bg-white"
-               onClick={() => handleCardClick(item)}
-             >
-            <div className="text-xs text-[#4a4a6a] mb-1">
-              {new Date(item.date).getDate()}
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-[#4a4a6a] line-clamp-2">
-                {item.title}
+
+        {/* Calendar Cells - 35 days (5 weeks) */}
+        {getMultiWeekDates(currentDate).map((date, index) => {
+          const dayContent = getContentForDate(date);
+          const isCurrentDay = isToday(date);
+
+          return (
+            <div
+              key={index}
+              className={`relative min-h-[180px] border rounded-lg p-3 transition-all duration-200 bg-white ${
+                isCurrentDay
+                  ? 'border-[#6658f4] border-2 bg-[#f8f9ff]'
+                  : 'border-[#b0b0d8] hover:border-[#6658f4]'
+              }`}
+            >
+              {/* Date Number */}
+              <div className={`text-sm font-semibold mb-2 ${isCurrentDay ? 'text-[#6658f4]' : 'text-[#4a4a6a]'}`}>
+                {date.getDate()}
+                {isCurrentDay && (
+                  <span className="ml-1 text-xs bg-[#6658f4] text-white px-1.5 py-0.5 rounded">Today</span>
+                )}
               </div>
-              <Badge className={`text-xs ${getStatusColor(item.status)}`}>
-                <span className="flex items-center space-x-1">
-                  {getStatusIcon(item.status)}
-                  <span>{item.status}</span>
-                </span>
-              </Badge>
+
+              {/* Content Items */}
+              <div className="space-y-2">
+                {dayContent.length > 0 ? (
+                  dayContent.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="relative border border-[#e0e0e0] rounded-md p-2 hover:border-[#6658f4] hover:shadow-sm transition-all duration-200 cursor-pointer group bg-white"
+                      onClick={() => handleCardClick(item)}
+                    >
+                      {/* Status Color Bar */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-md ${
+                        item.status === 'draft' ? 'bg-gray-400' :
+                        item.status === 'approved' ? 'bg-blue-500' :
+                        item.status === 'published' ? 'bg-green-500' : 'bg-gray-300'
+                      }`} />
+
+                      {/* Content Type Icon */}
+                      <div className="absolute top-1 right-1">
+                        {item.contentType === 'blog' || !item.contentType ? (
+                          <FileText className="w-3 h-3 text-[#6658f4]" title="Blog Post" />
+                        ) : item.contentType === 'social' ? (
+                          <Image className="w-3 h-3 text-blue-500" title="Social Media" />
+                        ) : item.contentType === 'newsletter' ? (
+                          <Send className="w-3 h-3 text-green-500" title="Newsletter" />
+                        ) : item.contentType === 'case-study' ? (
+                          <Brain className="w-3 h-3 text-purple-500" title="Case Study" />
+                        ) : (
+                          <FileText className="w-3 h-3 text-[#6658f4]" title="Content" />
+                        )}
+                      </div>
+
+                      <div className="pl-2 space-y-1 pr-5">
+                        {/* Title */}
+                        <div className="text-xs font-medium text-[#4a4a6a] line-clamp-2 leading-tight">
+                          {item.title}
+                        </div>
+
+                        {/* Status Badge with Dropdown */}
+                        <div className="relative">
+                          <Badge
+                            className={`text-xs cursor-pointer hover:opacity-80 transition-opacity ${getStatusColor(item.status)}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStatusDropdownOpen(statusDropdownOpen === item._id ? null : item._id);
+                            }}
+                          >
+                            <span className="flex items-center space-x-1">
+                              {getStatusIcon(item.status)}
+                              <span className="capitalize">{item.status}</span>
+                              <ChevronDown className="w-3 h-3 ml-0.5" />
+                            </span>
+                          </Badge>
+
+                          {/* Status Dropdown */}
+                          {statusDropdownOpen === item._id && (
+                            <div className="absolute z-50 mt-1 bg-white border border-[#b0b0d8] rounded-md shadow-lg py-1 min-w-[120px]">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickStatusChange(item, 'draft');
+                                }}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center space-x-2"
+                              >
+                                <FileText className="w-3 h-3 text-gray-500" />
+                                <span>Draft</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickStatusChange(item, 'approved');
+                                }}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center space-x-2"
+                              >
+                                <CheckCircle className="w-3 h-3 text-blue-600" />
+                                <span>Approved</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickStatusChange(item, 'published');
+                                }}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center space-x-2"
+                              >
+                                <Send className="w-3 h-3 text-green-600" />
+                                <span>Published</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Keywords */}
+                        {item.keywords && item.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {item.keywords.slice(0, 2).map((keyword, kidx) => (
+                              <span key={kidx} className="text-xs bg-[#f0f0ff] text-[#6658f4] px-1.5 py-0.5 rounded">
+                                {keyword}
+                              </span>
+                            ))}
+                            {item.keywords.length > 2 && (
+                              <span className="text-xs text-gray-500">+{item.keywords.length - 2}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Hover Actions */}
+                      <div className="absolute inset-0 bg-white/95 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-md flex items-center justify-center space-x-2 z-10">
+                        {item.status === 'approved' && (
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePublishSingleContent(item);
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1"
+                          >
+                            <Send className="w-3 h-3 mr-1" />
+                            Publish
+                          </Button>
+                        )}
+                        <div className="text-xs text-[#6658f4]">Click to edit</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div
+                    onClick={() => handleCreateContentForDate(date)}
+                    className="text-center py-6 text-xs text-gray-400 hover:text-[#6658f4] hover:bg-[#f8f9ff] rounded cursor-pointer transition-all group"
+                  >
+                    <Plus className="w-5 h-5 mx-auto mb-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="font-medium">Click to add content</div>
+                  </div>
+                )}
+              </div>
             </div>
-               
-               {/* Hover Actions - Only show on hover */}
-               <div className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-90 transition-all duration-200 rounded-lg flex items-center justify-center space-x-2 z-10">
-                 
-                
-                 
-                 {/* Publish Button - Only show for approved content */}
-                 {item.status === 'approved' && (
-                   <Button
-                     size="sm"
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       handlePublishSingleContent(item);
-                     }}
-                     className="bg-green-600 hover:bg-green-700 text-white"
-                   >
-                     <Send className="w-3 h-3 mr-1" />
-                     Publish
-                   </Button>
-                 )}
-               </div>
-               
-               {/* Click to edit hint */}
-               <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <div className="text-xs text-[#6658f4] bg-white/80 px-1 rounded">
-                   Click to edit
-                 </div>
-               </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
        )}
 
       {/* Month View */}
       {currentView === 'month' && (
-        <div className="bg-white border border-[#b0b0d8] rounded-lg p-4">
-          <div className="text-center text-lg font-semibold text-[#4a4a6a] mb-4">
-            Month view coming soon...
+        <div className="bg-white border border-[#b0b0d8] rounded-lg p-2">
+          {/* Day Headers */}
+          <div className="grid grid-cols-7 gap-1 mb-1">
+            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
+              <div key={day} className="text-center text-xs font-semibold text-[#4a4a6a] p-2 border-b border-[#e0e0e0]">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Month Calendar Grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {getMonthCalendarDates(currentDate).map((dateObj, index) => {
+              const dayContent = getContentForDate(dateObj.date);
+              const isCurrentDay = isToday(dateObj.date);
+              const isCurrentMonth = dateObj.isCurrentMonth;
+
+              return (
+                <div
+                  key={index}
+                  className={`relative min-h-[120px] border rounded-md p-2 transition-all duration-200 ${
+                    isCurrentDay
+                      ? 'border-[#6658f4] border-2 bg-[#f8f9ff]'
+                      : isCurrentMonth
+                      ? 'border-[#d0d0e0] bg-white hover:border-[#6658f4]'
+                      : 'border-[#e8e8f0] bg-gray-50'
+                  }`}
+                >
+                  {/* Date Number */}
+                  <div className={`text-xs font-semibold mb-1 ${
+                    isCurrentDay
+                      ? 'text-[#6658f4]'
+                      : isCurrentMonth
+                      ? 'text-[#4a4a6a]'
+                      : 'text-gray-400'
+                  }`}>
+                    {dateObj.date.getDate()}
+                    {isCurrentDay && (
+                      <span className="ml-1 text-xs bg-[#6658f4] text-white px-1 py-0.5 rounded">Today</span>
+                    )}
+                  </div>
+
+                  {/* Content Items */}
+                  <div className="space-y-1">
+                    {dayContent.length > 0 ? (
+                      <>
+                        {dayContent.slice(0, 2).map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="relative border border-[#e0e0e0] rounded p-1 hover:border-[#6658f4] transition-all duration-150 cursor-pointer group bg-white text-xs"
+                            onClick={() => handleCardClick(item)}
+                          >
+                            {/* Status Color Bar */}
+                            <div className={`absolute left-0 top-0 bottom-0 w-0.5 rounded-l ${
+                              item.status === 'draft' ? 'bg-gray-400' :
+                              item.status === 'approved' ? 'bg-blue-500' :
+                              item.status === 'published' ? 'bg-green-500' : 'bg-gray-300'
+                            }`} />
+
+                            {/* Content Type Icon */}
+                            <div className="absolute top-0.5 right-0.5">
+                              {item.contentType === 'blog' || !item.contentType ? (
+                                <FileText className="w-2.5 h-2.5 text-[#6658f4]" title="Blog" />
+                              ) : item.contentType === 'social' ? (
+                                <Image className="w-2.5 h-2.5 text-blue-500" title="Social" />
+                              ) : item.contentType === 'newsletter' ? (
+                                <Send className="w-2.5 h-2.5 text-green-500" title="Newsletter" />
+                              ) : item.contentType === 'case-study' ? (
+                                <Brain className="w-2.5 h-2.5 text-purple-500" title="Case Study" />
+                              ) : (
+                                <FileText className="w-2.5 h-2.5 text-[#6658f4]" />
+                              )}
+                            </div>
+
+                            <div className="pl-1.5 pr-4">
+                              {/* Title */}
+                              <div className="font-medium text-[#4a4a6a] line-clamp-1 text-xs leading-tight">
+                                {item.title}
+                              </div>
+
+                              {/* Status Icon */}
+                              <div className="flex items-center space-x-1 mt-0.5">
+                                <span className={`text-xs ${
+                                  item.status === 'draft' ? 'text-gray-500' :
+                                  item.status === 'approved' ? 'text-blue-600' :
+                                  item.status === 'published' ? 'text-green-600' : 'text-gray-500'
+                                }`}>
+                                  {getStatusIcon(item.status)}
+                                </span>
+                                <span className="text-xs capitalize text-gray-600">{item.status}</span>
+                              </div>
+                            </div>
+
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 bg-[#6658f4]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
+                          </div>
+                        ))}
+                        {dayContent.length > 2 && (
+                          <div className="text-xs text-center text-[#6658f4] font-medium cursor-pointer hover:underline">
+                            +{dayContent.length - 2} more
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      isCurrentMonth && (
+                        <div
+                          onClick={() => handleCreateContentForDate(dateObj.date)}
+                          className="text-center py-3 text-xs text-gray-300 hover:text-[#6658f4] hover:bg-[#f8f9ff] rounded cursor-pointer transition-all group"
+                        >
+                          <Plus className="w-4 h-4 mx-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -1438,32 +1830,144 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
       {/* List View */}
       {currentView === 'list' && (
         <div className="space-y-3">
+          {/* List Items */}
           {contentPlan.map((item, index) => (
-            <Card key={index} className="border border-[#b0b0d8] bg-white hover:border-[#6658f4] transition-colors">
+            <Card
+              key={index}
+              className="border border-[#b0b0d8] bg-white hover:border-[#6658f4] transition-colors"
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
+                  {/* Content */}
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <h4 className="font-semibold text-[#4a4a6a]">{item.title}</h4>
-                      <Badge className={getStatusColor(item.status)}>
-                        {item.status}
-                      </Badge>
+
+                      {/* Content Type Badge */}
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 flex items-center space-x-1">
+                        {item.contentType === 'blog' || !item.contentType ? (
+                          <>
+                            <FileText className="w-3 h-3" />
+                            <span>Blog</span>
+                          </>
+                        ) : item.contentType === 'social' ? (
+                          <>
+                            <Image className="w-3 h-3" />
+                            <span>Social</span>
+                          </>
+                        ) : item.contentType === 'newsletter' ? (
+                          <>
+                            <Send className="w-3 h-3" />
+                            <span>Newsletter</span>
+                          </>
+                        ) : item.contentType === 'case-study' ? (
+                          <>
+                            <Brain className="w-3 h-3" />
+                            <span>Case Study</span>
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="w-3 h-3" />
+                            <span>Content</span>
+                          </>
+                        )}
+                      </span>
+
+                      {/* Status Badge with Dropdown */}
+                      <div className="relative">
+                        <Badge
+                          className={`cursor-pointer hover:opacity-80 transition-opacity ${getStatusColor(item.status)}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusDropdownOpen(statusDropdownOpen === item._id ? null : item._id);
+                          }}
+                        >
+                          <span className="flex items-center space-x-1">
+                            {getStatusIcon(item.status)}
+                            <span className="capitalize">{item.status}</span>
+                            <ChevronDown className="w-3 h-3 ml-0.5" />
+                          </span>
+                        </Badge>
+
+                        {/* Status Dropdown */}
+                        {statusDropdownOpen === item._id && (
+                          <div className="absolute z-50 mt-1 left-0 bg-white border border-[#b0b0d8] rounded-md shadow-lg py-1 min-w-[120px]">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickStatusChange(item, 'draft');
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            >
+                              <FileText className="w-4 h-4 text-gray-500" />
+                              <span>Draft</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickStatusChange(item, 'approved');
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            >
+                              <CheckCircle className="w-4 h-4 text-blue-600" />
+                              <span>Approved</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickStatusChange(item, 'published');
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            >
+                              <Send className="w-4 h-4 text-green-600" />
+                              <span>Published</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       <span className="text-sm text-[#4a4a6a]">
                         {new Date(item.date).toLocaleDateString()}
                       </span>
                     </div>
                     <p className="text-sm text-[#4a4a6a] line-clamp-2">{item.description}</p>
+
+                    {/* Keywords */}
+                    {item.keywords && item.keywords.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {item.keywords.slice(0, 5).map((keyword, kidx) => (
+                          <span key={kidx} className="text-xs bg-[#f0f0ff] text-[#6658f4] px-2 py-0.5 rounded">
+                            {keyword}
+                          </span>
+                        ))}
+                        {item.keywords.length > 5 && (
+                          <span className="text-xs text-gray-500">+{item.keywords.length - 5} more</span>
+                        )}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Actions */}
                   <div className="flex space-x-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleEditContent(item)}
+                      onClick={() => handleCardClick(item)}
                       className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
                     >
                       <Edit className="w-4 h-4 mr-1" />
                       Edit
                     </Button>
+                    {item.status === 'approved' && (
+                      <Button
+                        size="sm"
+                        onClick={() => handlePublishSingleContent(item)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Send className="w-4 h-4 mr-1" />
+                        Publish
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
