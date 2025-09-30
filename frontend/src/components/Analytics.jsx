@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, TrendingUp, Users, MousePointer, Eye, ExternalLink, AlertCircle, CheckCircle, Settings } from 'lucide-react';
+import { ArrowLeft, ArrowRight, TrendingUp, Users, MousePointer, Eye, ExternalLink, AlertCircle, CheckCircle, Settings, Zap, Calendar } from 'lucide-react';
 import { apiService } from '../utils/api';
 
 const Analytics = ({ onClose }) => {
@@ -443,12 +443,49 @@ const Analytics = ({ onClose }) => {
 
   // Main Analytics Dashboard
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-      
-        <div className="flex items-center space-x-2">
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* Content Calendar CTA */}
+      {isConnected && overviewData && (
+        <Card className="border-0 bg-gradient-to-r from-[#6658f4] to-[#8b7ff5] text-white shadow-lg overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
+          <CardContent className="p-6 relative z-10">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2 flex items-center space-x-2">
+                    <span>📊 Turn Insights Into Action!</span>
+                  </h3>
+                  <p className="text-white/90 text-sm">
+                    {overviewData.analytics?.totalUsers > 1000
+                      ? 'Your content is performing well! Keep the momentum with more optimized posts'
+                      : 'Boost your traffic with AI-powered content from your calendar'
+                    }
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  if (onClose) {
+                    onClose();
+                  }
+                  // Small delay to ensure proper navigation
+                  setTimeout(() => {
+                    window.location.hash = '#content-calendar';
+                  }, 100);
+                }}
+                className="bg-white text-[#6658f4] hover:bg-white/90 font-semibold shadow-md transition-all hover:scale-105"
+              >
+                Generate More Content
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {loading && (
         <div className="flex items-center justify-center py-8">

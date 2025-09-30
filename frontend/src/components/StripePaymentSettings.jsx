@@ -12,6 +12,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { CreditCard, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -136,6 +137,8 @@ const StripePaymentSettings = () => {
   const [loading, setLoading] = useState(true);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   const plans = [
     {
@@ -209,14 +212,22 @@ const StripePaymentSettings = () => {
     loadPaymentInfo(); // Reload payment info
   };
 
-  const handleCancelSubscription = async () => {
+  const handleCancelSubscription = () => {
+    setShowCancelDialog(true);
+  };
+
+  const confirmCancelSubscription = async () => {
+    setIsCanceling(true);
     try {
       await apiService.cancelSubscription();
       toast.success('Subscription canceled successfully');
       loadPaymentInfo();
+      setShowCancelDialog(false);
     } catch (error) {
       console.error('Error canceling subscription:', error);
       toast.error('Failed to cancel subscription');
+    } finally {
+      setIsCanceling(false);
     }
   };
 
@@ -418,6 +429,19 @@ const StripePaymentSettings = () => {
           </div>
         </div>
       </div>
+
+      {/* Cancel Subscription Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showCancelDialog}
+        onClose={() => setShowCancelDialog(false)}
+        onConfirm={confirmCancelSubscription}
+        title="Cancel Subscription?"
+        description="Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing period."
+        confirmText="Cancel Subscription"
+        cancelText="Keep Subscription"
+        variant="destructive"
+        isLoading={isCanceling}
+      />
     </div>
   );
 };

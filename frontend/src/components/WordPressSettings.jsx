@@ -3,12 +3,15 @@ import { toast } from 'react-toastify';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Globe, ExternalLink, Check, AlertCircle, Loader2, FileText } from 'lucide-react';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 const WordPressSettings = ({ onConnectionChange }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [wordpressInfo, setWordpressInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/v1/wordpress`;
 

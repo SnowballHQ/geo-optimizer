@@ -3,6 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Switch } from '../components/ui/switch';
+import { Label } from '../components/ui/label';
+import { Select } from '../components/ui/select';
 import DomainAnalysis from './DomainAnalysis';
 import BlogAnalysis from './BlogAnalysis';
 import ContentCalendarView from './ContentCalendarView';
@@ -27,6 +31,7 @@ import {
   Link as LinkIcon,
   Activity,
   ArrowLeft,
+  ArrowRight,
   Calendar,
   Building2,
   TrendingUp,
@@ -66,6 +71,30 @@ const Dashboard = () => {
     webflow: 'checking',
     wordpress: 'checking'
   });
+
+  // Account settings state
+  const [accountSettings, setAccountSettings] = useState({
+    fullName: '',
+    email: '',
+    company: '',
+    role: '',
+    notifications: {
+      analysisCompletion: true,
+      weeklyReports: false,
+      contentCalendarReminders: true,
+      competitorAlerts: false
+    }
+  });
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
+
+  // Analysis preferences state
+  const [analysisPreferences, setAnalysisPreferences] = useState({
+    analysisDepth: 'standard',
+    blogScoringThreshold: '60',
+    contentCalendarPlanning: '30',
+    dataRetention: '6-months'
+  });
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   // Function to get dynamic welcome message based on content calendar state
   const getWelcomeMessage = () => {
@@ -371,6 +400,44 @@ const Dashboard = () => {
     apiService.logout();
   };
 
+  const handleSaveAccountSettings = async () => {
+    setIsSavingAccount(true);
+    try {
+      // TODO: Implement actual API call when backend endpoint is ready
+      // const response = await apiService.updateAccountSettings(accountSettings);
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // toast.success('Account settings saved successfully!');
+      console.log('Account settings saved:', accountSettings);
+    } catch (error) {
+      console.error('Error saving account settings:', error);
+      // toast.error('Failed to save account settings');
+    } finally {
+      setIsSavingAccount(false);
+    }
+  };
+
+  const handleSaveAnalysisPreferences = async () => {
+    setIsSavingPreferences(true);
+    try {
+      // TODO: Implement actual API call when backend endpoint is ready
+      // const response = await apiService.updateAnalysisPreferences(analysisPreferences);
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // toast.success('Analysis preferences saved successfully!');
+      console.log('Analysis preferences saved:', analysisPreferences);
+    } catch (error) {
+      console.error('Error saving analysis preferences:', error);
+      // toast.error('Failed to save analysis preferences');
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  };
+
   const handleDomainAnalysisSubmit = (e) => {
     e.preventDefault();
     if (domainToAnalyze.trim()) {
@@ -398,15 +465,36 @@ const Dashboard = () => {
     if (activeTool === 'blog') {
       return (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold text-[#4a4a6a]">Blog Analysis</h2>
-              <p className="text-[#4a4a6a]">Analyze blog content quality and optimization</p>
-            </div>
-            <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back
-            </Button>
-          </div>
+          {/* Content Calendar CTA */}
+          <Card className="border-0 bg-gradient-to-r from-[#6658f4] to-[#8b7ff5] text-white shadow-lg overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
+            <CardContent className="p-6 relative z-10">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <Brain className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2 flex items-center space-x-2">
+                      <span>✨ Found What Works?</span>
+                    </h3>
+                    <p className="text-white/90 text-sm">
+                      Use these insights to generate better, SEO-optimized content automatically
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setActiveTool('content-calendar')}
+                  className="bg-white text-[#6658f4] hover:bg-white/90 font-semibold shadow-md transition-all hover:scale-105"
+                >
+                  Go to Content Calendar
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <BlogAnalysis inline onClose={() => setActiveTool(null)} />
         </div>
       );
@@ -892,8 +980,49 @@ const Dashboard = () => {
 
            {activeSection === 'brand-dashboard' && (
              <div className="space-y-6">
-              
-               
+
+               {/* Content Calendar CTA */}
+               <Card className="border-0 bg-gradient-to-r from-[#6658f4] to-[#8b7ff5] text-white shadow-lg overflow-hidden relative">
+                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
+                 <CardContent className="p-6 relative z-10">
+                   <div className="flex items-center justify-between flex-wrap gap-4">
+                     <div className="flex items-start space-x-4">
+                       <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                         <Calendar className="w-6 h-6 text-white" />
+                       </div>
+                       <div>
+                         <h3 className="text-xl font-semibold mb-2 flex items-center space-x-2">
+                           <span>🚀 Ready to Publish?</span>
+                         </h3>
+                         <p className="text-white/90 text-sm mb-1">
+                           {contentCalendarData && contentCalendarData.length > 0 ? (
+                             <>
+                               Your AI-generated content is waiting!
+                               <strong className="ml-1">
+                                 {contentCalendarData.filter(item => item.status === 'approved').length > 0
+                                   ? `${contentCalendarData.filter(item => item.status === 'approved').length} pieces ready to publish`
+                                   : `${contentCalendarData.filter(item => item.status === 'draft').length} drafts ready for review`
+                                 }
+                               </strong>
+                             </>
+                           ) : (
+                             'Get AI-powered content created and published from your content calendar'
+                           )}
+                         </p>
+                       </div>
+                     </div>
+                     <Button
+                       onClick={() => { setActiveSection('dashboard'); setActiveTool('content-calendar'); }}
+                       className="bg-white text-[#6658f4] hover:bg-white/90 font-semibold shadow-md transition-all hover:scale-105"
+                     >
+                       Go to Content Calendar
+                       <ArrowRight className="w-4 h-4 ml-2" />
+                     </Button>
+                   </div>
+                 </CardContent>
+               </Card>
+
                {/* Direct Domain Analysis Integration */}
                <DomainAnalysis
                  initialDomain={userBrands.length > 0 ? userBrands[0].domain : ""}
@@ -916,61 +1045,39 @@ const Dashboard = () => {
 
           {activeSection === 'settings' && (
             <div className="space-y-6">
-            
+              <Tabs defaultValue="account" onValueChange={(value) => setActiveSettingsTab(value)}>
+                <TabsList className="w-full justify-start border-b border-gray-200 bg-transparent p-0 h-auto rounded-none">
+                  <TabsTrigger
+                    value="account"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6658f4] data-[state=active]:text-[#6658f4] data-[state=active]:bg-transparent px-4 py-3"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Account
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="brand"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6658f4] data-[state=active]:text-[#6658f4] data-[state=active]:bg-transparent px-4 py-3"
+                  >
+                    <Palette className="w-4 h-4 mr-2" />
+                    Brand & Content
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="integrations"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6658f4] data-[state=active]:text-[#6658f4] data-[state=active]:bg-transparent px-4 py-3"
+                  >
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Integrations
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="payment"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6658f4] data-[state=active]:text-[#6658f4] data-[state=active]:bg-transparent px-4 py-3"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Payment
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Tab Navigation */}
-              <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8">
-                  <button
-                    onClick={() => setActiveSettingsTab('account')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                      activeSettingsTab === 'account'
-                        ? 'border-[#6658f4] text-[#6658f4]'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <User className="w-4 h-4" />
-                    <span>Account</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveSettingsTab('brand')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                      activeSettingsTab === 'brand'
-                        ? 'border-[#6658f4] text-[#6658f4]'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Palette className="w-4 h-4" />
-                    <span>Brand & Content</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveSettingsTab('integrations')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                      activeSettingsTab === 'integrations'
-                        ? 'border-[#6658f4] text-[#6658f4]'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Building2 className="w-4 h-4" />
-                    <span>Integrations</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveSettingsTab('payment')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                      activeSettingsTab === 'payment'
-                        ? 'border-[#6658f4] text-[#6658f4]'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    <span>Payment</span>
-                  </button>
-                </nav>
-              </div>
-              
-              {/* Account Tab */}
-              {activeSettingsTab === 'account' && (
-                <div className="space-y-6">
+                <TabsContent value="account" className="mt-6 space-y-6">
                   {/* Profile Settings */}
                   <Card className="border border-[#b0b0d8] bg-white">
                     <CardHeader>
@@ -984,39 +1091,56 @@ const Dashboard = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Full Name</label>
+                        <div className="space-y-2">
+                          <Label htmlFor="fullName" className="text-[#4a4a6a]">Full Name</Label>
                           <Input
+                            id="fullName"
                             placeholder="Enter your full name"
                             className="border-[#b0b0d8] focus:border-[#6658f4]"
-                            defaultValue={userName}
+                            value={accountSettings.fullName || userName}
+                            onChange={(e) => setAccountSettings({ ...accountSettings, fullName: e.target.value })}
                           />
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Email</label>
+                        <div className="space-y-2">
+                          <Label htmlFor="email" className="text-[#4a4a6a]">Email</Label>
                           <Input
+                            id="email"
                             type="email"
                             placeholder="your@email.com"
                             className="border-[#b0b0d8] focus:border-[#6658f4]"
+                            value={accountSettings.email}
+                            onChange={(e) => setAccountSettings({ ...accountSettings, email: e.target.value })}
                           />
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Company</label>
+                        <div className="space-y-2">
+                          <Label htmlFor="company" className="text-[#4a4a6a]">Company</Label>
                           <Input
+                            id="company"
                             placeholder="Your company name"
                             className="border-[#b0b0d8] focus:border-[#6658f4]"
+                            value={accountSettings.company}
+                            onChange={(e) => setAccountSettings({ ...accountSettings, company: e.target.value })}
                           />
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Role</label>
+                        <div className="space-y-2">
+                          <Label htmlFor="role" className="text-[#4a4a6a]">Role</Label>
                           <Input
+                            id="role"
                             placeholder="Your job title"
                             className="border-[#b0b0d8] focus:border-[#6658f4]"
+                            value={accountSettings.role}
+                            onChange={(e) => setAccountSettings({ ...accountSettings, role: e.target.value })}
                           />
                         </div>
                       </div>
-                      <div className="flex justify-end">
-                        <Button className="gradient-primary">Save Profile</Button>
+                      <div className="flex justify-end pt-2">
+                        <Button
+                          onClick={handleSaveAccountSettings}
+                          disabled={isSavingAccount}
+                          className="gradient-primary"
+                        >
+                          {isSavingAccount ? 'Saving...' : 'Save Profile'}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1034,46 +1158,93 @@ const Dashboard = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between py-2">
-                          <div>
-                            <label className="text-sm font-medium text-[#4a4a6a]">Analysis Completion</label>
-                            <p className="text-xs text-gray-500">Get notified when analysis is ready</p>
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex-1">
+                            <Label htmlFor="notif-analysis" className="text-sm font-medium text-[#4a4a6a]">
+                              Analysis Completion
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">Get notified when analysis is ready</p>
                           </div>
-                          <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" defaultChecked />
+                          <Switch
+                            id="notif-analysis"
+                            checked={accountSettings.notifications.analysisCompletion}
+                            onCheckedChange={(checked) =>
+                              setAccountSettings({
+                                ...accountSettings,
+                                notifications: { ...accountSettings.notifications, analysisCompletion: checked }
+                              })
+                            }
+                          />
                         </div>
-                        <div className="flex items-center justify-between py-2">
-                          <div>
-                            <label className="text-sm font-medium text-[#4a4a6a]">Weekly Reports</label>
-                            <p className="text-xs text-gray-500">Receive weekly analysis summaries</p>
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex-1">
+                            <Label htmlFor="notif-weekly" className="text-sm font-medium text-[#4a4a6a]">
+                              Weekly Reports
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">Receive weekly analysis summaries</p>
                           </div>
-                          <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" />
+                          <Switch
+                            id="notif-weekly"
+                            checked={accountSettings.notifications.weeklyReports}
+                            onCheckedChange={(checked) =>
+                              setAccountSettings({
+                                ...accountSettings,
+                                notifications: { ...accountSettings.notifications, weeklyReports: checked }
+                              })
+                            }
+                          />
                         </div>
-                        <div className="flex items-center justify-between py-2">
-                          <div>
-                            <label className="text-sm font-medium text-[#4a4a6a]">Content Calendar Reminders</label>
-                            <p className="text-xs text-gray-500">Get reminded about content deadlines</p>
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex-1">
+                            <Label htmlFor="notif-calendar" className="text-sm font-medium text-[#4a4a6a]">
+                              Content Calendar Reminders
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">Get reminded about content deadlines</p>
                           </div>
-                          <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" defaultChecked />
+                          <Switch
+                            id="notif-calendar"
+                            checked={accountSettings.notifications.contentCalendarReminders}
+                            onCheckedChange={(checked) =>
+                              setAccountSettings({
+                                ...accountSettings,
+                                notifications: { ...accountSettings.notifications, contentCalendarReminders: checked }
+                              })
+                            }
+                          />
                         </div>
-                        <div className="flex items-center justify-between py-2">
-                          <div>
-                            <label className="text-sm font-medium text-[#4a4a6a]">Competitor Alerts</label>
-                            <p className="text-xs text-gray-500">Notify when competitors make changes</p>
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex-1">
+                            <Label htmlFor="notif-competitor" className="text-sm font-medium text-[#4a4a6a]">
+                              Competitor Alerts
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">Notify when competitors make changes</p>
                           </div>
-                          <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" />
+                          <Switch
+                            id="notif-competitor"
+                            checked={accountSettings.notifications.competitorAlerts}
+                            onCheckedChange={(checked) =>
+                              setAccountSettings({
+                                ...accountSettings,
+                                notifications: { ...accountSettings.notifications, competitorAlerts: checked }
+                              })
+                            }
+                          />
                         </div>
                       </div>
                       <div className="flex justify-end pt-4">
-                        <Button className="gradient-primary">Save Notifications</Button>
+                        <Button
+                          onClick={handleSaveAccountSettings}
+                          disabled={isSavingAccount}
+                          className="gradient-primary"
+                        >
+                          {isSavingAccount ? 'Saving...' : 'Save Notifications'}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-              )}
+                </TabsContent>
 
-              {/* Brand & Content Tab */}
-              {activeSettingsTab === 'brand' && (
-                <div className="space-y-6">
+                <TabsContent value="brand" className="mt-6 space-y-6">
                   {/* Brand Settings */}
                   <Card className="border border-[#b0b0d8] bg-white">
                     <CardHeader>
@@ -1103,51 +1274,90 @@ const Dashboard = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Default Analysis Depth</label>
-                          <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                            <option>Basic Analysis</option>
-                            <option>Standard Analysis</option>
-                            <option>Comprehensive Analysis</option>
-                          </select>
+                        <div className="space-y-2">
+                          <Label htmlFor="analysis-depth" className="text-[#4a4a6a]">
+                            Default Analysis Depth
+                          </Label>
+                          <Select
+                            id="analysis-depth"
+                            value={analysisPreferences.analysisDepth}
+                            onChange={(e) =>
+                              setAnalysisPreferences({ ...analysisPreferences, analysisDepth: e.target.value })
+                            }
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          >
+                            <option value="basic">Basic Analysis</option>
+                            <option value="standard">Standard Analysis</option>
+                            <option value="comprehensive">Comprehensive Analysis</option>
+                          </Select>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Blog Scoring Threshold</label>
-                          <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                            <option>70% (Strict)</option>
-                            <option>60% (Standard)</option>
-                            <option>50% (Lenient)</option>
-                          </select>
+                        <div className="space-y-2">
+                          <Label htmlFor="blog-scoring" className="text-[#4a4a6a]">
+                            Blog Scoring Threshold
+                          </Label>
+                          <Select
+                            id="blog-scoring"
+                            value={analysisPreferences.blogScoringThreshold}
+                            onChange={(e) =>
+                              setAnalysisPreferences({ ...analysisPreferences, blogScoringThreshold: e.target.value })
+                            }
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          >
+                            <option value="70">70% (Strict)</option>
+                            <option value="60">60% (Standard)</option>
+                            <option value="50">50% (Lenient)</option>
+                          </Select>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Content Calendar Planning</label>
-                          <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                            <option>30 Days</option>
-                            <option>60 Days</option>
-                            <option>90 Days</option>
-                          </select>
+                        <div className="space-y-2">
+                          <Label htmlFor="calendar-planning" className="text-[#4a4a6a]">
+                            Content Calendar Planning
+                          </Label>
+                          <Select
+                            id="calendar-planning"
+                            value={analysisPreferences.contentCalendarPlanning}
+                            onChange={(e) =>
+                              setAnalysisPreferences({ ...analysisPreferences, contentCalendarPlanning: e.target.value })
+                            }
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          >
+                            <option value="30">30 Days</option>
+                            <option value="60">60 Days</option>
+                            <option value="90">90 Days</option>
+                          </Select>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Data Retention</label>
-                          <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                            <option>3 Months</option>
-                            <option>6 Months</option>
-                            <option>1 Year</option>
-                            <option>Forever</option>
-                          </select>
+                        <div className="space-y-2">
+                          <Label htmlFor="data-retention" className="text-[#4a4a6a]">
+                            Data Retention
+                          </Label>
+                          <Select
+                            id="data-retention"
+                            value={analysisPreferences.dataRetention}
+                            onChange={(e) =>
+                              setAnalysisPreferences({ ...analysisPreferences, dataRetention: e.target.value })
+                            }
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          >
+                            <option value="3-months">3 Months</option>
+                            <option value="6-months">6 Months</option>
+                            <option value="1-year">1 Year</option>
+                            <option value="forever">Forever</option>
+                          </Select>
                         </div>
                       </div>
-                      <div className="flex justify-end">
-                        <Button className="gradient-primary">Save Preferences</Button>
+                      <div className="flex justify-end pt-2">
+                        <Button
+                          onClick={handleSaveAnalysisPreferences}
+                          disabled={isSavingPreferences}
+                          className="gradient-primary"
+                        >
+                          {isSavingPreferences ? 'Saving...' : 'Save Preferences'}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-              )}
+                </TabsContent>
 
-              {/* Integrations Tab */}
-              {activeSettingsTab === 'integrations' && (
-                <div className="space-y-6">
+                <TabsContent value="integrations" className="mt-6 space-y-6">
                   {/* CMS Integration Hub */}
                   <Card className="border border-[#b0b0d8] bg-white">
                     <CardHeader>
@@ -1268,14 +1478,9 @@ const Dashboard = () => {
                           </div>
                         </CardContent>
                       </Card>
-                </div>
-              )}
+                </TabsContent>
 
-
-
-              {/* Payment Tab */}
-              {activeSettingsTab === 'payment' && (
-                <div className="space-y-6">
+                <TabsContent value="payment" className="mt-6 space-y-6">
                   {/* Payment & Billing */}
                   <Card className="border border-[#b0b0d8] bg-white">
                     <CardHeader>
@@ -1291,9 +1496,8 @@ const Dashboard = () => {
                       <StripePaymentSettings />
                     </CardContent>
                   </Card>
-                </div>
-              )}
-
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 

@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Textarea } from './ui/textarea';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 const BrandSettings = () => {
   const [brandTonality, setBrandTonality] = useState('');
@@ -12,6 +13,7 @@ const BrandSettings = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
   // Load existing brand settings on component mount
   useEffect(() => {
@@ -59,7 +61,13 @@ const BrandSettings = () => {
   };
 
   const handleReset = () => {
+    setShowResetDialog(true);
+  };
+
+  const confirmReset = () => {
     loadBrandSettings();
+    setShowResetDialog(false);
+    toast.info('Settings have been reset to saved values');
   };
 
   if (loading) {
@@ -141,6 +149,17 @@ const BrandSettings = () => {
         </div>
       </div>
 
+      {/* Reset Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showResetDialog}
+        onClose={() => setShowResetDialog(false)}
+        onConfirm={confirmReset}
+        title="Reset Changes?"
+        description="This will discard all unsaved changes and restore your last saved brand settings. Are you sure you want to continue?"
+        confirmText="Reset"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 };

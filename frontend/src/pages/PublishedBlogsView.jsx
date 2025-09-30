@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { ArrowLeft, RefreshCw, CheckCircle, AlertCircle, Settings, BarChart3, ExternalLink, ShoppingBag, Globe, FileText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RefreshCw, CheckCircle, AlertCircle, Settings, BarChart3, ExternalLink, ShoppingBag, Globe, FileText, Sparkles, Calendar } from 'lucide-react';
 import { apiService } from '../utils/api';
 
 const PublishedBlogsView = ({ inline = false, onClose }) => {
@@ -214,7 +214,46 @@ const PublishedBlogsView = ({ inline = false, onClose }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Content Calendar CTA */}
+      <Card className="border-0 bg-gradient-to-r from-[#6658f4] to-[#8b7ff5] text-white shadow-lg overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
+        <CardContent className="p-6 relative z-10">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-start space-x-4">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 flex items-center space-x-2">
+                  <span>📝 Keep Your Content Fresh!</span>
+                </h3>
+                <p className="text-white/90 text-sm">
+                  {publishedBlogs.length > 0
+                    ? `You have ${publishedBlogs.length} published ${publishedBlogs.length === 1 ? 'blog' : 'blogs'}. Generate more AI-optimized content from your calendar!`
+                    : 'Ready to publish more? Generate new AI-optimized blogs from your content calendar'
+                  }
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => {
+                if (inline && onClose) {
+                  onClose();
+                }
+                // Small delay to ensure proper navigation
+                setTimeout(() => {
+                  window.location.hash = '#content-calendar';
+                }, 100);
+              }}
+              className="bg-white text-[#6658f4] hover:bg-white/90 font-semibold shadow-md transition-all hover:scale-105"
+            >
+              Create New Content
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Connection Status Bar */}
       <Card className="border-[#b0b0d8] bg-gradient-to-r from-blue-50 to-purple-50">

@@ -3,12 +3,15 @@ import { toast } from 'react-toastify';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Layers, ExternalLink, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 const WebflowSettings = ({ onConnectionChange }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [webflowInfo, setWebflowInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/webflow`;
 
@@ -135,18 +138,22 @@ const WebflowSettings = ({ onConnectionChange }) => {
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
+    setShowDisconnectDialog(true);
+  };
+
+  const confirmDisconnect = async () => {
+    setIsDisconnecting(true);
     try {
-      setLoading(true);
       const response = await fetch(`${API_BASE}/disconnect`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth')}`
         }
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         toast.success(data.message);
         setConnectionStatus('disconnected');
@@ -154,6 +161,7 @@ const WebflowSettings = ({ onConnectionChange }) => {
         if (onConnectionChange) {
           onConnectionChange('webflow', 'disconnected');
         }
+        setShowDisconnectDialog(false);
       } else {
         toast.error(data.message || 'Failed to disconnect');
       }
@@ -161,7 +169,7 @@ const WebflowSettings = ({ onConnectionChange }) => {
       console.error('Error disconnecting:', error);
       toast.error('Failed to disconnect from Webflow');
     } finally {
-      setLoading(false);
+      setIsDisconnecting(false);
     }
   };
 
@@ -333,6 +341,18 @@ const WebflowSettings = ({ onConnectionChange }) => {
         </div>
       )}
 
+      {/* Disconnect Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDisconnectDialog}
+        onClose={() => setShowDisconnectDialog(false)}
+        onConfirm={confirmDisconnect}
+        title="Disconnect Webflow Site?"
+        description="Are you sure you want to disconnect your Webflow site? You will no longer be able to auto-publish content to your site until you reconnect."
+        confirmText="Disconnect"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={isDisconnecting}
+      />
     </div>
   );
 };
