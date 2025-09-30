@@ -43,7 +43,7 @@ const DomainForm = ({ domain, setDomain, loading, onSubmit, onClose, existingDom
   }, [domain, loading]);
 
   return (
-    <Card className="mb-6 border border-[#b0b0d8] bg-white">
+    <Card className="mb-6 border-0.3 border-[#b0b0d8] bg-white">
       <CardHeader>
         <CardTitle className="text-[#4a4a6a]"></CardTitle>
       </CardHeader>

@@ -114,7 +114,7 @@ const SuperUserAnalysisViewPage = () => {
       a.href = url;
       
       // Get filename from Content-Disposition header or create default
-      let filename = `SuperUser_${analysisData.domain?.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${analysisData.analysisId}.pdf`;
+      let filename = `${analysisData.brandName?.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis.pdf`;
       const contentDisposition = response.headers['content-disposition'];
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);

@@ -372,7 +372,7 @@ const StripePaymentSettings = () => {
 
       {/* Payment History */}
       {paymentInfo?.paymentHistory?.length > 0 && (
-        <Card className="border border-[#b0b0d8]">
+        <Card className="border-0.3 border-[#b0b0d8]">
           <CardHeader>
             <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
               <CreditCard className="w-5 h-5" />

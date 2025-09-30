@@ -176,7 +176,7 @@ const Landing = () => {
 
           {/* Hero Image */}
           <div className="mt-16">
-            <Card className="border border-[#b0b0d8] shadow-lg bg-gradient-to-br from-white to-[#f8f9ff]">
+            <Card className="border-0.3 border-[#b0b0d8] shadow-lg bg-gradient-to-br from-white to-[#f8f9ff]">
               <CardContent className="p-8">
                 <div className="aspect-video bg-gradient-to-br from-[#f8f9ff] to-white rounded-lg flex items-center justify-center border border-[#e8eaff]">
                   <div className="text-center space-y-4">
@@ -209,7 +209,7 @@ const Landing = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
-              <Card key={index} className="border border-[#b0b0d8] bg-gradient-to-br from-white to-[#f8f9ff] card-hover glow-primary shadow-sm">
+              <Card key={index} className="border-0.3 border-[#b0b0d8] bg-gradient-to-br from-white to-[#f8f9ff] card-hover glow-primary shadow-sm">
                 <CardContent className="p-6">
                   <div className="w-12 h-12 bg-gradient-to-br from-[#6658f4] to-[#7c77ff] rounded-lg flex items-center justify-center mb-4 shadow-md">
                     <div className="text-white">
@@ -284,7 +284,7 @@ const Landing = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {testimonials.map((testimonial, index) => (
-              <Card key={index} className="border border-[#b0b0d8] bg-gradient-to-br from-white to-[#f8f9ff] card-hover shadow-sm">
+              <Card key={index} className="border-0.3 border-[#b0b0d8] bg-gradient-to-br from-white to-[#f8f9ff] card-hover shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-1 mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
@@ -313,7 +313,7 @@ const Landing = () => {
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-[#f8f9ff] to-[#f0f2ff]">
         <div className="max-w-4xl mx-auto text-center">
-          <Card className="border border-[#b0b0d8] bg-gradient-to-br from-white to-[#f8f9ff] shadow-lg">
+          <Card className="border-0.3 border-[#b0b0d8] bg-gradient-to-br from-white to-[#f8f9ff] shadow-lg">
             <CardContent className="p-12">
               <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">
                 Ready to transform your content?

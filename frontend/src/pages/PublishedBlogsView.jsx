@@ -394,7 +394,7 @@ const PublishedBlogsView = ({ inline = false, onClose }) => {
               </div>
 
               {publishedBlogs.map((blog) => (
-                <Card key={blog.id} className="border border-[#b0b0d8] bg-white hover:border-[#6658f4] transition-colors">
+                <Card key={blog.id} className="border-0.3 border-[#b0b0d8] bg-white hover:border-[#6658f4] transition-colors">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">

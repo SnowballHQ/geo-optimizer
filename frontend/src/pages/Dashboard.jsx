@@ -512,7 +512,7 @@ const Dashboard = () => {
             </Button>
           </div>
           <div className="space-y-4">
-            <Card className="border border-[#b0b0d8] bg-white">
+            <Card className="border-0.3 border-[#b0b0d8] bg-white">
               <CardHeader>
                 <CardTitle className="text-[#4a4a6a]">Quick Link Analysis</CardTitle>
                 <CardDescription className="text-[#4a4a6a]">
@@ -774,8 +774,8 @@ const Dashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* Domain Analysis Card - Only for superusers
                     {isUserSuperuser && (
-                      <Card 
-                        className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out"
+                      <Card
+                        className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out"
                         onClick={() => setActiveTool('domain')}
                       >
                         <CardContent className="p-6">
@@ -800,8 +800,8 @@ const Dashboard = () => {
                     )} */}
 
                     {/* Blog Analysis Card */}
-                    <Card 
-                      className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-100"
+                    <Card
+                      className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-100"
                       onClick={() => setActiveTool('blog')}
                     >
                       <CardContent className="p-6">
@@ -825,8 +825,8 @@ const Dashboard = () => {
                     </Card>
 
                                          {/* Content Calendar Card - Available for all users */}
-                     <Card 
-                       className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
+                     <Card
+                       className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
                        onClick={() => setActiveTool('content-calendar')}
                      >
                        <CardContent className="p-6">
@@ -851,8 +851,8 @@ const Dashboard = () => {
                      </Card>
 
                      {/* Analytics Card - Available for all users */}
-                     <Card 
-                       className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
+                     <Card
+                       className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
                        onClick={() => setActiveTool('analytics')}
                      >
                        <CardContent className="p-6">
@@ -877,8 +877,8 @@ const Dashboard = () => {
 
                      {/* Shopify Integration Card - Only for superusers
                      {isUserSuperuser && (
-                       <Card 
-                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
+                       <Card
+                         className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
                          onClick={() => window.location.href = '/shopify-integration'}
                        >
                          <CardContent className="p-6">
@@ -904,8 +904,8 @@ const Dashboard = () => {
 
                                          {/* Brand Dashboard Card - Available for all users with brands except superusers */}
                      {userBrands.length > 0 && !isSuperuser() && (
-                       <Card 
-                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
+                       <Card
+                         className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
                          onClick={() => { setActiveSection('brand-dashboard'); setActiveTool(null); }}
                        >
                         <CardContent className="p-6">
@@ -934,7 +934,7 @@ const Dashboard = () => {
 
                   {/* Analyze Link Form - Only for superusers */}
                   {isUserSuperuser && showAnalyzeLink && (
-                    <Card className="border border-[#b0b0d8] bg-white">
+                    <Card className="border-0.3 border-[#b0b0d8] bg-white">
                       <CardHeader>
                         <CardTitle className="text-[#4a4a6a]">Quick Link Analysis</CardTitle>
                         <CardDescription className="text-[#4a4a6a]">
