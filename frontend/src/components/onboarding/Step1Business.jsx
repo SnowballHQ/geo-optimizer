@@ -63,6 +63,13 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
 
   return (
     <div className="max-w-lg mx-auto">
+      {/* Step Header */}
+      <div className="mb-6">
+        <p className="text-sm text-gray-500 mb-1">Step 1 of 4</p>
+        <h2 className="text-2xl font-bold text-gray-900">Business Details</h2>
+        <p className="text-sm text-gray-600 mt-1">Let's start with your website and business information</p>
+      </div>
+
       <div className="space-y-6">
         {/* Domain Input */}
         <div className="space-y-3">
@@ -75,7 +82,7 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
             placeholder="https://example.com"
-            className="h-11 border-gray-300 focus:border-primary-500 focus:ring-primary-500"
+            className="h-11 border-primary-200 shadow-[0_4px_20px_rgba(99,102,241,0.7)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.9)] focus:border-primary-500 focus:ring-2 focus:ring-primary-500 transition-all duration-300"
           />
           
           <Button
@@ -99,7 +106,7 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
 
         {/* Business Details */}
         <div className="space-y-4">
-          <h3 className="text-h4 text-gray-900">Business Details</h3>
+       
           
           <div className="space-y-3">
             <div>
@@ -111,7 +118,7 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 placeholder="Enter business name"
-                className="h-11 border-gray-300 focus:border-primary-500 focus:ring-primary-500"
+                className="h-11 border-primary-200 shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus:border-primary-500 focus:ring-2 focus:ring-primary-500 transition-all duration-300"
               />
             </div>
 
@@ -124,7 +131,7 @@ const Step1Business = ({ onComplete, loading, error, progress }) => {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter business description"
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 resize-none"
+                className="w-full px-3 py-2 border border-primary-200 rounded-md shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 resize-none transition-all duration-300"
               />
             </div>
 

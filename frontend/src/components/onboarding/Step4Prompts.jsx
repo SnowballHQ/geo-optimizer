@@ -128,6 +128,13 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
 
   return (
     <div className="max-w-lg mx-auto">
+      {/* Step Header */}
+      <div className="mb-6">
+        <p className="text-sm text-gray-500 mb-1">Step 4 of 4</p>
+        <h2 className="text-2xl font-bold text-gray-900">AI Prompts</h2>
+        <p className="text-sm text-gray-600 mt-1">Generate search prompts to analyze your brand's presence</p>
+      </div>
+
       <div className="space-y-6">
         {/* Prompts Section */}
         <div className="space-y-4">
@@ -178,13 +185,13 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Generated Prompts:</h4>
                 {prompts.map((prompt, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div key={index} className="p-3 bg-white rounded-lg border border-primary-200 shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] transition-all duration-300">
                     {editingIndex === index ? (
                       <div className="space-y-3">
                         <textarea
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 resize-none"
+                          className="w-full px-3 py-2 border border-primary-200 rounded-md shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 resize-none transition-all duration-300"
                           rows={2}
                           placeholder="Edit prompt text"
                         />
@@ -263,8 +270,15 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
           </div>
         )}
 
-        {/* Complete Button */}
-        <div className="flex justify-end">
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center">
+          <Button
+            onClick={() => onComplete({}, 3)}
+            variant="outline"
+            className="border-gray-300 text-gray-700 px-6 h-11"
+          >
+            Back
+          </Button>
           <Button
             onClick={handleComplete}
             disabled={loading || isSaving || prompts.length === 0}

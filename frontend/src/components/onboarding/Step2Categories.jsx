@@ -99,6 +99,13 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
 
   return (
     <div className="max-w-lg mx-auto">
+      {/* Step Header */}
+      <div className="mb-6">
+        <p className="text-sm text-gray-500 mb-1">Step 2 of 4</p>
+        <h2 className="text-2xl font-bold text-gray-900">Content Categories</h2>
+        <p className="text-sm text-gray-600 mt-1">Select the topics your business focuses on</p>
+      </div>
+
       <div className="space-y-6">
         {/* Categories Section */}
         <div className="space-y-4">
@@ -139,14 +146,14 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
           ) : (
             <div className="space-y-3">
               {categories.map((category, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-primary-200 shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] transition-all duration-300">
                   {editingIndex === index ? (
                     <>
                       <input
                         type="text"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="flex-1 px-3 py-2 border border-primary-200 rounded-md shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300"
                         placeholder="Enter category name"
                       />
                       <Button
@@ -206,8 +213,15 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
           )}
         </div>
 
-        {/* Continue Button */}
-        <div className="flex justify-end">
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center">
+          <Button
+            onClick={() => onComplete({}, 1)}
+            variant="outline"
+            className="border-gray-300 text-gray-700 px-6 h-11"
+          >
+            Back
+          </Button>
           <Button
             onClick={handleContinue}
             disabled={loading || isSaving || categories.length === 0}

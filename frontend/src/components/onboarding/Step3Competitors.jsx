@@ -65,6 +65,13 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
 
   return (
     <div className="max-w-lg mx-auto">
+      {/* Step Header */}
+      <div className="mb-6">
+        <p className="text-sm text-gray-500 mb-1">Step 3 of 4</p>
+        <h2 className="text-2xl font-bold text-gray-900">Competitors</h2>
+        <p className="text-sm text-gray-600 mt-1">Add competitor URLs to analyze your market position</p>
+      </div>
+
       <div className="space-y-6">
         {/* Competitors Section */}
         <div className="space-y-4">
@@ -105,7 +112,7 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
               onChange={(e) => setNewCompetitor(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddCompetitor()}
               placeholder="Enter competitor URL (e.g., competitor.com)"
-              className="h-11 border-gray-300 focus:border-primary-500 focus:ring-primary-500"
+              className="h-11 border-primary-200 shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus:border-primary-500 focus:ring-2 focus:ring-primary-500 transition-all duration-300"
             />
             <Button
               onClick={handleAddCompetitor}
@@ -126,7 +133,7 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
           ) : (
             <div className="space-y-3">
               {competitors.map((competitor, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-primary-200 shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] transition-all duration-300">
                   <span className="text-gray-900 font-medium">{competitor}</span>
                   <Button
                     onClick={() => handleRemoveCompetitor(index)}
@@ -146,8 +153,15 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
           </p>
         </div>
 
-        {/* Continue Button */}
-        <div className="flex justify-end">
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center">
+          <Button
+            onClick={() => onComplete({}, 2)}
+            variant="outline"
+            className="border-gray-300 text-gray-700 px-6 h-11"
+          >
+            Back
+          </Button>
           <Button
             onClick={handleContinue}
             disabled={loading || isSaving}

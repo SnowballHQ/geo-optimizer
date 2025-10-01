@@ -144,16 +144,12 @@ const Register = () => {
 
           {/* Logo & Title */}
           <motion.div className="text-center space-y-4" variants={fadeInUp}>
-            <Link to="/" className="inline-flex items-center justify-center w-16 h-16 gradient-primary rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <span className="text-2xl font-bold text-white">S</span>
-            </Link>
+          
             <div>
               <h1 className="text-4xl font-bold text-black mb-2">
                 Create your account
               </h1>
-              <p className="text-gray-600">
-                Start optimizing your content today
-              </p>
+          
             </div>
           </motion.div>
 

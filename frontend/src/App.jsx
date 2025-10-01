@@ -3,6 +3,7 @@ import { Dashboard, HomeLayout, Landing, Login, Logout, Register, BlogScoring, D
 import History from "./pages/History";
 import BlogEditor from "./pages/BlogEditor";
 import OnboardingFlow from "./components/OnboardingFlow";
+import OnboardingPreview from "./components/OnboardingPreview";
 import DomainAnalysisDashboard from "./pages/DomainAnalysisDashboard";
 import SuperUserAnalysisPage from "./pages/SuperUserAnalysisPage";
 import SuperUserHistoryPage from "./pages/SuperUserHistoryPage";
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
       {
         path: "onboarding",
         element: <OnboardingFlow />,
+      },
+      {
+        path: "onboarding-preview",
+        element: <OnboardingPreview />,
       },
       {
         path: "domain-analysis",

@@ -130,16 +130,12 @@ const Login = () => {
 
           {/* Logo & Title */}
           <motion.div className="text-center space-y-4" variants={fadeInUp}>
-            <Link to="/" className="inline-flex items-center justify-center w-16 h-16 gradient-primary rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <span className="text-2xl font-bold text-white">S</span>
-            </Link>
+            
             <div>
               <h1 className="text-4xl font-bold text-black mb-2">
-                Welcome back
+              Sign in to continue
               </h1>
-              <p className="text-gray-600">
-                Sign in to continue to your workspace
-              </p>
+          
             </div>
           </motion.div>
 
