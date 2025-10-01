@@ -1334,15 +1334,25 @@ Return ONLY a JSON object with this exact format:
         totalMentionRecords: mentions.length
       });
       
-      // Generate PDF using the existing PDF generator
-      const BrandAnalysisPDFGenerator = require('../services/pdfGenerator');
-      const pdfGenerator = new BrandAnalysisPDFGenerator();
-      const pdfBuffer = await pdfGenerator.generateBrandAnalysisPDF(analysisData);
-      
-      console.log(`✅ PDF generated successfully for analysis ${analysisId}`);
+      // Generate PDF using the new HTML-based PDF generator with fallback
+      let pdfBuffer;
+      try {
+        console.log(`📄 Attempting to generate PDF with HTML generator for analysis ${analysisId}`);
+        const HTMLPdfGenerator = require('../services/htmlPdfGenerator');
+        const htmlPdfGenerator = new HTMLPdfGenerator();
+        pdfBuffer = await htmlPdfGenerator.generateBrandAnalysisPDF(analysisData);
+        console.log(`✅ PDF generated successfully with HTML generator for analysis ${analysisId}`);
+      } catch (htmlError) {
+        console.error(`❌ HTML PDF generation failed, falling back to PDFKit generator:`, htmlError.message);
+        // Fallback to old PDFKit generator
+        const BrandAnalysisPDFGenerator = require('../services/pdfGenerator');
+        const pdfGenerator = new BrandAnalysisPDFGenerator();
+        pdfBuffer = await pdfGenerator.generateBrandAnalysisPDF(analysisData);
+        console.log(`✅ PDF generated successfully with PDFKit fallback for analysis ${analysisId}`);
+      }
       
       // Set response headers for PDF download
-      const filename = `SuperUser_${analysis.domain.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${analysis.analysisId}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const filename = `${analysis.brandName.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis.pdf`;
       
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

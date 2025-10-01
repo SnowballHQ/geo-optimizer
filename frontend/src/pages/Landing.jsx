@@ -94,17 +94,17 @@ const Landing = () => {
     {
       title: "Analyze Your Content Quality",
       description: "Get comprehensive quality scores and detailed recommendations for every piece of content.",
-      image: "/api/placeholder/800/500"
+      image: "/images/landing/content-quality.png"
     },
     {
       title: "Track SEO Rankings in Real-Time",
       description: "Monitor your search performance and identify opportunities for improvement instantly.",
-      image: "/api/placeholder/800/500"
+      image: "/images/landing/seo-rankings.png"
     },
     {
       title: "Identify Content Gaps and Take Action",
       description: "Discover what's missing from your content strategy and get actionable insights to fill the gaps.",
-      image: "/api/placeholder/800/500"
+      image: "/images/landing/content-gap.png"
     }
   ];
 
@@ -363,6 +363,26 @@ const Landing = () => {
               <div className="flex items-center space-x-2">
                 <Users className="w-4 h-4 text-green-500" />
                 <span>Join 10,000+ creators</span>
+              </div>
+            </motion.div>
+
+            {/* Hero Dashboard Preview Image */}
+            <motion.div
+              variants={fadeInUp}
+              className="mt-16 max-w-5xl mx-auto"
+            >
+              <div className="relative group">
+                {/* Glowing effect */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl opacity-30 group-hover:opacity-50 blur-2xl transition-opacity duration-500" />
+
+                {/* Image container */}
+                <div className="relative bg-white rounded-2xl shadow-2xl p-2 border border-gray-200">
+                  <img
+                    src="/images/landing/hero-dashboard.png"
+                    alt="Snowball AI Dashboard Preview"
+                    className="w-full rounded-xl shadow-lg"
+                  />
+                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -969,44 +989,12 @@ const ShowcaseSection = ({ section, index, reversed }) => {
           <div className="absolute -inset-1 bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl opacity-20 group-hover:opacity-40 blur-xl transition-opacity duration-500" />
 
           <div className="relative bg-gradient-to-br from-primary-100 to-primary-50 rounded-2xl p-8 shadow-2xl border border-primary-200">
-            <div className="aspect-video bg-white rounded-lg shadow-inner flex items-center justify-center relative overflow-hidden">
-              {/* Animated Placeholder */}
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-primary-100/50 to-transparent"
-                animate={{
-                  x: ['-100%', '100%']
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "linear",
-                  repeatDelay: 1
-                }}
+            <div className="aspect-video bg-white rounded-lg shadow-lg overflow-hidden">
+              <img
+                src={section.image}
+                alt={section.title}
+                className="w-full h-full object-cover"
               />
-              <FileText className="w-16 h-16 text-gray-300 relative z-10" />
-
-              {/* Animated Highlight Dots */}
-              {[
-                { top: '20%', left: '30%' },
-                { top: '60%', left: '70%' },
-                { top: '40%', left: '50%' }
-              ].map((pos, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-3 h-3 bg-primary-500 rounded-full shadow-lg"
-                  style={{ top: pos.top, left: pos.left }}
-                  animate={inView ? {
-                    scale: [1, 1.5, 1],
-                    opacity: [0.5, 1, 0.5]
-                  } : {}}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    delay: i * 0.5,
-                    ease: "easeInOut"
-                  }}
-                />
-              ))}
             </div>
 
             {/* Metric Badge */}
