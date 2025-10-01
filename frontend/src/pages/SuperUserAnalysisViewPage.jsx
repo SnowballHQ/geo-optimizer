@@ -50,11 +50,11 @@ const SuperUserAnalysisViewPage = () => {
   };
 
   const handleBack = () => {
-    navigate('/super-user-history');
+    navigate('/playground/history');
   };
 
   const handleStartNewAnalysis = () => {
-    navigate('/super-user-analysis');
+    navigate('/playground');
   };
 
   const handleDownloadPDF = async () => {

@@ -141,8 +141,8 @@ const SuperUserHistoryPage = () => {
   };
 
   const viewAnalysis = (analysisId) => {
-    // Navigate to super user analysis page with specific analysis ID
-    navigate(`/super-user-analysis/view/${analysisId}`);
+    // Navigate to playground analysis page with specific analysis ID
+    navigate(`/playground/analysis/${analysisId}`);
   };
 
   const formatDate = (dateString) => {
@@ -228,8 +228,8 @@ const SuperUserHistoryPage = () => {
               <CardDescription className="text-[#4a4a6a] mb-6">
                 You haven't performed any super user analyses yet.
               </CardDescription>
-              <Button 
-                onClick={() => navigate('/super-user-analysis')}
+              <Button
+                onClick={() => navigate('/playground')}
                 className="gradient-primary"
               >
                 Start New Analysis

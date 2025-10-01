@@ -132,10 +132,16 @@ Output Format:
     );
     
     console.log("OpenAI competitor response:", responseContent);
-    
+
     let competitors = [];
     try {
-      const parsedResponse = JSON.parse(responseContent);
+      // Clean response - remove markdown code blocks if present
+      let cleanedResponse = responseContent.trim();
+      if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      }
+
+      const parsedResponse = JSON.parse(cleanedResponse);
       console.log("Parsed competitors JSON:", parsedResponse);
       
       // Check if the response is in the expected array format
@@ -177,22 +183,6 @@ Output Format:
     }
 
     console.log("Final competitors list:", competitors);
-
-    // Save each competitor as an AICompetitorMention
-    for (const competitorName of competitors) {
-      try {
-        await AICompetitorMention.create({
-          insightId: null, // Not linked to an insight, just direct competitor extraction
-          competitorName,
-          competitorDomain: null,
-          mentionCount: 1,
-          sentiment: "neutral"
-        });
-        console.log("Saved competitor:", competitorName);
-      } catch (error) {
-        console.error("Error saving competitor:", competitorName, error);
-      }
-    }
 
     // Return both competitors and the brand description for use in other parts of the analysis
     return {

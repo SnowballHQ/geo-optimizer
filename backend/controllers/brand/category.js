@@ -34,48 +34,14 @@ exports.extractCategories = async (domain) => {
     global.extractedBrandDescription = brandDescription;
   }
 
-  const catPrompt = `Task: Analyze the brand domain  ${domain} to identify its brand categorization.
-Instruction:
-
-Step 1 – Extract Core Variables: For the given brand ${domain}, determine values for each of the following variables:
-
-Product/Service Offering
-Customer Segment / Target Audience
-Industry / Sector
-Use Case / Customer Need
-Price Positioning / Market Tier
-Geography / Market Presence
-Distribution Model
-Brand Positioning / Values
-Competitive Landscape
-Regulatory/Compliance Environment
+  const catPrompt = `Analyze the brand domain ${domain} and identify 4 content categories that best define the brand.
 
 Domain information: ${domainInfo}
 
-Step 2 – Derive Exact Categories: From the extracted variables, synthesize the 4 most essential categories that best define the brand overall.
-
-Output Format (JSON):
+Respond ONLY with valid JSON in this exact format (no explanations, no markdown):
 
 {
-  "brand_domain": "${domain}",
-  "core_variables": {
-    "product_service_offering": "<value>",
-    "customer_segment": "<value>",
-    "industry_sector": "<value>",
-    "use_case": "<value>",
-    "price_positioning": "<value>",
-    "geography": "<value>",
-    "distribution_model": "<value>",
-    "brand_positioning": "<value>",
-    "competitive_landscape": "<value>",
-    "regulatory_environment": "<value>"
-  },
-  "final_categories": {
-    "category_1": "<value>",
-    "category_2": "<value>",
-    "category_3": "<value>",
-    "category_4": "<value>"
-  }
+  "categories": ["Category 1", "Category 2", "Category 3", "Category 4"]
 }`;
   
   // Use OpenAI API for category extraction
@@ -98,10 +64,16 @@ Output Format (JSON):
   try {
     console.log("🔍 Making OpenAI API request...");
          const catResp = await openai.chat.completions.create({
-       model: "gpt-4o-mini-search-preview",
-       messages: [{ role: 'user', content: catPrompt }],
-       // max_tokens: 200,
-       // temperature: 0.1
+       model: "gpt-4o-mini",
+       messages: [
+         {
+           role: 'system',
+           content: 'You are a brand categorization expert. Always respond with valid JSON only, no explanations or markdown formatting.'
+         },
+         { role: 'user', content: catPrompt }
+       ],
+       response_format: { type: "json_object" },
+       temperature: 0.3
      });
     
     const responseContent = catResp.choices[0].message.content;
@@ -126,44 +98,21 @@ Output Format (JSON):
       } else if (cleanedContent.startsWith('```')) {
         cleanedContent = cleanedContent.replace(/```\s*/, '').replace(/\s*```$/, '');
       }
-      
+
       const parsedResponse = JSON.parse(cleanedContent);
-      
-      // Extract categories from the new structured response
-      if (parsedResponse.final_categories) {
-        categories = [
-          parsedResponse.final_categories.category_1,
-          parsedResponse.final_categories.category_2,
-          parsedResponse.final_categories.category_3,
-          parsedResponse.final_categories.category_4
-        ].filter(cat => cat && cat !== "<value>"); // Filter out empty or placeholder values
-        
-        console.log("📊 Extracted core variables:", parsedResponse.core_variables);
-        console.log("🏷️ Final categories:", categories);
+
+      // Extract categories from the simplified response
+      if (parsedResponse.categories && Array.isArray(parsedResponse.categories)) {
+        categories = parsedResponse.categories.filter(cat => cat && typeof cat === 'string' && cat.trim());
+        console.log("🏷️ Extracted categories:", categories);
       } else {
-        // Fallback: try to parse as simple array (backward compatibility)
-        categories = Array.isArray(parsedResponse) ? parsedResponse : [];
-      }
-    } catch (e) {
-      console.error("Failed to parse categories JSON:", responseContent);
-      
-      // Enhanced fallback: try to extract just the final_categories section
-      try {
-        const categoryMatch = responseContent.match(/"final_categories":\s*{([^}]+)}/);
-        if (categoryMatch) {
-          const categoriesText = categoryMatch[1];
-          const categoryValues = categoriesText.match(/"category_\d+":\s*"([^"]+)"/g);
-          if (categoryValues) {
-            categories = categoryValues.map(match => {
-              const valueMatch = match.match(/"([^"]+)"$/);
-              return valueMatch ? valueMatch[1] : null;
-            }).filter(Boolean);
-          }
-        }
-      } catch (fallbackError) {
-        console.error("Fallback parsing also failed:", fallbackError.message);
+        console.error("❌ Unexpected response format:", parsedResponse);
         categories = [];
       }
+    } catch (e) {
+      console.error("Failed to parse categories JSON:", e.message);
+      console.error("Response content:", responseContent);
+      categories = [];
     }
     
     // Ensure we always return exactly 4 categories

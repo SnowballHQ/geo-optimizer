@@ -62,19 +62,19 @@ const router = createBrowserRouter([
         element: <DomainAnalysisDashboard />,
       },
       {
-        path: "super-user-analysis",
+        path: "playground",
         element: <SuperUserAnalysisPage />,
       },
       {
-        path: "super-user-history",
+        path: "playground/history",
         element: <SuperUserHistoryPage />,
       },
       {
-        path: "super-user-analysis/:brandId",
+        path: "playground/brand/:brandId",
         element: <SuperUserAnalysisPage />,
       },
       {
-        path: "super-user-analysis/view/:analysisId",
+        path: "playground/analysis/:analysisId",
         element: <SuperUserAnalysisViewPage />,
       }
     ],

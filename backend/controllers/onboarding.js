@@ -246,9 +246,10 @@ class OnboardingController {
         extractedCompetitors = result.competitors || result; // Handle both new object format and legacy array format
       }
 
-      // Save competitors to brand profile
-      brand.competitors = extractedCompetitors;
-      await brand.save();
+      // Save competitors to brand profile using atomic update to avoid version conflicts
+      await BrandProfile.findByIdAndUpdate(brand._id, {
+        competitors: extractedCompetitors
+      }, { new: true });
 
       // Save progress
       await OnboardingProgress.findOneAndUpdate(

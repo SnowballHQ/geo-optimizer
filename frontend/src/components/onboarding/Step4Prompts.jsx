@@ -14,6 +14,11 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
   useEffect(() => {
     if (progress?.step4?.promptsGenerated) {
       setPrompts(['Prompts generated successfully']);
+    } else if (progress?.step4?.prompts) {
+      setPrompts(progress.step4.prompts);
+    } else {
+      // Auto-generate prompts on mount if none exist
+      handleGeneratePrompts();
     }
   }, [progress]);
 
@@ -35,21 +40,21 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
       }
       
       console.log('📝 Prompts response:', response.data);
-      
-      if (response.data.success) {
-        // Check if prompts is an array and has the expected structure
-        if (response.data.prompts && Array.isArray(response.data.prompts)) {
-          const promptTexts = response.data.prompts.map(p => p.promptText);
-          console.log('📝 Extracted prompt texts:', promptTexts);
-          setPrompts(promptTexts);
-        } else {
-          console.error('❌ Unexpected prompts structure:', response.data.prompts);
-          alert('Prompts were generated but could not be displayed. Check console for details.');
-        }
+
+      // Check if prompts is an array and has the expected structure
+      if (response.data.prompts && Array.isArray(response.data.prompts)) {
+        const promptTexts = response.data.prompts.map(p => p.promptText);
+        console.log('📝 Extracted prompt texts:', promptTexts);
+        setPrompts(promptTexts);
+      } else if (response.data.success) {
+        console.error('❌ Unexpected prompts structure:', response.data.prompts);
+        // Silently log error - don't interrupt user flow
+        setPrompts([]);
       }
     } catch (error) {
       console.error('Prompts generation failed:', error);
-      alert('Failed to generate prompts. Please try again.');
+      // Silently fail - user can proceed without prompts or try again later
+      setPrompts([]);
     } finally {
       setIsGenerating(false);
     }
@@ -138,39 +143,25 @@ const Step4Prompts = ({ onComplete, loading, error, progress, isSuperUser = fals
       <div className="space-y-6">
         {/* Prompts Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-primary-500" />
-              <h3 className="text-h4 text-gray-900">Search Prompts</h3>
-            </div>
-            <Button
-              onClick={handleGeneratePrompts}
-              disabled={isGenerating}
-              variant="outline"
-              className="border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Prompts
-                </>
-              )}
-            </Button>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary-500" />
+            <h3 className="text-h4 text-gray-900">Search Prompts</h3>
           </div>
           
           <p className="text-base text-gray-600">
             These prompts will be used to analyze your brand's online presence
           </p>
 
-          {prompts.length === 0 ? (
+          {isGenerating ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 font-medium">Generating prompts with AI...</p>
+              <p className="text-sm text-gray-500 mt-2">This may take a few seconds</p>
+            </div>
+          ) : prompts.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <MessageSquare className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-              <p>Click "Generate Prompts" to create search queries</p>
+              <p>No prompts generated. Please try again.</p>
             </div>
           ) : (
             <div className="space-y-4">

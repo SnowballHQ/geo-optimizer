@@ -13,6 +13,9 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
   useEffect(() => {
     if (progress?.step3?.competitors) {
       setCompetitors(progress.step3.competitors);
+    } else {
+      // Auto-extract competitors on mount if none exist
+      handleExtractCompetitors();
     }
   }, [progress]);
 
@@ -20,12 +23,15 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
     try {
       setIsExtracting(true);
       const response = await apiService.step3Competitors({});
-      if (response.data.success) {
+      if (response.data.competitors && Array.isArray(response.data.competitors)) {
         setCompetitors(response.data.competitors);
+      } else if (response.data.success) {
+        setCompetitors(response.data.competitors || []);
       }
     } catch (error) {
       console.error('Competitors extraction failed:', error);
-      alert('Failed to extract competitors. Please try again.');
+      // Silently fail - user can add competitors manually
+      setCompetitors([]);
     } finally {
       setIsExtracting(false);
     }
@@ -75,29 +81,9 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
       <div className="space-y-6">
         {/* Competitors Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-primary-500" />
-              <h3 className="text-h4 text-gray-900">Your Competitors</h3>
-            </div>
-            <Button
-              onClick={handleExtractCompetitors}
-              disabled={isExtracting}
-              variant="outline"
-              className="border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white"
-            >
-              {isExtracting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Extracting...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Extract with AI
-                </>
-              )}
-            </Button>
+          <div className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-primary-500" />
+            <h3 className="text-h4 text-gray-900">Your Competitors</h3>
           </div>
           
           <p className="text-base text-gray-600">
@@ -125,10 +111,16 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
           </div>
 
           {/* Competitors List */}
-          {competitors.length === 0 ? (
+          {isExtracting ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 font-medium">Extracting competitors with AI...</p>
+              <p className="text-sm text-gray-500 mt-2">This may take a few seconds</p>
+            </div>
+          ) : competitors.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Building2 className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-              <p>No competitors added yet</p>
+              <p>No competitors extracted. You can add them manually above.</p>
             </div>
           ) : (
             <div className="space-y-3">

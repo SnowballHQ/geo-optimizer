@@ -14,22 +14,28 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
     // Load saved progress if available
     if (progress?.step2?.categories) {
       setCategories(progress.step2.categories);
+    } else {
+      // Auto-extract categories on mount if none exist
+      handleExtractCategories();
     }
   }, [progress]);
 
   const handleExtractCategories = async () => {
     try {
       setIsExtracting(true);
-      
+
       // Only extract categories from AI, don't save to database yet
       const response = await apiService.extractCategories({});
-      
-      if (response.data.success) {
+
+      if (response.data.categories && Array.isArray(response.data.categories)) {
         setCategories(response.data.categories);
+      } else if (response.data.success) {
+        setCategories(response.data.categories || []);
       }
     } catch (error) {
       console.error('Categories extraction failed:', error);
-      alert('Failed to extract categories. Please try again.');
+      // Silently fail - user can add categories manually
+      setCategories([]);
     } finally {
       setIsExtracting(false);
     }
@@ -109,39 +115,25 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
       <div className="space-y-6">
         {/* Categories Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Tags className="w-5 h-5 text-primary-500" />
-              <h3 className="text-h4 text-gray-900">Business Categories</h3>
-            </div>
-            <Button
-              onClick={handleExtractCategories}
-              disabled={isExtracting}
-              variant="outline"
-              className="border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white"
-            >
-              {isExtracting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Extracting...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Extract with AI
-                </>
-              )}
-            </Button>
+          <div className="flex items-center gap-2">
+            <Tags className="w-5 h-5 text-primary-500" />
+            <h3 className="text-h4 text-gray-900">Business Categories</h3>
           </div>
           
           <p className="text-base text-gray-600">
             Categories help us understand your business focus areas
           </p>
 
-          {categories.length === 0 ? (
+          {isExtracting ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 font-medium">Extracting categories with AI...</p>
+              <p className="text-sm text-gray-500 mt-2">This may take a few seconds</p>
+            </div>
+          ) : categories.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Tags className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-              <p>No categories yet. Click "Extract with AI" to get started.</p>
+              <p>No categories extracted. You can add them manually below.</p>
             </div>
           ) : (
             <div className="space-y-3">
