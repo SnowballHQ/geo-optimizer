@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import CountUp from 'react-countup';
 import { Button } from '../components/ui/button';
@@ -42,6 +42,17 @@ const Landing = () => {
   const handleLogin = () => {
     navigate('/login');
   };
+
+  // Parallax scroll effect
+  const { scrollY } = useScroll();
+
+  // Hero text: moves slower, stays visible longer
+  const heroTextY = useTransform(scrollY, [0, 500], [0, -50]);
+  const heroTextOpacity = useTransform(scrollY, [0, 400], [1, 0.3]);
+
+  // Hero image: moves faster, comes over the text
+  const heroImageY = useTransform(scrollY, [0, 500], [0, -150]);
+  const heroImageScale = useTransform(scrollY, [0, 500], [1, 1.02]);
 
   // Animation variants
   const fadeInUp = {
@@ -241,7 +252,7 @@ const Landing = () => {
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative z-50 border-b border-gray-200 bg-white/90 backdrop-blur-xl sticky top-0"
+        className="relative z-[100] border-b border-gray-200 bg-white/90 backdrop-blur-xl sticky top-0"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -296,12 +307,14 @@ const Landing = () => {
         {/* Dot Grid */}
         <div className="dot-grid-subtle" />
 
-        <div className="max-w-7xl mx-auto relative z-10">
+        <div className="max-w-7xl mx-auto relative">
+          {/* Hero Text with Parallax */}
           <motion.div
-            className="text-center space-y-8 max-w-4xl mx-auto"
+            className="text-center space-y-8 max-w-4xl mx-auto relative z-10"
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
+            style={{ y: heroTextY, opacity: heroTextOpacity }}
           >
             <motion.div variants={fadeInUp}>
               <Badge className="gradient-primary text-white border-0 shadow-lg px-4 py-2 text-sm font-medium">
@@ -365,26 +378,29 @@ const Landing = () => {
                 <span>Join 10,000+ creators</span>
               </div>
             </motion.div>
+          </motion.div>
 
-            {/* Hero Dashboard Preview Image */}
-            <motion.div
-              variants={fadeInUp}
-              className="mt-16 max-w-5xl mx-auto"
-            >
-              <div className="relative group">
-                {/* Glowing effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl opacity-30 group-hover:opacity-50 blur-2xl transition-opacity duration-500" />
+          {/* Hero Dashboard Preview Image with Parallax */}
+          <motion.div
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            style={{ y: heroImageY, scale: heroImageScale }}
+            className="mt-16 max-w-5xl mx-auto relative z-20"
+          >
+            <div className="relative group">
+              {/* Glowing effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl opacity-30 group-hover:opacity-50 blur-2xl transition-opacity duration-500" />
 
-                {/* Image container */}
-                <div className="relative bg-white rounded-2xl shadow-2xl p-2 border border-gray-200">
-                  <img
-                    src="/images/landing/hero-dashboard.png"
-                    alt="Snowball AI Dashboard Preview"
-                    className="w-full rounded-xl shadow-lg"
-                  />
-                </div>
+              {/* Image container */}
+              <div className="relative bg-white rounded-2xl shadow-2xl p-2 border border-gray-200">
+                <img
+                  src="/images/landing/hero-dashboard.png"
+                  alt="Snowball AI Dashboard Preview"
+                  className="w-full rounded-xl shadow-lg"
+                />
               </div>
-            </motion.div>
+            </div>
           </motion.div>
         </div>
       </section>
