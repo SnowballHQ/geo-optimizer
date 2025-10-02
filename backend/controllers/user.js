@@ -323,8 +323,9 @@ const googleAuth = async (req, res) => {
         email,
         googleId,
         profilePicture: picture,
-        // Generate a random password for Google users
-        password: Math.random().toString(36).substring(2, 15),
+        // Generate a secure random password that meets validation requirements
+        // Format: Google! + random chars + numbers + @
+        password: `Google!${Math.random().toString(36).substring(2, 10)}${Math.floor(Math.random() * 1000)}@Auth`,
         provider: 'google'
       });
       

@@ -9,7 +9,7 @@ exports.generateAndSavePrompts = async (openai, catDocs, brand, competitors = []
   console.log(`🏢 Using competitors: ${competitors.join(', ')}`);
   console.log(`📍 Location context: ${location || 'None (global prompts)'}`);
   const prompts = [];
-  
+
   for (const catDoc of catDocs) {
     console.log(`📝 Step 1: Getting long-tail keywords for category: ${catDoc.categoryName} (${catDoc._id})`);
 

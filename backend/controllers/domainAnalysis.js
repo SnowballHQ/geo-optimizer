@@ -19,6 +19,25 @@ class DomainAnalysisController {
         return res.status(404).json({ error: 'Brand profile not found' });
       }
 
+      // Check if brandInformation is missing and fetch it if needed
+      if (!brand.brandInformation || brand.brandInformation.trim() === '') {
+        console.log(`⚠️ Brand ${brand.brandName} is missing brandInformation, fetching from Perplexity...`);
+        try {
+          const PerplexityService = require('../utils/perplexityService');
+          const perplexityService = new PerplexityService();
+          const domainInfo = await perplexityService.getDomainInfo(brand.domain);
+
+          if (domainInfo && domainInfo.description) {
+            brand.brandInformation = domainInfo.description;
+            await brand.save();
+            console.log(`✅ Successfully updated brandInformation for ${brand.brandName}`);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching brandInformation:', error);
+          // Continue without failing - we'll just have empty description
+        }
+      }
+
       // Get all related data with proper nesting
       const [allSoVResults, brandStrength, categories] = await Promise.all([
         BrandShareOfVoice.find({ brandId: brand._id }).sort({ calculatedAt: -1 }),

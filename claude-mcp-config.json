@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "snowball-backend": {
+      "command": "node",
+      "args": ["F:\\seo snow\\Snowball\\mcp-snowball-server.mjs"],
+      "env": {
+        "BACKEND_URL": "http://localhost:5000",
+        "MONGO_URI": "mongodb+srv://abhishek:RLlOzwwUkzpDaBMd@cluster0.9pmn7wd.mongodb.net/snowball_fin?retryWrites=true&w=majority&appName=Cluster0",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "PERPLEXITY_API_KEY": "${PERPLEXITY_API_KEY}"
+      }
+    }
+  }
+}

@@ -21,9 +21,9 @@ const BrandShareOfVoiceSchema = new mongoose.Schema({
   aiVisibilityScore: { type: Number, default: 0 }, // New field: AI-based visibility score
   trueSOV: { type: Number, default: 0 }, // Future field for multi-source SOV
   
-  // Frontend-expected fields - Changed from Map to Object to support dot-containing keys
-  shareOfVoice: { type: Object, default: {} }, // Brand name -> percentage
-  mentionCounts: { type: Object, default: {} }, // Brand name -> mention count
+  // Frontend-expected fields - Using Mixed type for proper deserialization
+  shareOfVoice: { type: mongoose.Schema.Types.Mixed, default: {} }, // Brand name -> percentage
+  mentionCounts: { type: mongoose.Schema.Types.Mixed, default: {} }, // Brand name -> mention count
   brandShare: { type: Number, default: 0 }, // Main brand's share percentage
   
   sourceBreakdown: {
@@ -34,11 +34,11 @@ const BrandShareOfVoiceSchema = new mongoose.Schema({
     newsBlogs: { type: Number, default: 0 }
   },
   channelBreakdown: {
-    openai: { type: Object, default: {} }, // Changed from Map to Object
-    google: { type: Object, default: {} }, // Changed from Map to Object
-    reddit: { type: Object, default: {} }, // Changed from Map to Object
-    twitter: { type: Object, default: {} }, // Changed from Map to Object
-    news: { type: Object, default: {} } // Changed from Map to Object
+    openai: { type: mongoose.Schema.Types.Mixed, default: {} }, // Using Mixed for proper deserialization
+    google: { type: mongoose.Schema.Types.Mixed, default: {} }, // Using Mixed for proper deserialization
+    reddit: { type: mongoose.Schema.Types.Mixed, default: {} }, // Using Mixed for proper deserialization
+    twitter: { type: mongoose.Schema.Types.Mixed, default: {} }, // Using Mixed for proper deserialization
+    news: { type: mongoose.Schema.Types.Mixed, default: {} } // Using Mixed for proper deserialization
   },
   coMentions: [{ 
     brands: [String],

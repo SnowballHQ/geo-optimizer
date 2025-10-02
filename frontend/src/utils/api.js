@@ -277,17 +277,19 @@ export const apiService = {
   // Auto-reload Brand Dashboard helper
   triggerBrandDashboardReload: () => {
     console.log('🔄 AUTO-RELOAD: Checking if Brand Dashboard reload is needed');
-    
+
     // Check if user is currently on Brand Dashboard related pages
     const currentPath = window.location.pathname;
-    const isDashboardPage = currentPath.includes('/domain-analysis') || 
+    const isDashboardPage = currentPath.includes('/domain-analysis') ||
+                           currentPath.includes('/dashboard') ||
                            currentPath.includes('/brand-dashboard');
-    
+
     if (isDashboardPage) {
       console.log('✅ AUTO-RELOAD: User is on Brand Dashboard, triggering reload');
-      
+
       // Show a brief loading indication
       const reloadMessage = document.createElement('div');
+      reloadMessage.id = 'brand-dashboard-reload-message';
       reloadMessage.style.cssText = `
         position: fixed;
         top: 20px;
@@ -303,7 +305,7 @@ export const apiService = {
       `;
       reloadMessage.innerHTML = '🔄 Updating Brand Dashboard...';
       document.body.appendChild(reloadMessage);
-      
+
       // Add CSS animation
       if (!document.getElementById('auto-reload-styles')) {
         const style = document.createElement('style');
@@ -313,15 +315,29 @@ export const apiService = {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
           }
+          @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+          }
         `;
         document.head.appendChild(style);
       }
-      
-      // Add a small delay to ensure backend processing is complete
+
+      // Dispatch custom event for dashboard components to listen to
+      const reloadEvent = new CustomEvent('brandDashboardReload', {
+        detail: { timestamp: Date.now() }
+      });
+      window.dispatchEvent(reloadEvent);
+      console.log('📡 AUTO-RELOAD: Dispatched brandDashboardReload event');
+
+      // Remove the message after reload completes
       setTimeout(() => {
-        // Force navigate to Brand Dashboard to reload all data
-        window.location.href = '/domain-analysis';
-      }, 1500);
+        const message = document.getElementById('brand-dashboard-reload-message');
+        if (message) {
+          message.style.animation = 'slideOut 0.3s ease-in';
+          setTimeout(() => message.remove(), 300);
+        }
+      }, 2000);
     } else {
       console.log('ℹ️ AUTO-RELOAD: User not on Brand Dashboard, skipping reload');
     }

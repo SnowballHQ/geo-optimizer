@@ -54,10 +54,17 @@ const Landing = () => {
   const heroImageY = useTransform(scrollY, [0, 500], [0, -150]);
   const heroImageScale = useTransform(scrollY, [0, 500], [1, 1.02]);
 
-  // Animation variants
+  // Animation variants - Linear-inspired timing
   const fadeInUp = {
-    hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.35,
+        ease: [0.22, 1, 0.36, 1] // Custom cubic bezier for smooth animation
+      }
+    }
   };
 
   const staggerContainer = {
@@ -65,8 +72,8 @@ const Landing = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.2
+        staggerChildren: 0.08,
+        delayChildren: 0.1
       }
     }
   };
@@ -249,10 +256,10 @@ const Landing = () => {
     <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Navigation */}
       <motion.nav
-        initial={{ opacity: 0, y: -50 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative z-[100] border-b border-gray-200 bg-white/90 backdrop-blur-xl sticky top-0"
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-[100] border-b border-gray-200/60 bg-white/80 backdrop-blur-2xl sticky top-0"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -283,14 +290,14 @@ const Landing = () => {
             </div>
 
             {/* Auth Buttons */}
-            <div className="flex items-center space-x-4">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="ghost" onClick={handleLogin} className="text-sm text-gray-600 hover:text-primary-600 font-medium transition-colors duration-300">
+            <div className="flex items-center space-x-3">
+              <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.15 }}>
+                <Button variant="ghost" onClick={handleLogin} className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-150">
                   Log in
                 </Button>
               </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button onClick={handleGetStarted} className="text-sm gradient-primary hover:shadow-xl hover:shadow-primary-500/40 transition-all duration-300 text-white font-medium px-6">
+              <motion.div whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.15 }}>
+                <Button onClick={handleGetStarted} className="text-sm gradient-primary hover:shadow-lg hover:shadow-primary-500/25 transition-all duration-150 text-white font-medium px-5 py-2">
                   Get Started
                 </Button>
               </motion.div>
@@ -300,9 +307,9 @@ const Landing = () => {
       </motion.nav>
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-primary-50/20 to-white overflow-hidden" style={{ contain: 'layout style paint' }}>
-        {/* Background Orbs - Reduced to 1 */}
-        <div className="gradient-orb gradient-orb-purple w-[500px] h-[500px] -top-48 -right-24" />
+      <section className="relative py-24 md:py-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-primary-50/10 to-white overflow-hidden" style={{ contain: 'layout style paint' }}>
+        {/* Background Orbs - Very subtle */}
+        <div className="gradient-orb gradient-orb-purple w-[600px] h-[600px] -top-48 -right-24 opacity-40" />
 
         {/* Dot Grid */}
         <div className="dot-grid-subtle" />
@@ -317,19 +324,19 @@ const Landing = () => {
             style={{ y: heroTextY, opacity: heroTextOpacity }}
           >
             <motion.div variants={fadeInUp}>
-              <Badge className="gradient-primary text-white border-0 shadow-lg px-4 py-2 text-sm font-medium">
-                <Sparkles className="w-4 h-4 mr-2" />
+              <Badge className="gradient-primary text-white border-0 shadow-md px-3 py-1.5 text-xs font-medium">
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                 AI-Powered Content Intelligence
               </Badge>
             </motion.div>
 
-            <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-black leading-tight">
+            <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-bold text-black leading-[1.1] tracking-tight">
               Dominate Content With
               <span className="block text-gradient-primary mt-2">AI-Powered Insights</span>
             </motion.h1>
 
             <motion.p
-              className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
+              className="text-lg text-gray-600 max-w-2xl mx-auto leading-[1.6] tracking-[-0.01em]"
               variants={fadeInUp}
             >
               Analyze, optimize, and enhance your content with advanced AI. Get real-time SEO recommendations and performance analytics that drive results.
@@ -339,43 +346,37 @@ const Landing = () => {
               className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4"
               variants={fadeInUp}
             >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+              <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
                 <Button
                   size="lg"
                   onClick={handleGetStarted}
-                  className="text-lg px-10 py-6 gradient-primary hover:shadow-2xl hover:shadow-primary-500/50 transition-all duration-300 text-white font-semibold"
+                  className="text-base px-8 py-3 gradient-primary hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-200 text-white font-medium tracking-tight"
                 >
                   Start Free Trial
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="text-lg px-10 py-6 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 font-semibold"
+              <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
+                <button
+                  className="text-base px-6 py-3 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium tracking-tight flex items-center space-x-2"
                 >
-                  <Play className="w-5 h-5 mr-2" />
-                  Watch Demo
-                </Button>
+                  <Play className="w-4 h-4" />
+                  <span>Watch Demo</span>
+                </button>
               </motion.div>
             </motion.div>
 
             <motion.div
-              className="flex flex-wrap justify-center items-center gap-8 pt-8 text-sm text-gray-500"
+              className="flex flex-wrap justify-center items-center gap-6 pt-6 text-xs text-gray-500"
               variants={fadeInUp}
             >
-              <div className="flex items-center space-x-2">
-                <Shield className="w-4 h-4 text-green-500" />
+              <div className="flex items-center space-x-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-gray-400" />
                 <span>14-day free trial</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
+              <div className="flex items-center space-x-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-gray-400" />
                 <span>No credit card required</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Users className="w-4 h-4 text-green-500" />
-                <span>Join 10,000+ creators</span>
               </div>
             </motion.div>
           </motion.div>
@@ -386,18 +387,18 @@ const Landing = () => {
             initial="hidden"
             animate="visible"
             style={{ y: heroImageY, scale: heroImageScale }}
-            className="mt-16 max-w-5xl mx-auto relative z-20"
+            className="mt-20 max-w-5xl mx-auto relative z-20"
           >
             <div className="relative group">
-              {/* Glowing effect */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl opacity-30 group-hover:opacity-50 blur-2xl transition-opacity duration-500" />
+              {/* Subtle Glowing effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl opacity-10 group-hover:opacity-20 blur-3xl transition-opacity duration-300" />
 
               {/* Image container */}
-              <div className="relative bg-white rounded-2xl shadow-2xl p-2 border border-gray-200">
+              <div className="relative bg-white rounded-xl shadow-xl p-1.5 border border-gray-200/40">
                 <img
                   src="/images/landing/hero-dashboard.png"
                   alt="Snowball AI Dashboard Preview"
-                  className="w-full rounded-xl shadow-lg"
+                  className="w-full rounded-lg shadow-md"
                 />
               </div>
             </div>
@@ -430,14 +431,12 @@ const Landing = () => {
       </section>
 
       {/* Animated Metrics Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 text-white relative overflow-hidden">
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <motion.div
+      <section className="py-24 md:py-28 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 text-white relative overflow-hidden">
+        {/* Subtle Background Pattern */}
+        <div className="absolute inset-0 opacity-[0.02]">
+          <div
             className="absolute inset-0"
             style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }}
-            animate={{ backgroundPosition: ['0px 0px', '40px 40px'] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           />
         </div>
 
@@ -484,22 +483,22 @@ const Landing = () => {
       </section>
 
       {/* Key Features - Icon Based */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50/20 via-white to-primary-50/20 relative overflow-hidden" style={{ contain: 'layout style paint' }}>
+      <section id="features" className="py-28 md:py-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50/10 via-white to-primary-50/10 relative overflow-hidden" style={{ contain: 'layout style paint' }}>
         {/* Subtle Orb */}
-        <div className="gradient-orb gradient-orb-pink w-[400px] h-[400px] top-0 right-0" />
+        <div className="gradient-orb gradient-orb-pink w-[500px] h-[500px] top-0 right-0" />
 
         <div className="max-w-7xl mx-auto relative z-10">
           <motion.div
-            className="text-center space-y-4 mb-16"
-            initial={{ opacity: 0, y: 30 }}
+            className="text-center space-y-3 mb-20"
+            initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-black">
+            <h2 className="text-3xl md:text-4xl font-bold text-black tracking-tight leading-[1.15]">
               Everything you need to <span className="text-gradient-primary">excel</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-base text-gray-600 max-w-xl mx-auto tracking-[-0.01em]">
               Powerful tools designed to transform your content strategy
             </p>
           </motion.div>
@@ -513,9 +512,9 @@ const Landing = () => {
       </section>
 
       {/* Visual Product Showcase */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ contain: 'layout style paint' }}>
+      <section className="py-28 md:py-32 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style={{ contain: 'layout style paint' }}>
         {/* Background Effects */}
-        <div className="gradient-orb gradient-orb-blue w-[450px] h-[450px] top-1/2 left-0" />
+        <div className="gradient-orb gradient-orb-blue w-[500px] h-[500px] top-1/2 left-0" />
 
         <div className="max-w-7xl mx-auto space-y-24 relative z-10">
           {showcaseSections.map((section, index) => (
@@ -556,7 +555,7 @@ const Landing = () => {
       </section>
 
       {/* Customer Success Stories */}
-      <section id="testimonials" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="testimonials" className="py-28 md:py-32 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <motion.div
             className="text-center space-y-4 mb-16"
@@ -612,7 +611,7 @@ const Landing = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="pricing" className="py-28 md:py-32 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <motion.div
             className="text-center space-y-4 mb-16"
@@ -911,27 +910,27 @@ const FeatureCard = ({ feature, index }) => {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      whileHover={{ y: -4, scale: 1.02 }}
+      initial={{ opacity: 0, y: 15 }}
+      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
+      transition={{ duration: 0.35, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -3, scale: 1.01 }}
       className="h-full"
     >
-      <Card className="border border-gray-200 bg-white shadow-sm hover:shadow-xl hover:border-primary-200 transition-all duration-300 ease-out h-full">
+      <Card className="border border-gray-200/60 bg-white shadow-sm hover:shadow-lg hover:border-primary-200/60 transition-all duration-200 ease-out h-full rounded-lg">
         <CardContent className="p-6">
           <motion.div
-            className="w-14 h-14 gradient-primary rounded-xl flex items-center justify-center mb-4 shadow-md"
-            whileHover={{ scale: 1.1, rotate: 5 }}
-            transition={{ duration: 0.3 }}
+            className="w-12 h-12 gradient-primary rounded-lg flex items-center justify-center mb-4 shadow-sm"
+            whileHover={{ scale: 1.05, rotate: 3 }}
+            transition={{ duration: 0.2 }}
           >
             <div className="text-white">
               {feature.icon}
             </div>
           </motion.div>
-          <h3 className="text-xl font-bold text-black mb-3">
+          <h3 className="text-lg font-semibold text-black mb-2 tracking-tight">
             {feature.title}
           </h3>
-          <p className="text-gray-600 leading-relaxed text-sm">
+          <p className="text-gray-600 leading-relaxed text-sm tracking-[-0.01em]">
             {feature.description}
           </p>
         </CardContent>

@@ -151,21 +151,21 @@
     font-weight: 400;
   }
 
-  /* Button Variants */
+  /* Button Variants - Linear-inspired */
   .btn-primary {
-    @apply bg-primary-500 text-white px-4 py-2 rounded-md font-medium hover:bg-primary-600 shadow-sm hover:shadow-md transition-all duration-200;
+    @apply bg-primary-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-600 shadow-sm hover:shadow-md transition-all duration-150;
   }
-  
+
   .btn-secondary {
-    @apply bg-gray-100 text-gray-900 px-4 py-2 rounded-md font-medium hover:bg-gray-200 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-300;
+    @apply bg-gray-100 text-gray-900 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 shadow-sm hover:shadow-md transition-all duration-150 border border-gray-200/60;
   }
-  
+
   .btn-outline {
-    @apply border border-gray-300 bg-white text-gray-900 px-4 py-2 rounded-md font-medium hover:bg-gray-50 shadow-sm hover:shadow-md transition-all duration-200;
+    @apply border border-gray-200/60 bg-white text-gray-900 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-300 shadow-sm hover:shadow-md transition-all duration-150;
   }
-  
+
   .btn-ghost {
-    @apply text-primary-500 px-4 py-2 rounded-md font-medium hover:bg-gray-100 transition-all duration-200;
+    @apply text-gray-600 px-4 py-2 rounded-lg font-medium hover:text-gray-900 hover:bg-gray-50 transition-all duration-150;
   }
   
   .btn-link {
@@ -388,14 +388,14 @@
   background: linear-gradient(135deg, #7c77ff, #6658f4);
 }
 
-/* Card hover effects */
+/* Card hover effects - Linear-style */
 .card-hover {
-  transition: all 0.2s ease-in-out;
+  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(102, 88, 244, 0.1), 0 10px 10px -5px rgba(124, 119, 255, 0.04);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -4px rgba(102, 88, 244, 0.08), 0 8px 16px -4px rgba(124, 119, 255, 0.03);
 }
 
 /* Animated border keyframes */
@@ -415,13 +415,13 @@
   animation: border-glow 3s ease-in-out infinite;
 }
 
-/* Custom gradient backgrounds */
+/* Custom gradient backgrounds - Muted tones */
 .gradient-primary {
-  background: linear-gradient(135deg, #6658f4, #7c77ff);
+  background: linear-gradient(135deg, #5b4ecf, #6e5fdc);
 }
 
 .gradient-secondary {
-  background: linear-gradient(135deg, #7c77ff, #b0b0d8);
+  background: linear-gradient(135deg, #6e5fdc, #9b95d3);
 }
 
 .gradient-subtle {
@@ -429,15 +429,15 @@
 }
 
 .gradient-dark {
-  background: linear-gradient(135deg, #4a4a6a, #6658f4);
+  background: linear-gradient(135deg, #3d3d55, #5b4ecf);
 }
 
 /* SaaS-style background patterns */
 .gradient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.35;
+  filter: blur(80px);
+  opacity: 0.15;
   pointer-events: none;
   z-index: 0;
   will-change: transform, opacity;
@@ -446,30 +446,30 @@
 }
 
 .gradient-orb-purple {
-  background: radial-gradient(circle, rgba(102, 88, 244, 0.6), transparent 70%);
+  background: radial-gradient(circle, rgba(102, 88, 244, 0.4), transparent 70%);
 }
 
 .gradient-orb-blue {
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.5), transparent 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.35), transparent 70%);
 }
 
 .gradient-orb-pink {
-  background: radial-gradient(circle, rgba(219, 39, 119, 0.2), transparent 70%);
+  background: radial-gradient(circle, rgba(219, 39, 119, 0.15), transparent 70%);
 }
 
-/* Dot grid pattern */
+/* Dot grid pattern - More subtle */
 .dot-grid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(102, 88, 244, 0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-image: radial-gradient(circle, rgba(102, 88, 244, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
   pointer-events: none;
   z-index: 0;
 }
 
 .dot-grid-subtle {
-  background-image: radial-gradient(circle, rgba(102, 88, 244, 0.03) 5px, transparent 1px);
-  background-size: 32px 32px;
+  background-image: radial-gradient(circle, rgba(102, 88, 244, 0.015) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
 
 /* Simplified noise texture - removed expensive SVG filter */
@@ -505,16 +505,16 @@
   z-index: 0;
 }
 
-/* Text gradients */
+/* Text gradients - Refined colors */
 .text-gradient-primary {
-  background: linear-gradient(135deg, #6658f4, #7c77ff);
+  background: linear-gradient(135deg, #5b4ecf, #7f71ea);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .text-gradient-dark {
-  background: linear-gradient(135deg, #4a4a6a, #6658f4);
+  background: linear-gradient(135deg, #3d3d55, #5b4ecf);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

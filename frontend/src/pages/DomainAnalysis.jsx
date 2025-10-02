@@ -445,7 +445,8 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
         brandShare: analysisResponse.data.brandShare,
         aiVisibilityScore: analysisResponse.data.aiVisibilityScore,
         competitors: analysisResponse.data.competitors, // Update competitors list
-        categories: analysisResponse.data.categories || prevResult.categories // Update categories if available
+        categories: analysisResponse.data.categories || prevResult.categories, // Update categories if available
+        description: prevResult.description // Preserve brand description
       }));
       
       console.log('✅ SOV table data updated successfully');
@@ -729,10 +730,11 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
                 categoriesLength: result.categories.length,
                 firstCategory: result.categories[0]
               })}
-              <CategoriesWithPrompts 
-                categories={result.categories} 
-                brandId={result.brandId} 
+              <CategoriesWithPrompts
+                categories={result.categories}
+                brandId={result.brandId}
                 onSOVUpdate={refreshSOVData}
+                onDataUpdate={refreshSOVData}
               />
               
               {/* Blog analysis moved to separate page */}

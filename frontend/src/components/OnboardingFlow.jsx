@@ -83,8 +83,8 @@ const OnboardingFlow = () => {
       if (response.data.success) {
         console.log('✅ Onboarding completed successfully:', response.data.analysisSteps);
 
-        // All users who complete onboarding go to their brand dashboard
-        navigate('/domain-analysis');
+        // All users who complete onboarding go to full dashboard with brand dashboard view
+        navigate('/dashboard?redirect=brand-dashboard');
       } else {
         throw new Error('Onboarding completion failed');
       }
