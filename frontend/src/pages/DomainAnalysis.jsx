@@ -414,46 +414,27 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
     onClose();
   };
 
-  // Function to refresh SOV data after competitor addition or custom prompt addition
+  // Function to fully reload all data after competitor addition or custom prompt addition
   const refreshSOVData = async () => {
     if (!result || !result.brandId) {
-      console.log('❌ No brandId available for SOV refresh');
+      console.log('❌ No brandId available for data reload');
       return;
     }
-    
+
     try {
-      console.log('🔄 Refreshing SOV data for brandId:', result.brandId);
-      
+      console.log('🔄 Triggering full data reload...');
+
       // Add a small delay to ensure backend processing is complete
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Refetch the brand analysis to get updated SOV data
-      const analysisResponse = await apiService.getBrandAnalysis(result.brandId);
-      console.log('✅ SOV data refreshed:', {
-        shareOfVoice: analysisResponse.data.shareOfVoice,
-        mentionCounts: analysisResponse.data.mentionCounts,
-        totalMentions: analysisResponse.data.totalMentions,
-        competitors: analysisResponse.data.competitors?.length || 0
-      });
-      
-      // Update the result with new SOV data and any updated fields
-      setResult(prevResult => ({
-        ...prevResult,
-        shareOfVoice: analysisResponse.data.shareOfVoice,
-        mentionCounts: analysisResponse.data.mentionCounts,
-        totalMentions: analysisResponse.data.totalMentions,
-        brandShare: analysisResponse.data.brandShare,
-        aiVisibilityScore: analysisResponse.data.aiVisibilityScore,
-        competitors: analysisResponse.data.competitors, // Update competitors list
-        categories: analysisResponse.data.categories || prevResult.categories, // Update categories if available
-        description: prevResult.description // Preserve brand description
-      }));
-      
-      console.log('✅ SOV table data updated successfully');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Trigger full data reload by calling checkForExistingAnalysis
+      await checkForExistingAnalysis();
+
+      console.log('✅ Full data reload completed successfully');
       toast.success('Data refreshed successfully!');
-      
+
     } catch (error) {
-      console.error('❌ Error refreshing SOV data:', error);
+      console.error('❌ Error reloading data:', error);
       console.error('❌ Error details:', {
         status: error.response?.status,
         message: error.response?.data?.msg || error.message
