@@ -12,7 +12,11 @@ import axios from 'axios';
 import { MongoClient } from 'mongodb';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://abhishek:RLlOzwwUkzpDaBMd@cluster0.9pmn7wd.mongodb.net/snowball_fin?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+  throw new Error('MONGO_URI environment variable is required. Please set it in your .env file or MCP config.');
+}
 
 class SnowballMCPServer {
   constructor() {

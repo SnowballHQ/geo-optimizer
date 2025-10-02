@@ -45,14 +45,14 @@ You need to add the MCP configuration to Claude Code's settings:
       "args": ["F:\\seo snow\\Snowball\\mcp-snowball-server.js"],
       "env": {
         "BACKEND_URL": "http://localhost:5000",
-        "MONGO_URI": "mongodb+srv://abhishek:RLlOzwwUkzpDaBMd@cluster0.9pmn7wd.mongodb.net/snowball_fin?retryWrites=true&w=majority&appName=Cluster0"
+        "MONGO_URI": "YOUR_MONGODB_CONNECTION_STRING_FROM_.ENV_FILE"
       }
     }
   }
 }
 ```
 
-**Note:** Replace the `MONGO_URI` if your connection string changes.
+**Note:** Replace `YOUR_MONGODB_CONNECTION_STRING_FROM_.ENV_FILE` with your actual MongoDB connection string from your `.env` file. Never commit credentials to git.
 
 ### Step 3: Restart Claude Code
 
