@@ -41,6 +41,19 @@ const BrandDashboardStep = ({
       // Auto-save super user analysis to history
       saveAnalysisToHistory();
     }
+
+    // Listen for brand dashboard reload events
+    const handleReloadEvent = (event) => {
+      console.log('📡 BrandDashboardStep: Received reload event', event.detail);
+      loadDashboardData();
+    };
+
+    window.addEventListener('brandDashboardReload', handleReloadEvent);
+
+    // Cleanup event listener on unmount
+    return () => {
+      window.removeEventListener('brandDashboardReload', handleReloadEvent);
+    };
   }, [brandId, analysisId]);
 
   const loadDashboardData = async () => {

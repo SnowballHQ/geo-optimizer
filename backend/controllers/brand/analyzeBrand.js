@@ -361,7 +361,8 @@ exports.getBrandAnalysis = async (req, res) => {
     console.log("✅ Brand ownership validated:", brand.brandName);
 
     // Get the current analysis for this brand (guaranteed to be only one record)
-    const latestAnalysis = await BrandShareOfVoice.findOne({ brandId: brand._id, userId });
+    // Using .lean() to ensure proper deserialization of Mixed type fields
+    const latestAnalysis = await BrandShareOfVoice.findOne({ brandId: brand._id, userId }).lean();
 
     if (!latestAnalysis) {
       return res.status(404).json({ 
@@ -373,6 +374,21 @@ exports.getBrandAnalysis = async (req, res) => {
     // Since we changed from Map to Object types, no conversion needed
     const shareOfVoice = latestAnalysis.shareOfVoice || {};
     const mentionCounts = latestAnalysis.mentionCounts || {};
+
+    // 🔍 DEBUG: Detailed SOV data verification
+    console.log("🔍 SOV Data Retrieved from Database:", {
+      shareOfVoice: shareOfVoice,
+      shareOfVoiceKeys: Object.keys(shareOfVoice),
+      shareOfVoiceValues: Object.values(shareOfVoice),
+      shareOfVoiceType: typeof shareOfVoice,
+      mentionCounts: mentionCounts,
+      mentionCountsKeys: Object.keys(mentionCounts),
+      mentionCountsValues: Object.values(mentionCounts),
+      mentionCountsType: typeof mentionCounts,
+      totalMentions: latestAnalysis.totalMentions,
+      brandShare: latestAnalysis.brandShare,
+      aiVisibilityScore: latestAnalysis.aiVisibilityScore
+    });
 
     console.log("✅ Brand analysis retrieved:", {
       categories: latestAnalysis.categories?.length || 0,

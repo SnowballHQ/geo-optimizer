@@ -3,12 +3,15 @@ import { toast } from 'react-toastify';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { ShoppingBag, ExternalLink, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
-const ShopifySettings = () => {
+const ShopifySettings = ({ onConnectionChange }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [shopInfo, setShopInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/shopify`;
 
@@ -131,22 +134,30 @@ const ShopifySettings = () => {
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
+    setShowDisconnectDialog(true);
+  };
+
+  const confirmDisconnect = async () => {
+    setIsDisconnecting(true);
     try {
-      setLoading(true);
       const response = await fetch(`${API_BASE}/disconnect`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth')}`
         }
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         toast.success(data.message);
         setConnectionStatus('disconnected');
         setShopInfo(null);
+        if (onConnectionChange) {
+          onConnectionChange('shopify', 'disconnected');
+        }
+        setShowDisconnectDialog(false);
       } else {
         toast.error(data.message || 'Failed to disconnect');
       }
@@ -154,7 +165,7 @@ const ShopifySettings = () => {
       console.error('Error disconnecting:', error);
       toast.error('Failed to disconnect from Shopify');
     } finally {
-      setLoading(false);
+      setIsDisconnecting(false);
     }
   };
 
@@ -325,16 +336,18 @@ const ShopifySettings = () => {
         </div>
       )}
 
-      {/* Information Card */}
-      <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
-        <h4 className="font-medium text-blue-900 mb-2">How it works</h4>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>• Connect your Shopify store using OAuth (secure authentication)</li>
-          <li>• Publish blog content directly from our platform to your store</li>
-          <li>• Maintain full control - you can disconnect anytime</li>
-          <li>• Your store credentials are encrypted and securely stored</li>
-        </ul>
-      </div>
+      {/* Disconnect Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDisconnectDialog}
+        onClose={() => setShowDisconnectDialog(false)}
+        onConfirm={confirmDisconnect}
+        title="Disconnect Shopify Store?"
+        description="Are you sure you want to disconnect your Shopify store? You will no longer be able to auto-publish content to your store's blog until you reconnect."
+        confirmText="Disconnect"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={isDisconnecting}
+      />
     </div>
   );
 };

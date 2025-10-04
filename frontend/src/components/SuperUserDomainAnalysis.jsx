@@ -376,7 +376,7 @@ const SuperUserDomainAnalysis = ({ onAnalysisComplete }) => {
 
       {/* Domain Analysis Form */}
       {!result && (
-        <Card className="border border-[#b0b0d8] bg-white">
+        <Card className="border-0.3 border-[#b0b0d8] bg-white">
           <CardHeader>
             <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
               <div className="w-6 h-6 bg-[#7c77ff] rounded-full flex items-center justify-center">

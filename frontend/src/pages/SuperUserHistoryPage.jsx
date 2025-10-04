@@ -93,7 +93,7 @@ const SuperUserHistoryPage = () => {
       a.href = url;
       
       // Get filename from Content-Disposition header or create default
-      let filename = `SuperUser_${analysis.domain?.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis_${analysisId}.pdf`;
+      let filename = `${analysis.brandName?.replace(/[^a-zA-Z0-9]/g, '_')}_Analysis.pdf`;
       const contentDisposition = response.headers['content-disposition'];
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
@@ -141,8 +141,8 @@ const SuperUserHistoryPage = () => {
   };
 
   const viewAnalysis = (analysisId) => {
-    // Navigate to super user analysis page with specific analysis ID
-    navigate(`/super-user-analysis/view/${analysisId}`);
+    // Navigate to playground analysis page with specific analysis ID
+    navigate(`/playground/analysis/${analysisId}`);
   };
 
   const formatDate = (dateString) => {
@@ -221,15 +221,15 @@ const SuperUserHistoryPage = () => {
 
       <div className="px-8 py-6">
         {analysisHistory.length === 0 ? (
-          <Card className="border border-[#b0b0d8] bg-white">
+          <Card className="border-0.3 border-[#b0b0d8] bg-white">
             <CardContent className="text-center py-12">
               <Calendar size={48} className="text-gray-400 mx-auto mb-4" />
               <CardTitle className="text-xl text-[#4a4a6a] mb-2">No Analysis History</CardTitle>
               <CardDescription className="text-[#4a4a6a] mb-6">
                 You haven't performed any super user analyses yet.
               </CardDescription>
-              <Button 
-                onClick={() => navigate('/super-user-analysis')}
+              <Button
+                onClick={() => navigate('/playground')}
                 className="gradient-primary"
               >
                 Start New Analysis
@@ -239,7 +239,7 @@ const SuperUserHistoryPage = () => {
         ) : (
           <div className="space-y-6">
             {/* Analysis Table */}
-            <Card className="border border-[#b0b0d8] bg-white">
+            <Card className="border-0.3 border-[#b0b0d8] bg-white">
               <CardHeader>
                 <CardTitle className="text-[#4a4a6a]">Analysis History</CardTitle>
               </CardHeader>
@@ -263,7 +263,6 @@ const SuperUserHistoryPage = () => {
                         <tr key={analysis.analysisId} className="border-b border-gray-100 hover:bg-[#f8f9ff]">
                           <td className="py-3 px-4">
                             <div className="font-semibold text-[#4a4a6a]">{analysis.brandName}</div>
-                            <div className="text-xs text-gray-500">{analysis.analysisId}</div>
                           </td>
                           <td className="py-3 px-4">
                             <code className="bg-gray-100 px-2 py-1 rounded text-sm">{analysis.domain}</code>
@@ -346,7 +345,7 @@ const SuperUserHistoryPage = () => {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="border border-[#b0b0d8] bg-white text-center">
+              <Card className="border-0.3 border-[#b0b0d8] bg-white text-center">
                 <CardContent className="pt-6">
                   <TrendingUp size={32} className="text-[#6658f4] mx-auto mb-2" />
                   <CardDescription className="text-sm text-[#4a4a6a]">Average Visibility</CardDescription>
@@ -361,7 +360,7 @@ const SuperUserHistoryPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border border-[#b0b0d8] bg-white text-center">
+              <Card className="border-0.3 border-[#b0b0d8] bg-white text-center">
                 <CardContent className="pt-6">
                   <Users size={32} className="text-green-600 mx-auto mb-2" />
                   <CardDescription className="text-sm text-[#4a4a6a]">Total Mentions</CardDescription>
@@ -371,7 +370,7 @@ const SuperUserHistoryPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border border-[#b0b0d8] bg-white text-center">
+              <Card className="border-0.3 border-[#b0b0d8] bg-white text-center">
                 <CardContent className="pt-6">
                   <Calendar size={32} className="text-blue-600 mx-auto mb-2" />
                   <CardDescription className="text-sm text-[#4a4a6a]">Latest Analysis</CardDescription>
@@ -384,7 +383,7 @@ const SuperUserHistoryPage = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border border-[#b0b0d8] bg-white text-center">
+              <Card className="border-0.3 border-[#b0b0d8] bg-white text-center">
                 <CardContent className="pt-6">
                   <div className="text-3xl mb-2">🏢</div>
                   <CardDescription className="text-sm text-[#4a4a6a]">Avg Competitors</CardDescription>

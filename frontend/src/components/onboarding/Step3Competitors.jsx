@@ -13,6 +13,9 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
   useEffect(() => {
     if (progress?.step3?.competitors) {
       setCompetitors(progress.step3.competitors);
+    } else {
+      // Auto-extract competitors on mount if none exist
+      handleExtractCompetitors();
     }
   }, [progress]);
 
@@ -20,12 +23,15 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
     try {
       setIsExtracting(true);
       const response = await apiService.step3Competitors({});
-      if (response.data.success) {
+      if (response.data.competitors && Array.isArray(response.data.competitors)) {
         setCompetitors(response.data.competitors);
+      } else if (response.data.success) {
+        setCompetitors(response.data.competitors || []);
       }
     } catch (error) {
       console.error('Competitors extraction failed:', error);
-      alert('Failed to extract competitors. Please try again.');
+      // Silently fail - user can add competitors manually
+      setCompetitors([]);
     } finally {
       setIsExtracting(false);
     }
@@ -65,32 +71,19 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
 
   return (
     <div className="max-w-lg mx-auto">
+      {/* Step Header */}
+      <div className="mb-6">
+        <p className="text-sm text-gray-500 mb-1">Step 3 of 4</p>
+        <h2 className="text-2xl font-bold text-gray-900">Competitors</h2>
+        <p className="text-sm text-gray-600 mt-1">Add competitor URLs to analyze your market position</p>
+      </div>
+
       <div className="space-y-6">
         {/* Competitors Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-primary-500" />
-              <h3 className="text-h4 text-gray-900">Your Competitors</h3>
-            </div>
-            <Button
-              onClick={handleExtractCompetitors}
-              disabled={isExtracting}
-              variant="outline"
-              className="border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white"
-            >
-              {isExtracting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Extracting...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Extract with AI
-                </>
-              )}
-            </Button>
+          <div className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-primary-500" />
+            <h3 className="text-h4 text-gray-900">Your Competitors</h3>
           </div>
           
           <p className="text-base text-gray-600">
@@ -105,7 +98,7 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
               onChange={(e) => setNewCompetitor(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddCompetitor()}
               placeholder="Enter competitor URL (e.g., competitor.com)"
-              className="h-11 border-gray-300 focus:border-primary-500 focus:ring-primary-500"
+              className="h-11 border-primary-200 shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus:border-primary-500 focus:ring-2 focus:ring-primary-500 transition-all duration-300"
             />
             <Button
               onClick={handleAddCompetitor}
@@ -118,15 +111,21 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
           </div>
 
           {/* Competitors List */}
-          {competitors.length === 0 ? (
+          {isExtracting ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 font-medium">Extracting competitors with AI...</p>
+              <p className="text-sm text-gray-500 mt-2">This may take a few seconds</p>
+            </div>
+          ) : competitors.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Building2 className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-              <p>No competitors added yet</p>
+              <p>No competitors extracted. You can add them manually above.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {competitors.map((competitor, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-primary-200 shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] transition-all duration-300">
                   <span className="text-gray-900 font-medium">{competitor}</span>
                   <Button
                     onClick={() => handleRemoveCompetitor(index)}
@@ -146,8 +145,15 @@ const Step3Competitors = ({ onComplete, loading, error, progress }) => {
           </p>
         </div>
 
-        {/* Continue Button */}
-        <div className="flex justify-end">
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center">
+          <Button
+            onClick={() => onComplete({}, 2)}
+            variant="outline"
+            className="border-gray-300 text-gray-700 px-6 h-11"
+          >
+            Back
+          </Button>
           <Button
             onClick={handleContinue}
             disabled={loading || isSaving}

@@ -3,6 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Switch } from '../components/ui/switch';
+import { Label } from '../components/ui/label';
+import { Select } from '../components/ui/select';
 import DomainAnalysis from './DomainAnalysis';
 import BlogAnalysis from './BlogAnalysis';
 import ContentCalendarView from './ContentCalendarView';
@@ -18,19 +22,30 @@ import CMSConnectionSelector from '../components/CMSConnectionSelector';
 
 import { apiService } from '../utils/api';
 import { getUserName, isSuperuser } from '../utils/auth';
-import { 
-  BarChart3, 
-  Globe, 
-  FileText, 
-  Settings, 
-  LogOut, 
+import {
+  BarChart3,
+  Globe,
+  FileText,
+  Settings,
+  LogOut,
   Link as LinkIcon,
   Activity,
   ArrowLeft,
+  ArrowRight,
   Calendar,
   Building2,
   TrendingUp,
-  CheckCircle
+  CheckCircle,
+  Sparkles,
+  Brain,
+  Zap,
+  User,
+  Palette,
+  CreditCard,
+  Bell,
+  Sliders,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -47,6 +62,223 @@ const Dashboard = () => {
   const [isUserSuperuser, setIsUserSuperuser] = useState(isSuperuser());
   const [showCMSSelector, setShowCMSSelector] = useState(false);
   const [cmsFocus, setCmsFocus] = useState(null);
+  const [isInContentEditor, setIsInContentEditor] = useState(false);
+  const [contentCalendarData, setContentCalendarData] = useState(null);
+  const [activeSettingsTab, setActiveSettingsTab] = useState('account');
+  const [showCMSAdvanced, setShowCMSAdvanced] = useState(false);
+  const [cmsConnectionStatus, setCmsConnectionStatus] = useState({
+    shopify: 'checking',
+    webflow: 'checking',
+    wordpress: 'checking'
+  });
+
+  // Account settings state
+  const [accountSettings, setAccountSettings] = useState({
+    fullName: '',
+    email: '',
+    company: '',
+    role: '',
+    notifications: {
+      analysisCompletion: true,
+      weeklyReports: false,
+      contentCalendarReminders: true,
+      competitorAlerts: false
+    }
+  });
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
+
+  // Analysis preferences state
+  const [analysisPreferences, setAnalysisPreferences] = useState({
+    analysisDepth: 'standard',
+    blogScoringThreshold: '60',
+    contentCalendarPlanning: '30',
+    dataRetention: '6-months'
+  });
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+
+  // Function to get dynamic welcome message based on content calendar state
+  const getWelcomeMessage = () => {
+    if (activeSection === 'brand-dashboard') {
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: (
+          <div className="space-y-1">
+            <span className="flex items-center space-x-1">
+              <Globe className="w-4 h-4 text-[#6658f4]" />
+              <span><strong>Brand Dashboard</strong></span>
+            </span>
+          </div>
+        )
+      };
+    }
+
+    if (activeSection === 'settings') {
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: (
+          <div className="space-y-1">
+            <span className="flex items-center space-x-1">
+              <Settings className="w-4 h-4 text-[#6658f4]" />
+              <span><strong>Settings</strong></span>
+            </span>
+          </div>
+        )
+      };
+    }
+
+    if (activeTool === 'analytics') {
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: (
+          <div className="space-y-1">
+            <span className="flex items-center space-x-1">
+              <TrendingUp className="w-4 h-4 text-[#6658f4]" />
+              <span><strong>Analytics Dashboard</strong></span>
+            </span>
+          </div>
+        )
+      };
+    }
+
+    if (activeTool === 'content-calendar' || activeSection === 'content-calendar') {
+      let dynamicSubtitle = (
+        <span className="flex items-center space-x-1">
+
+
+        </span>
+      );
+
+      if (contentCalendarData && contentCalendarData.length > 0) {
+        const draftCount = contentCalendarData.filter(item => item.status === 'draft').length;
+        const approvedCount = contentCalendarData.filter(item => item.status === 'approved').length;
+
+        if (approvedCount > 0) {
+          dynamicSubtitle = (
+            <span className="flex items-center space-x-1">
+              <Sparkles className="w-4 h-4 text-[#6658f4]" />
+              <span>Your <strong>AI content pipeline</strong> has {approvedCount} ready to publish!</span>
+            </span>
+          );
+        } else if (draftCount > 0) {
+          dynamicSubtitle = (
+            <span className="flex items-center space-x-1">
+              <Brain className="w-4 h-4 text-[#6658f4]" />
+              <span>Your <strong>AI calendar</strong> has {draftCount} drafts ready for review</span>
+            </span>
+          );
+        }
+      }
+
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: (
+          <div className="space-y-1">
+            {dynamicSubtitle}
+            <div className="mt-3">
+              <h2 className="text-lg font-semibold text-[#4a4a6a] flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-[#6658f4]" />
+                <span>Content Calendar</span>
+              </h2>
+            </div>
+          </div>
+        )
+      };
+    }
+
+    if (activeTool === 'published-blogs') {
+      return {
+        title: `Welcome back, ${userName}!`,
+        subtitle: "Published Blogs"
+      };
+    }
+
+    // Default message for other sections
+    return {
+      title: `Welcome back, ${userName}!`,
+      subtitle: "Ready to analyze your next project?"
+    };
+  };
+
+  // Check CMS connection status
+  const checkCmsConnections = async () => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const auth = localStorage.getItem('auth');
+
+    const platforms = ['shopify', 'webflow', 'wordpress'];
+    const statuses = {};
+
+    for (const platform of platforms) {
+      try {
+        const response = await fetch(`${API_URL}/api/v1/${platform}/status`, {
+          headers: { 'Authorization': `Bearer ${auth}` }
+        });
+        const data = await response.json();
+        statuses[platform] = response.ok && data.status === 'connected' ? 'connected' : 'disconnected';
+      } catch (error) {
+        statuses[platform] = 'disconnected';
+      }
+    }
+
+    setCmsConnectionStatus(statuses);
+  };
+
+  // Direct CMS connection handler
+  const handleDirectCmsConnect = async (platform) => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const auth = localStorage.getItem('auth');
+
+    try {
+      const response = await fetch(`${API_URL}/api/v1/${platform}/connect?shop=testingsnowball.myshopify.com`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${auth}` }
+      });
+
+      if (response.redirected) {
+        window.location.href = response.url;
+      } else if (response.ok) {
+        const data = await response.json();
+        if (data.authUrl) {
+          window.location.href = data.authUrl;
+        }
+      }
+    } catch (error) {
+      console.error(`Error connecting to ${platform}:`, error);
+    }
+  };
+
+  // Handle connection status changes from integration components
+  const handleConnectionChange = (platform, status) => {
+    setCmsConnectionStatus(prev => ({
+      ...prev,
+      [platform]: status
+    }));
+  };
+
+  // Load content calendar data for dynamic messaging
+  useEffect(() => {
+    const loadContentCalendarData = async () => {
+      try {
+        const storedCompanyName = localStorage.getItem('companyName') || getUserName()?.companyName;
+        if (storedCompanyName) {
+          const response = await apiService.getContentCalendar({ companyName: storedCompanyName });
+          if (response.data.data && response.data.data.length > 0) {
+            setContentCalendarData(response.data.data);
+          }
+        }
+      } catch (error) {
+        console.log('Could not load content calendar data for welcome message:', error);
+      }
+    };
+
+    loadContentCalendarData();
+  }, [activeTool, activeSection]);
+
+  // Check CMS connections when integrations tab is active
+  useEffect(() => {
+    if (activeSection === 'settings' && activeSettingsTab === 'integrations') {
+      checkCmsConnections();
+    }
+  }, [activeSection, activeSettingsTab]);
 
   // Handle navigation state from blog editor
   useEffect(() => {
@@ -87,6 +319,17 @@ const Dashboard = () => {
       setActiveSection('dashboard');
       setActiveTool('content-calendar');
       // Delay URL cleanup to ensure state is set properly
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 100);
+    }
+
+    // Handle brand-dashboard redirect from login
+    const redirectParam = urlParams.get('redirect');
+    if (redirectParam === 'brand-dashboard') {
+      setActiveSection('brand-dashboard');
+      setActiveTool(null);
+      // Clean up the URL parameter
       setTimeout(() => {
         window.history.replaceState({}, document.title, window.location.pathname);
       }, 100);
@@ -157,6 +400,44 @@ const Dashboard = () => {
     apiService.logout();
   };
 
+  const handleSaveAccountSettings = async () => {
+    setIsSavingAccount(true);
+    try {
+      // TODO: Implement actual API call when backend endpoint is ready
+      // const response = await apiService.updateAccountSettings(accountSettings);
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // toast.success('Account settings saved successfully!');
+      console.log('Account settings saved:', accountSettings);
+    } catch (error) {
+      console.error('Error saving account settings:', error);
+      // toast.error('Failed to save account settings');
+    } finally {
+      setIsSavingAccount(false);
+    }
+  };
+
+  const handleSaveAnalysisPreferences = async () => {
+    setIsSavingPreferences(true);
+    try {
+      // TODO: Implement actual API call when backend endpoint is ready
+      // const response = await apiService.updateAnalysisPreferences(analysisPreferences);
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // toast.success('Analysis preferences saved successfully!');
+      console.log('Analysis preferences saved:', analysisPreferences);
+    } catch (error) {
+      console.error('Error saving analysis preferences:', error);
+      // toast.error('Failed to save analysis preferences');
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  };
+
   const handleDomainAnalysisSubmit = (e) => {
     e.preventDefault();
     if (domainToAnalyze.trim()) {
@@ -184,15 +465,36 @@ const Dashboard = () => {
     if (activeTool === 'blog') {
       return (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold text-[#4a4a6a]">Blog Analysis</h2>
-              <p className="text-[#4a4a6a]">Analyze blog content quality and optimization</p>
-            </div>
-            <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back
-            </Button>
-          </div>
+          {/* Content Calendar CTA */}
+          <Card className="border-0 bg-gradient-to-r from-[#6658f4] to-[#8b7ff5] text-white shadow-lg overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
+            <CardContent className="p-6 relative z-10">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <Brain className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2 flex items-center space-x-2">
+                      <span>✨ Found What Works?</span>
+                    </h3>
+                    <p className="text-white/90 text-sm">
+                      Use these insights to generate better, SEO-optimized content automatically
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setActiveTool('content-calendar')}
+                  className="bg-white text-[#6658f4] hover:bg-white/90 font-semibold shadow-md transition-all hover:scale-105"
+                >
+                  Go to Content Calendar
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <BlogAnalysis inline onClose={() => setActiveTool(null)} />
         </div>
       );
@@ -210,7 +512,7 @@ const Dashboard = () => {
             </Button>
           </div>
           <div className="space-y-4">
-            <Card className="border border-[#b0b0d8] bg-white">
+            <Card className="border-0.3 border-[#b0b0d8] bg-white">
               <CardHeader>
                 <CardTitle className="text-[#4a4a6a]">Quick Link Analysis</CardTitle>
                 <CardDescription className="text-[#4a4a6a]">
@@ -239,16 +541,7 @@ const Dashboard = () => {
     if (activeTool === 'content-calendar') {
       return (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold text-[#4a4a6a]">Content Calendar</h2>
-              <p className="text-[#4a4a6a]">AI-powered content planning and auto-publishing</p>
-            </div>
-            <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back
-            </Button>
-          </div>
-          
+
           {isLoadingContentCalendar ? (
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
@@ -258,7 +551,12 @@ const Dashboard = () => {
               </div>
             </div>
           ) : (
-            <ContentCalendarView inline onClose={() => setActiveTool(null)} shouldAutoLoad={shouldAutoLoadContent} />
+            <ContentCalendarView
+              inline
+              onClose={() => setActiveTool(null)}
+              shouldAutoLoad={shouldAutoLoadContent}
+              onEditorStateChange={setIsInContentEditor}
+            />
           )}
         </div>
       );
@@ -275,9 +573,9 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="h-screen bg-white flex overflow-hidden">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-50 border-r border-[#ffffff] flex flex-col">
+      <div className="w-64 bg-gray-50 border-r border-[#ffffff] flex flex-col flex-shrink-0">
         {/* Logo */}
         <div className="p-6 border-b border-[#ffffff]">
           <div className="flex items-center space-x-3">
@@ -305,18 +603,6 @@ const Dashboard = () => {
             </button>
           )} */}
 
-          {/* Blog Analysis - visible to all users */}
-          <button
-            onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
-            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeSection === 'blog-analysis' || activeTool === 'blog'
-                ? 'nav-active'
-                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Blog Analysis</span>
-          </button>
 
           {/* Domain Analysis - only for superusers
           {isUserSuperuser && (
@@ -333,8 +619,8 @@ const Dashboard = () => {
             </button>
           )} */}
 
-                     {/* Brand Dashboard - visible to all users with brands */}
-           {userBrands.length > 0 && (
+                     {/* Brand Dashboard - visible to all users with brands except superusers */}
+           {userBrands.length > 0 && !isSuperuser() && (
              <button
                onClick={() => { setActiveSection('brand-dashboard'); setActiveTool(null); }}
                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -387,6 +673,19 @@ const Dashboard = () => {
             <span>Analytics</span>
           </button>
 
+          {/* Blog Analysis - visible to all users */}
+          <button
+            onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
+            className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeSection === 'blog-analysis' || activeTool === 'blog'
+                ? 'nav-active'
+                : 'text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Blog Analysis</span>
+          </button>
+
           {/* Shopify Integration - only for superusers
           {isUserSuperuser && (
             <button
@@ -411,7 +710,7 @@ const Dashboard = () => {
 
           {/* Settings - now available for all users */}
           <button
-            onClick={() => setActiveSection('settings')}
+            onClick={() => { setActiveSection('settings'); setActiveTool(null); }}
             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeSection === 'settings'
                 ? 'nav-active'
@@ -424,14 +723,14 @@ const Dashboard = () => {
 
 
 
-          {/* Super User Domain Analysis - Only visible to super users */}
+          {/* Playground - Only visible to super users */}
           {isUserSuperuser && (
             <button
-              onClick={() => navigate('/super-user-analysis')}
+              onClick={() => navigate('/playground')}
               className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[#4a4a6a] hover:text-[#6658f4] hover:bg-gray-100 hover:border-l-3 hover:border-l-[#6658f4]/20"
             >
               <Globe className="w-4 h-4" />
-              <span>Super User Domain Analysis</span>
+              <span>Playground</span>
             </button>
           )}
         </nav>
@@ -456,17 +755,17 @@ const Dashboard = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-xl font-semibold text-[#000000]">
-                Welcome back, {userName}!
+                {getWelcomeMessage().title}
               </h1>
-              <p className="text-[#000000] mt-1">
-                Ready to analyze your next project?
-              </p>
+              <div className="text-[#000000] mt-1">
+                {getWelcomeMessage().subtitle}
+              </div>
             </div>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-8 overflow-y-auto min-h-0 bg-white">
+        <main className="flex-1 p-8 overflow-y-auto bg-white">
           {activeSection === 'dashboard' && (
             <div className="space-y-8">
               {!activeTool && (
@@ -475,8 +774,8 @@ const Dashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* Domain Analysis Card - Only for superusers
                     {isUserSuperuser && (
-                      <Card 
-                        className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out"
+                      <Card
+                        className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out"
                         onClick={() => setActiveTool('domain')}
                       >
                         <CardContent className="p-6">
@@ -501,8 +800,8 @@ const Dashboard = () => {
                     )} */}
 
                     {/* Blog Analysis Card */}
-                    <Card 
-                      className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-100"
+                    <Card
+                      className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-100"
                       onClick={() => setActiveTool('blog')}
                     >
                       <CardContent className="p-6">
@@ -526,33 +825,34 @@ const Dashboard = () => {
                     </Card>
 
                                          {/* Content Calendar Card - Available for all users */}
-                     <Card 
-                       className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
+                     <Card
+                       className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-200"
                        onClick={() => setActiveTool('content-calendar')}
                      >
                        <CardContent className="p-6">
                          <div className="flex items-center space-x-4 mb-4">
-                           <div className="w-12 h-12 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                             <Calendar className="w-6 h-6 text-white" />
+                           <div className="w-12 h-12 bg-gradient-to-r from-[#7c77ff] to-[#6658f4] rounded-lg flex items-center justify-center">
+                             <Sparkles className="w-6 h-6 text-white" />
                            </div>
                            <div>
-                             <h3 className="text-lg font-semibold text-[#000000]">
-                               Content Calendar
+                             <h3 className="text-lg font-semibold text-[#000000] flex items-center space-x-2">
+                               <span>🚀 AI Content Calendar</span>
                              </h3>
-                             <p className="text-sm text-[#4a4a6a]">
-                               AI-powered content planning
+                             <p className="text-sm text-[#4a4a6a] flex items-center space-x-1">
+                               <Brain className="w-4 h-4 text-[#6658f4]" />
+                               <span><strong>AI-powered</strong> content planning</span>
                              </p>
                            </div>
                          </div>
                          <p className="text-sm text-[#4a4a6a]">
-                           Generate 30-day content plans and auto-publish to your CMS platforms.
+                           Generate <span className="font-semibold text-[#6658f4]">AI-powered 30-day</span> content plans and auto-publish to your CMS platforms.
                          </p>
                        </CardContent>
                      </Card>
 
                      {/* Analytics Card - Available for all users */}
-                     <Card 
-                       className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
+                     <Card
+                       className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
                        onClick={() => setActiveTool('analytics')}
                      >
                        <CardContent className="p-6">
@@ -577,8 +877,8 @@ const Dashboard = () => {
 
                      {/* Shopify Integration Card - Only for superusers
                      {isUserSuperuser && (
-                       <Card 
-                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
+                       <Card
+                         className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-300"
                          onClick={() => window.location.href = '/shopify-integration'}
                        >
                          <CardContent className="p-6">
@@ -602,10 +902,10 @@ const Dashboard = () => {
                        </Card>
                      )} */}
 
-                                         {/* Brand Dashboard Card - Available for all users with brands */}
-                     {userBrands.length > 0 && (
-                       <Card 
-                         className="cursor-pointer card-hover border border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
+                                         {/* Brand Dashboard Card - Available for all users with brands except superusers */}
+                     {userBrands.length > 0 && !isSuperuser() && (
+                       <Card
+                         className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
                          onClick={() => { setActiveSection('brand-dashboard'); setActiveTool(null); }}
                        >
                         <CardContent className="p-6">
@@ -634,7 +934,7 @@ const Dashboard = () => {
 
                   {/* Analyze Link Form - Only for superusers */}
                   {isUserSuperuser && showAnalyzeLink && (
-                    <Card className="border border-[#b0b0d8] bg-white">
+                    <Card className="border-0.3 border-[#b0b0d8] bg-white">
                       <CardHeader>
                         <CardTitle className="text-[#4a4a6a]">Quick Link Analysis</CardTitle>
                         <CardDescription className="text-[#4a4a6a]">
@@ -680,66 +980,54 @@ const Dashboard = () => {
 
            {activeSection === 'brand-dashboard' && (
              <div className="space-y-6">
-               <div>
-                 <h2 className="text-2xl font-semibold text-[#4a4a6a] mb-2">Brand Dashboard</h2>
-                 <p className="text-[#4a4a6a]">View your complete brand analysis, AI responses, and Share of Voice metrics</p>
-               </div>
-               
-               {/* Brand Dashboard Content */}
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                 {/* Brand Summary */}
-                 <Card className="border border-[#b0b0d8] bg-white">
-                   <CardHeader>
-                     <CardTitle className="text-[#4a4a6a]">Brand Summary</CardTitle>
-                   </CardHeader>
-                   <CardContent>
-                     <div className="space-y-4">
-                       <div className="flex items-center space-x-2">
-                         <Globe className="w-4 h-4 text-[#6658f4]" />
-                         <span className="text-sm font-medium">Domain</span>
-                       </div>
-                       <p className="text-sm text-[#4a4a6a]">
-                         {userBrands.length > 0 ? userBrands[0].domain : 'No brand configured'}
-                       </p>
-                       <div className="pt-2">
-                                                 <Button 
-                          onClick={() => navigate('/domain-analysis')}
-                          className="w-full gradient-primary"
-                        >
-                          View Full Analysis
-                        </Button>
-                       </div>
-                     </div>
-                   </CardContent>
-                 </Card>
 
-                 {/* Quick Actions */}
-                 <Card className="border border-[#b0b0d8] bg-white">
-                   <CardHeader>
-                     <CardTitle className="text-[#4a4a6a]">Quick Actions</CardTitle>
-                   </CardHeader>
-                   <CardContent>
-                     <div className="space-y-3">
-                       <Button 
-                         onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
-                         variant="outline"
-                         className="w-full border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                       >
-                         <FileText className="w-4 h-4 mr-2" />
-                         Blog Analysis
-                       </Button>
-                                               <Button 
-                          onClick={() => navigate('/domain-analysis')}
-                          variant="outline"
-                          className="w-full border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                        >
-                          <BarChart3 className="w-4 h-4 mr-2" />
-                          View Complete Analysis
-                        </Button>
+               {/* Content Calendar CTA */}
+               <Card className="border-0 bg-gradient-to-r from-[#6658f4] to-[#8b7ff5] text-white shadow-lg overflow-hidden relative">
+                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
+                 <CardContent className="p-6 relative z-10">
+                   <div className="flex items-center justify-between flex-wrap gap-4">
+                     <div className="flex items-start space-x-4">
+                       <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                         <Calendar className="w-6 h-6 text-white" />
+                       </div>
+                       <div>
+                         <h3 className="text-xl font-semibold mb-2 flex items-center space-x-2">
+                           <span>🚀 Ready to Publish?</span>
+                         </h3>
+                         <p className="text-white/90 text-sm mb-1">
+                           {contentCalendarData && contentCalendarData.length > 0 ? (
+                             <>
+                               Your AI-generated content is waiting!
+                               <strong className="ml-1">
+                                 {contentCalendarData.filter(item => item.status === 'approved').length > 0
+                                   ? `${contentCalendarData.filter(item => item.status === 'approved').length} pieces ready to publish`
+                                   : `${contentCalendarData.filter(item => item.status === 'draft').length} drafts ready for review`
+                                 }
+                               </strong>
+                             </>
+                           ) : (
+                             'Get AI-powered content created and published from your content calendar'
+                           )}
+                         </p>
+                       </div>
                      </div>
-                   </CardContent>
-                 </Card>
-               </div>
+                     <Button
+                       onClick={() => { setActiveSection('dashboard'); setActiveTool('content-calendar'); }}
+                       className="bg-white text-[#6658f4] hover:bg-white/90 font-semibold shadow-md transition-all hover:scale-105"
+                     >
+                       Go to Content Calendar
+                       <ArrowRight className="w-4 h-4 ml-2" />
+                     </Button>
+                   </div>
+                 </CardContent>
+               </Card>
+
+               {/* Direct Domain Analysis Integration */}
+               <DomainAnalysis
+                 initialDomain={userBrands.length > 0 ? userBrands[0].domain : ""}
+                 onClose={() => setActiveSection('dashboard')}
+               />
              </div>
            )}
 
@@ -756,372 +1044,452 @@ const Dashboard = () => {
           )}
 
           {activeSection === 'settings' && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-2xl font-semibold text-[#4a4a6a] mb-2">Settings</h2>
-                <p className="text-[#4a4a6a]">Manage your account and preferences</p>
-              </div>
-              
-              {/* Profile Settings */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">👤</span>
-                    </div>
-                    <span>Profile Settings</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Update your personal information and account details
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Full Name</label>
-                      <Input 
-                        placeholder="Enter your full name" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                        defaultValue={userName}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Email</label>
-                      <Input 
-                        type="email" 
-                        placeholder="your@email.com" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Company</label>
-                      <Input 
-                        placeholder="Your company name" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Role</label>
-                      <Input 
-                        placeholder="Your job title" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button className="gradient-primary">Save Profile</Button>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="space-y-6">
+              <Tabs defaultValue="account" onValueChange={(value) => setActiveSettingsTab(value)}>
+                <TabsList className="w-full justify-start border-b border-gray-200 bg-transparent p-0 h-auto rounded-none">
+                  <TabsTrigger
+                    value="account"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6658f4] data-[state=active]:text-[#6658f4] data-[state=active]:bg-transparent px-4 py-3"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Account
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="brand"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6658f4] data-[state=active]:text-[#6658f4] data-[state=active]:bg-transparent px-4 py-3"
+                  >
+                    <Palette className="w-4 h-4 mr-2" />
+                    Brand & Content
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="integrations"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6658f4] data-[state=active]:text-[#6658f4] data-[state=active]:bg-transparent px-4 py-3"
+                  >
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Integrations
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="payment"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6658f4] data-[state=active]:text-[#6658f4] data-[state=active]:bg-transparent px-4 py-3"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Payment
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Brand Settings */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">🎨</span>
-                    </div>
-                    <span>Brand Settings</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Customize your brand's voice and information for personalized AI responses
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <BrandSettings />
-                </CardContent>
-              </Card>
-
-              {/* CMS Platform Selector */}
-              {showCMSSelector ? (
-                <CMSConnectionSelector 
-                  onBack={() => setShowCMSSelector(false)}
-                  focusPlatform={cmsFocus}
-                />
-              ) : (
-                <>
-                  {/* CMS Integration Overview */}
-                  <Card className="border border-[#b0b0d8] bg-gradient-to-r from-purple-50 to-blue-50">
+                <TabsContent value="account" className="mt-6 space-y-6">
+                  {/* Profile Settings */}
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
                     <CardHeader>
                       <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-[#7765e3] rounded-lg flex items-center justify-center">
-                          <span className="text-sm font-bold text-white">🌐</span>
-                        </div>
-                        <span>CMS Platform Connection</span>
+                        <User className="w-5 h-5 text-[#6658f4]" />
+                        <span>Profile Settings</span>
                       </CardTitle>
                       <CardDescription className="text-[#4a4a6a]">
-                        Connect to your preferred content management system for seamless publishing
+                        Update your personal information and account details
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <p className="text-sm text-[#6b7280]">
-                        Choose from Shopify, Webflow, or WordPress to publish your AI-generated content directly to your website.
-                      </p>
-                      <Button
-                        onClick={() => setShowCMSSelector(true)}
-                        className="bg-[#7765e3] hover:bg-[#6658f4] text-white"
-                      >
-                        Choose CMS Platform
-                      </Button>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="fullName" className="text-[#4a4a6a]">Full Name</Label>
+                          <Input
+                            id="fullName"
+                            placeholder="Enter your full name"
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                            value={accountSettings.fullName || userName}
+                            onChange={(e) => setAccountSettings({ ...accountSettings, fullName: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email" className="text-[#4a4a6a]">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="your@email.com"
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                            value={accountSettings.email}
+                            onChange={(e) => setAccountSettings({ ...accountSettings, email: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="company" className="text-[#4a4a6a]">Company</Label>
+                          <Input
+                            id="company"
+                            placeholder="Your company name"
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                            value={accountSettings.company}
+                            onChange={(e) => setAccountSettings({ ...accountSettings, company: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="role" className="text-[#4a4a6a]">Role</Label>
+                          <Input
+                            id="role"
+                            placeholder="Your job title"
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                            value={accountSettings.role}
+                            onChange={(e) => setAccountSettings({ ...accountSettings, role: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end pt-2 text-white">
+                        <Button
+                          onClick={handleSaveAccountSettings}
+                          disabled={isSavingAccount}
+                          className="gradient-primary"
+                        >
+                          {isSavingAccount ? 'Saving...' : 'Save Profile'}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
 
-                  {/* Individual CMS Settings - Advanced Configuration */}
-                  <Card className="border border-[#b0b0d8] bg-white">
+                  {/* Notification Settings */}
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
                     <CardHeader>
-                      <CardTitle className="text-[#4a4a6a] text-lg">Advanced CMS Configuration</CardTitle>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <Bell className="w-5 h-5 text-[#6658f4]" />
+                        <span>Notification Preferences</span>
+                      </CardTitle>
                       <CardDescription className="text-[#4a4a6a]">
-                        Configure specific settings for each platform (for advanced users)
+                        Choose how and when you want to be notified
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Shopify Integration */}
-                      <div>
-                        <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
-                          <div className="w-6 h-6 bg-[#95BF47] rounded flex items-center justify-center">
-                            <span className="text-xs font-bold text-white">🛍️</span>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex-1">
+                            <Label htmlFor="notif-analysis" className="text-sm font-medium text-[#4a4a6a]">
+                              Analysis Completion
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">Get notified when analysis is ready</p>
                           </div>
-                          <span>Shopify Settings</span>
-                        </h4>
-                        <ShopifySettings />
+                          <Switch
+                            id="notif-analysis"
+                            checked={accountSettings.notifications.analysisCompletion}
+                            onCheckedChange={(checked) =>
+                              setAccountSettings({
+                                ...accountSettings,
+                                notifications: { ...accountSettings.notifications, analysisCompletion: checked }
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex-1">
+                            <Label htmlFor="notif-weekly" className="text-sm font-medium text-[#4a4a6a]">
+                              Weekly Reports
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">Receive weekly analysis summaries</p>
+                          </div>
+                          <Switch
+                            id="notif-weekly"
+                            checked={accountSettings.notifications.weeklyReports}
+                            onCheckedChange={(checked) =>
+                              setAccountSettings({
+                                ...accountSettings,
+                                notifications: { ...accountSettings.notifications, weeklyReports: checked }
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex-1">
+                            <Label htmlFor="notif-calendar" className="text-sm font-medium text-[#4a4a6a]">
+                              Content Calendar Reminders
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">Get reminded about content deadlines</p>
+                          </div>
+                          <Switch
+                            id="notif-calendar"
+                            checked={accountSettings.notifications.contentCalendarReminders}
+                            onCheckedChange={(checked) =>
+                              setAccountSettings({
+                                ...accountSettings,
+                                notifications: { ...accountSettings.notifications, contentCalendarReminders: checked }
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex-1">
+                            <Label htmlFor="notif-competitor" className="text-sm font-medium text-[#4a4a6a]">
+                              Competitor Alerts
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">Notify when competitors make changes</p>
+                          </div>
+                          <Switch
+                            id="notif-competitor"
+                            checked={accountSettings.notifications.competitorAlerts}
+                            onCheckedChange={(checked) =>
+                              setAccountSettings({
+                                ...accountSettings,
+                                notifications: { ...accountSettings.notifications, competitorAlerts: checked }
+                              })
+                            }
+                          />
+                        </div>
                       </div>
-                      
-                      {/* Webflow Integration */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
-                          <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
-                            <span className="text-xs font-bold text-white">🌐</span>
-                          </div>
-                          <span>Webflow Settings</span>
-                        </h4>
-                        <WebflowSettings />
-                      </div>
-                      
-                      {/* WordPress Integration */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
-                          <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center">
-                            <span className="text-xs font-bold text-white">📝</span>
-                          </div>
-                          <span>WordPress Settings</span>
-                        </h4>
-                        <WordPressSettings />
+                      <div className="flex justify-end pt-4 text-white">
+                        <Button
+                          onClick={handleSaveAccountSettings}
+                          disabled={isSavingAccount}
+                          className="gradient-primary"
+                        >
+                          {isSavingAccount ? 'Saving...' : 'Save Notifications'}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
-                </>
-              )}
+                </TabsContent>
 
+                <TabsContent value="brand" className="mt-6 space-y-6">
+                  {/* Brand Settings */}
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <Palette className="w-5 h-5 text-[#6658f4]" />
+                        <span>Brand Settings</span>
+                      </CardTitle>
+                     
+                    </CardHeader>
+                    <CardContent>
+                      <BrandSettings />
+                    </CardContent>
+                  </Card>
 
-
-              {/* Analysis Preferences */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">⚙️</span>
-                    </div>
-                    <span>Analysis Preferences</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Configure default settings for your analysis tools
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Default Analysis Depth</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>Basic Analysis</option>
-                        <option>Standard Analysis</option>
-                        <option>Comprehensive Analysis</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Blog Scoring Threshold</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>70% (Strict)</option>
-                        <option>60% (Standard)</option>
-                        <option>50% (Lenient)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Content Calendar Planning</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>30 Days</option>
-                        <option>60 Days</option>
-                        <option>90 Days</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Data Retention</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>3 Months</option>
-                        <option>6 Months</option>
-                        <option>1 Year</option>
-                        <option>Forever</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button className="gradient-primary">Save Preferences</Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Notification Settings */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">🔔</span>
-                    </div>
-                    <span>Notification Preferences</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Choose how and when you want to be notified
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-sm font-medium text-[#4a4a6a]">Analysis Completion</label>
-                        <p className="text-xs text-[#4a4a6a]">Get notified when analysis is ready</p>
+                  {/* Analysis Preferences */}
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <Sliders className="w-5 h-5 text-[#6658f4]" />
+                        <span>Analysis Preferences</span>
+                      </CardTitle>
+                      
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="analysis-depth" className="text-[#4a4a6a]">
+                            Default Analysis Depth
+                          </Label>
+                          <Select
+                            id="analysis-depth"
+                            value={analysisPreferences.analysisDepth}
+                            onChange={(e) =>
+                              setAnalysisPreferences({ ...analysisPreferences, analysisDepth: e.target.value })
+                            }
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          >
+                            <option value="basic">Basic Analysis</option>
+                            <option value="standard">Standard Analysis</option>
+                            <option value="comprehensive">Comprehensive Analysis</option>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="blog-scoring" className="text-[#4a4a6a]">
+                            Blog Scoring Threshold
+                          </Label>
+                          <Select
+                            id="blog-scoring"
+                            value={analysisPreferences.blogScoringThreshold}
+                            onChange={(e) =>
+                              setAnalysisPreferences({ ...analysisPreferences, blogScoringThreshold: e.target.value })
+                            }
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          >
+                            <option value="70">70% (Strict)</option>
+                            <option value="60">60% (Standard)</option>
+                            <option value="50">50% (Lenient)</option>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="calendar-planning" className="text-[#4a4a6a]">
+                            Content Calendar Planning
+                          </Label>
+                          <Select
+                            id="calendar-planning"
+                            value={analysisPreferences.contentCalendarPlanning}
+                            onChange={(e) =>
+                              setAnalysisPreferences({ ...analysisPreferences, contentCalendarPlanning: e.target.value })
+                            }
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          >
+                            <option value="30">30 Days</option>
+                            <option value="60">60 Days</option>
+                            <option value="90">90 Days</option>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="data-retention" className="text-[#4a4a6a]">
+                            Data Retention
+                          </Label>
+                          <Select
+                            id="data-retention"
+                            value={analysisPreferences.dataRetention}
+                            onChange={(e) =>
+                              setAnalysisPreferences({ ...analysisPreferences, dataRetention: e.target.value })
+                            }
+                            className="border-[#b0b0d8] focus:border-[#6658f4]"
+                          >
+                            <option value="3-months">3 Months</option>
+                            <option value="6-months">6 Months</option>
+                            <option value="1-year">1 Year</option>
+                            <option value="forever">Forever</option>
+                          </Select>
+                        </div>
                       </div>
-                      <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-sm font-medium text-[#4a4a6a]">Weekly Reports</label>
-                        <p className="text-xs text-[#4a4a6a]">Receive weekly analysis summaries</p>
+                      <div className="flex justify-end pt-2 text-white">
+                        <Button
+                          onClick={handleSaveAnalysisPreferences}
+                          disabled={isSavingPreferences}
+                          className="gradient-primary"
+                        >
+                          {isSavingPreferences ? 'Saving...' : 'Save Preferences'}
+                        </Button>
                       </div>
-                      <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-sm font-medium text-[#4a4a6a]">Content Calendar Reminders</label>
-                        <p className="text-xs text-[#4a4a6a]">Get reminded about content deadlines</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="integrations" className="mt-6 space-y-6">
+                  {/* CMS Integration Hub */}
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <Building2 className="w-5 h-5 text-[#6658f4]" />
+                        <span>CMS Integrations</span>
+                      </CardTitle>
+                   
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="flex flex-wrap gap-3">
+                        {cmsConnectionStatus.shopify === 'connected' ? (
+                          <Button
+                            variant="outline"
+                            className="border-green-300 bg-green-50 text-green-700 cursor-default"
+                            disabled
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Shopify Connected
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleDirectCmsConnect('shopify')}
+                            variant="outline"
+                            className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
+                          >
+                            <Building2 className="w-4 h-4 mr-2" />
+                            Connect Shopify
+                          </Button>
+                        )}
+
+                        {cmsConnectionStatus.webflow === 'connected' ? (
+                          <Button
+                            variant="outline"
+                            className="border-green-300 bg-green-50 text-green-700 cursor-default"
+                            disabled
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Webflow Connected
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleDirectCmsConnect('webflow')}
+                            variant="outline"
+                            className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
+                          >
+                            <Globe className="w-4 h-4 mr-2" />
+                            Connect Webflow
+                          </Button>
+                        )}
+
+                        {cmsConnectionStatus.wordpress === 'connected' ? (
+                          <Button
+                            variant="outline"
+                            className="border-green-300 bg-green-50 text-green-700 cursor-default"
+                            disabled
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            WordPress Connected
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleDirectCmsConnect('wordpress')}
+                            variant="outline"
+                            className="border-[#b0b0d8] hover:border-[#6658f4] text-[#4a4a6a]"
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            Connect WordPress
+                          </Button>
+                        )}
                       </div>
-                      <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-sm font-medium text-[#4a4a6a]">Competitor Alerts</label>
-                        <p className="text-xs text-[#4a4a6a]">Notify when competitors make changes</p>
-                      </div>
-                      <input type="checkbox" className="w-4 h-4 text-[#6658f4] border-[#b0b0d8] rounded focus:ring-[#6658f4]" />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button className="gradient-primary">Save Notifications</Button>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* API & Integrations */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7c77ff] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">🔗</span>
-                    </div>
-                    <span>API & Integrations</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Manage your external service connections and API keys
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">OpenAI API Key</label>
-                      <Input 
-                        type="password" 
-                        placeholder="sk-..." 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Google Search Console</label>
-                      <Input 
-                        placeholder="Enter your GSC property URL" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">WordPress Site URL</label>
-                      <Input 
-                        placeholder="https://yoursite.com" 
-                        className="border-[#b0b0d8] focus:border-[#6658f4]"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button className="gradient-primary">Save Integrations</Button>
-                  </div>
-                </CardContent>
-              </Card>
+                          {/* Advanced CMS Configuration - Collapsible */}
+                          <div className="pt-4">
+                            <button
+                              onClick={() => setShowCMSAdvanced(!showCMSAdvanced)}
+                              className="w-full flex items-center justify-between p-3 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <Sliders className="w-4 h-4 text-[#6658f4]" />
+                                <span className="font-medium text-[#4a4a6a]">Advanced CMS Configuration</span>
+                              </div>
+                              {showCMSAdvanced ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                            </button>
 
-              {/* Payment & Billing */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-[#7765e3] rounded-lg flex items-center justify-center">
-                      <span className="text-sm font-bold text-white">💳</span>
-                    </div>
-                    <span>Payment & Billing</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Manage your subscription and billing information
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <StripePaymentSettings />
-                </CardContent>
-              </Card>
+                            {showCMSAdvanced && (
+                              <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-white space-y-6">
+                                {/* Shopify Integration */}
+                                <div>
+                                  <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
+                                    <Building2 className="w-4 h-4 text-green-600" />
+                                    <span>Shopify Settings</span>
+                                  </h4>
+                                  <ShopifySettings onConnectionChange={handleConnectionChange} />
+                                </div>
 
-              {/* Export & Data */}
-              <Card className="border border-[#b0b0d8] bg-white">
-                <CardHeader>
-                  <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                    <div className="text-2xl">📊</div>
-                    <span>Export & Data</span>
-                  </CardTitle>
-                  <CardDescription className="text-[#4a4a6a]">
-                    Manage your data exports and report preferences
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Default Export Format</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>PDF</option>
-                        <option>Excel</option>
-                        <option>CSV</option>
-                        <option>PowerPoint</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#4a4a6a] mb-2">Auto-Export Frequency</label>
-                      <select className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none">
-                        <option>Never</option>
-                        <option>Weekly</option>
-                        <option>Monthly</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex space-x-3">
-                    <Button variant="outline" className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]">
-                      Export All Data
-                    </Button>
-                    <Button variant="outline" className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]">
-                      Clear Analysis History
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                                {/* Webflow Integration */}
+                                <div className="border-t border-gray-200 pt-6">
+                                  <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
+                                    <Globe className="w-4 h-4 text-blue-600" />
+                                    <span>Webflow Settings</span>
+                                  </h4>
+                                  <WebflowSettings onConnectionChange={handleConnectionChange} />
+                                </div>
+
+                                {/* WordPress Integration */}
+                                <div className="border-t border-gray-200 pt-6">
+                                  <h4 className="text-md font-semibold text-[#4a4a6a] mb-3 flex items-center space-x-2">
+                                    <FileText className="w-4 h-4 text-purple-600" />
+                                    <span>WordPress Settings</span>
+                                  </h4>
+                                  <WordPressSettings onConnectionChange={handleConnectionChange} />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                </TabsContent>
+
+                <TabsContent value="payment" className="mt-6 space-y-6">
+                  {/* Payment & Billing */}
+                  <Card className="border-0.3 border-[#b0b0d8] bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
+                        <CreditCard className="w-5 h-5 text-[#6658f4]" />
+                        <span>Payment & Billing</span>
+                      </CardTitle>
+                     
+                    </CardHeader>
+                    <CardContent>
+                      <StripePaymentSettings />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 

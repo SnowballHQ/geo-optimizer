@@ -6,10 +6,10 @@ import Step2Categories from './onboarding/Step2Categories';
 import Step3Competitors from './onboarding/Step3Competitors';
 import Step4Prompts from './onboarding/Step4Prompts';
 import ProgressBar from './onboarding/ProgressBar';
-import PostAnalysisFlow from './shared/PostAnalysisFlow';
+import BrandDashboardStep from './shared/BrandDashboardStep';
 import { toast } from 'react-toastify';
 import { Button } from './ui/button';
-import { Download, RefreshCw, Crown } from 'lucide-react';
+import { Download, RefreshCw, Sparkles } from 'lucide-react';
 
 const SuperUserDomainAnalysisFlow = ({ onAnalysisComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -337,9 +337,9 @@ const SuperUserDomainAnalysisFlow = ({ onAnalysisComplete }) => {
   };
 
   const renderAnalysisComplete = () => {
-    // Show the new unified post-analysis flow (Responses → Mentions → SOV → Dashboard)
+    // Show dashboard directly with all results
     return (
-      <PostAnalysisFlow
+      <BrandDashboardStep
         brandId={progress.analysisResult?.brandId}
         analysisId={analysisId}
         brandName={progress.step1?.brandName}
@@ -348,7 +348,6 @@ const SuperUserDomainAnalysisFlow = ({ onAnalysisComplete }) => {
         onDownloadPDF={handleDownloadPDF}
         downloadingPdf={downloadingPdf}
         isSuperUser={true}
-        initialStep="responses"
       />
     );
   };
@@ -360,29 +359,18 @@ const SuperUserDomainAnalysisFlow = ({ onAnalysisComplete }) => {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      {/* Super User Header */}
+      {/* Playground Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-2xl mb-4">
-          <Crown className="w-8 h-8 text-white" />
-        </div>
+      
         <h1 className="text-3xl font-bold text-[#4a4a6a] mb-2">
-          Super User Domain Analysis
+          Brand Analysis Playground
         </h1>
-        <p className="text-[#6b7280]">
-          Complete isolated domain analysis with AI-powered insights and market analysis
-        </p>
-        {analysisId && (
-          <p className="text-sm text-gray-500 mt-1">
-            Analysis ID: {analysisId}
-          </p>
-        )}
+      
+      
       </div>
 
       {/* Progress Bar */}
       <ProgressBar currentStep={currentStep} totalSteps={4} />
-      <div className="text-center mb-4 text-sm text-gray-600">
-        <p>Step 4 includes: Prompts → AI Analysis → Mentions → Share of Voice</p>
-      </div>
 
       {/* Error Display */}
       {error && (

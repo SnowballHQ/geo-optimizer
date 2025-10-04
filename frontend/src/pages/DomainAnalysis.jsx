@@ -36,13 +36,16 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
 
   // Check for existing analysis first, then auto-start if needed
   useEffect(() => {
-    if (initialDomain && initialDomain.trim() && !hasStartedAnalysis) {
-      setDomain(initialDomain);
+    if (!hasStartedAnalysis) {
       setHasStartedAnalysis(true);
-      checkExistingAnalysisOrStart(initialDomain);
-    } else if (!initialDomain && !hasStartedAnalysis) {
-      // No initial domain - check if user has existing analysis to display
-      checkForExistingAnalysis();
+      if (initialDomain && initialDomain.trim()) {
+        setDomain(initialDomain);
+        // Always use the comprehensive data loading path that includes prompts/responses
+        checkForExistingAnalysis();
+      } else {
+        // No initial domain - check if user has existing analysis to display
+        checkForExistingAnalysis();
+      }
     }
   }, [initialDomain, hasStartedAnalysis]);
 
@@ -411,45 +414,27 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
     onClose();
   };
 
-  // Function to refresh SOV data after competitor addition or custom prompt addition
+  // Function to fully reload all data after competitor addition or custom prompt addition
   const refreshSOVData = async () => {
     if (!result || !result.brandId) {
-      console.log('❌ No brandId available for SOV refresh');
+      console.log('❌ No brandId available for data reload');
       return;
     }
-    
+
     try {
-      console.log('🔄 Refreshing SOV data for brandId:', result.brandId);
-      
+      console.log('🔄 Triggering full data reload...');
+
       // Add a small delay to ensure backend processing is complete
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Refetch the brand analysis to get updated SOV data
-      const analysisResponse = await apiService.getBrandAnalysis(result.brandId);
-      console.log('✅ SOV data refreshed:', {
-        shareOfVoice: analysisResponse.data.shareOfVoice,
-        mentionCounts: analysisResponse.data.mentionCounts,
-        totalMentions: analysisResponse.data.totalMentions,
-        competitors: analysisResponse.data.competitors?.length || 0
-      });
-      
-      // Update the result with new SOV data and any updated fields
-      setResult(prevResult => ({
-        ...prevResult,
-        shareOfVoice: analysisResponse.data.shareOfVoice,
-        mentionCounts: analysisResponse.data.mentionCounts,
-        totalMentions: analysisResponse.data.totalMentions,
-        brandShare: analysisResponse.data.brandShare,
-        aiVisibilityScore: analysisResponse.data.aiVisibilityScore,
-        competitors: analysisResponse.data.competitors, // Update competitors list
-        categories: analysisResponse.data.categories || prevResult.categories // Update categories if available
-      }));
-      
-      console.log('✅ SOV table data updated successfully');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Trigger full data reload by calling checkForExistingAnalysis
+      await checkForExistingAnalysis();
+
+      console.log('✅ Full data reload completed successfully');
       toast.success('Data refreshed successfully!');
-      
+
     } catch (error) {
-      console.error('❌ Error refreshing SOV data:', error);
+      console.error('❌ Error reloading data:', error);
       console.error('❌ Error details:', {
         status: error.response?.status,
         message: error.response?.data?.msg || error.message
@@ -671,27 +656,9 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
       )}
 
       {result && (
-        <div className="mt-8 space-y-6">
+        <div className="mt-2 space-y-3">
           {/* Header */}
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <h3 className="text-2xl font-bold text-foreground">Brand Analysis Result</h3>
-              <Button
-                onClick={handleRegenerateAnalysis}
-                disabled={isRegenerating || loading}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 hover:bg-primary/10 hover:border-primary"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                {isRegenerating ? 'Regenerating...' : 'Refresh Analysis'}
-              </Button>
-            </div>
-            <p className="text-muted-foreground">
-              Comprehensive analysis for {result.domain}
-              {isRegenerating && <span className="ml-2 text-primary">• Generating fresh responses...</span>}
-            </p>
-          </div>
+          
 
           {/* Main Analysis Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -744,10 +711,11 @@ const DomainAnalysis = ({ onClose, initialDomain = "" }) => {
                 categoriesLength: result.categories.length,
                 firstCategory: result.categories[0]
               })}
-              <CategoriesWithPrompts 
-                categories={result.categories} 
-                brandId={result.brandId} 
+              <CategoriesWithPrompts
+                categories={result.categories}
+                brandId={result.brandId}
                 onSOVUpdate={refreshSOVData}
+                onDataUpdate={refreshSOVData}
               />
               
               {/* Blog analysis moved to separate page */}

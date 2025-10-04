@@ -177,7 +177,7 @@ class OnboardingController {
     try {
       const userId = req.user.id;
       const { categories } = req.body;
-      
+
       const brand = await BrandProfile.findOne({ ownerUserId: userId.toString() });
       if (!brand) {
         return res.status(404).json({ error: 'Brand profile not found' });
@@ -186,10 +186,27 @@ class OnboardingController {
       console.log(`🏷️ Step 2: Categories for ${brand.brandName}`);
 
       let extractedCategories = categories;
-      
+
       // If no categories provided, extract them using existing API
       if (!categories || categories.length === 0) {
         extractedCategories = await extractCategories(brand.domain);
+      }
+
+      // Delete existing categories and their prompts to prevent duplicates when user edits
+      const existingCategories = await BrandCategory.find({ brandId: brand._id });
+      if (existingCategories.length > 0) {
+        console.log(`🗑️ Deleting ${existingCategories.length} existing categories and their prompts`);
+
+        // Delete prompts associated with existing categories
+        const categoryIds = existingCategories.map(cat => cat._id);
+        const deletedPrompts = await CategorySearchPrompt.deleteMany({
+          categoryId: { $in: categoryIds }
+        });
+        console.log(`🗑️ Deleted ${deletedPrompts.deletedCount} existing prompts`);
+
+        // Delete the categories
+        const deletedCategories = await BrandCategory.deleteMany({ brandId: brand._id });
+        console.log(`🗑️ Deleted ${deletedCategories.deletedCount} existing categories`);
       }
 
       // Save categories to database
@@ -246,9 +263,10 @@ class OnboardingController {
         extractedCompetitors = result.competitors || result; // Handle both new object format and legacy array format
       }
 
-      // Save competitors to brand profile
-      brand.competitors = extractedCompetitors;
-      await brand.save();
+      // Save competitors to brand profile using atomic update to avoid version conflicts
+      await BrandProfile.findByIdAndUpdate(brand._id, {
+        competitors: extractedCompetitors
+      }, { new: true });
 
       // Save progress
       await OnboardingProgress.findOneAndUpdate(
@@ -296,69 +314,55 @@ class OnboardingController {
 
       let prompts;
 
-      // If edited prompts are provided, update the existing prompts
-      if (editedPrompts && Array.isArray(editedPrompts) && editedPrompts.length > 0) {
-        console.log(`✏️ Updating prompts with edited versions`);
-        
-        // Get existing prompts from database
-        const existingPrompts = await CategorySearchPrompt.find({ brandId: brand._id });
-        
-        // Update existing prompts with edited text
-        for (let i = 0; i < Math.min(editedPrompts.length, existingPrompts.length); i++) {
-          if (existingPrompts[i] && editedPrompts[i].trim()) {
-            existingPrompts[i].promptText = editedPrompts[i].trim();
-            await existingPrompts[i].save();
-          }
-        }
-        
-        // Return updated prompts with their categories
-        prompts = existingPrompts.map(p => ({
-          promptDoc: p,
-          catDoc: categories.find(c => c._id.toString() === p.categoryId.toString())
-        }));
-      } else {
-        console.log(`🤖 Generating new prompts with AI`);
-        
-        // Use the existing, more sophisticated prompt generation logic
-        const OpenAI = require('openai');
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        
-        // Import the existing prompt generation function
-        const { generateAndSavePrompts } = require('./brand/prompt');
-        
-        // Get brand description from brand profile or generate a fallback
-        const brandDescription = brand.description || brand.overview || `${brand.brandName} operates at ${brand.domain}`;
-        
-        // Generate prompts using the existing logic
-        console.log(`🔄 Onboarding Step 4: Generating prompts for ${categories.length} categories`);
-        console.log(`🏢 Brand: ${brand.brandName} (${brand._id})`);
-        console.log(`📂 Categories:`, categories.map(c => `${c.categoryName} (${c._id})`));
-        
-        prompts = await generateAndSavePrompts(
-          openai, 
-          categories, 
-          brand, 
-          brand.competitors || [],
-          brand.location // Pass location for local brand prompt generation
-        );
-        
-        console.log(`✅ Onboarding Step 4: Generated ${prompts.length} prompts`);
-        
-        // Validate prompts array structure
-        if (!Array.isArray(prompts)) {
-          console.error('❌ Prompts is not an array:', typeof prompts);
-          throw new Error('Invalid prompts data structure returned from generateAndSavePrompts');
-        }
-        
-        console.log(`🔍 Prompt structure validation:`, prompts.map((p, index) => ({
-          index,
-          hasPromptDoc: !!p?.promptDoc,
-          hasCatDoc: !!p?.catDoc,
-          promptId: p?.promptDoc?._id,
-          categoryId: p?.catDoc?._id,
-          categoryName: p?.catDoc?.categoryName
-        })));
+      // Delete existing prompts to ensure fresh generation based on current categories
+      const existingPrompts = await CategorySearchPrompt.find({ brandId: brand._id });
+      if (existingPrompts.length > 0) {
+        console.log(`🗑️ Deleting ${existingPrompts.length} existing prompts to regenerate fresh`);
+        await CategorySearchPrompt.deleteMany({ brandId: brand._id });
       }
+
+      // Always generate new prompts based on current categories
+      console.log(`🤖 Generating prompts with AI for ${categories.length} categories`);
+
+      // Use the existing, more sophisticated prompt generation logic
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      // Import the existing prompt generation function
+      const { generateAndSavePrompts } = require('./brand/prompt');
+
+      // Get brand description from brand profile or generate a fallback
+      const brandDescription = brand.brandInformation || brand.overview || `${brand.brandName} operates at ${brand.domain}`;
+
+      // Generate prompts using the existing logic
+      console.log(`🔄 Onboarding Step 4: Generating prompts for ${categories.length} categories`);
+      console.log(`🏢 Brand: ${brand.brandName} (${brand._id})`);
+      console.log(`📂 Categories:`, categories.map(c => `${c.categoryName} (${c._id})`));
+
+      prompts = await generateAndSavePrompts(
+        openai,
+        categories,
+        brand,
+        brand.competitors || [],
+        brand.location // Pass location for local brand prompt generation
+      );
+
+      console.log(`✅ Onboarding Step 4: Generated ${prompts.length} prompts`);
+
+      // Validate prompts array structure
+      if (!Array.isArray(prompts)) {
+        console.error('❌ Prompts is not an array:', typeof prompts);
+        throw new Error('Invalid prompts data structure returned from generateAndSavePrompts');
+      }
+
+      console.log(`🔍 Prompt structure validation:`, prompts.map((p, index) => ({
+        index,
+        hasPromptDoc: !!p?.promptDoc,
+        hasCatDoc: !!p?.catDoc,
+        promptId: p?.promptDoc?._id,
+        categoryId: p?.catDoc?._id,
+        categoryName: p?.catDoc?.categoryName
+      })));
 
       // Save progress
       await OnboardingProgress.findOneAndUpdate(

@@ -14,22 +14,28 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
     // Load saved progress if available
     if (progress?.step2?.categories) {
       setCategories(progress.step2.categories);
+    } else {
+      // Auto-extract categories on mount if none exist
+      handleExtractCategories();
     }
   }, [progress]);
 
   const handleExtractCategories = async () => {
     try {
       setIsExtracting(true);
-      
+
       // Only extract categories from AI, don't save to database yet
       const response = await apiService.extractCategories({});
-      
-      if (response.data.success) {
+
+      if (response.data.categories && Array.isArray(response.data.categories)) {
         setCategories(response.data.categories);
+      } else if (response.data.success) {
+        setCategories(response.data.categories || []);
       }
     } catch (error) {
       console.error('Categories extraction failed:', error);
-      alert('Failed to extract categories. Please try again.');
+      // Silently fail - user can add categories manually
+      setCategories([]);
     } finally {
       setIsExtracting(false);
     }
@@ -99,54 +105,47 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
 
   return (
     <div className="max-w-lg mx-auto">
+      {/* Step Header */}
+      <div className="mb-6">
+        <p className="text-sm text-gray-500 mb-1">Step 2 of 4</p>
+        <h2 className="text-2xl font-bold text-gray-900">Content Categories</h2>
+        <p className="text-sm text-gray-600 mt-1">Select the topics your business focuses on</p>
+      </div>
+
       <div className="space-y-6">
         {/* Categories Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Tags className="w-5 h-5 text-primary-500" />
-              <h3 className="text-h4 text-gray-900">Business Categories</h3>
-            </div>
-            <Button
-              onClick={handleExtractCategories}
-              disabled={isExtracting}
-              variant="outline"
-              className="border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white"
-            >
-              {isExtracting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Extracting...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Extract with AI
-                </>
-              )}
-            </Button>
+          <div className="flex items-center gap-2">
+            <Tags className="w-5 h-5 text-primary-500" />
+            <h3 className="text-h4 text-gray-900">Business Categories</h3>
           </div>
           
           <p className="text-base text-gray-600">
             Categories help us understand your business focus areas
           </p>
 
-          {categories.length === 0 ? (
+          {isExtracting ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 font-medium">Extracting categories with AI...</p>
+              <p className="text-sm text-gray-500 mt-2">This may take a few seconds</p>
+            </div>
+          ) : categories.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Tags className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-              <p>No categories yet. Click "Extract with AI" to get started.</p>
+              <p>No categories extracted. You can add them manually below.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {categories.map((category, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-primary-200 shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] transition-all duration-300">
                   {editingIndex === index ? (
                     <>
                       <input
                         type="text"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="flex-1 px-3 py-2 border border-primary-200 rounded-md shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.4)] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300"
                         placeholder="Enter category name"
                       />
                       <Button
@@ -206,8 +205,15 @@ const Step2Categories = ({ onComplete, loading, error, progress }) => {
           )}
         </div>
 
-        {/* Continue Button */}
-        <div className="flex justify-end">
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center">
+          <Button
+            onClick={() => onComplete({}, 1)}
+            variant="outline"
+            className="border-gray-300 text-gray-700 px-6 h-11"
+          >
+            Back
+          </Button>
           <Button
             onClick={handleContinue}
             disabled={loading || isSaving || categories.length === 0}

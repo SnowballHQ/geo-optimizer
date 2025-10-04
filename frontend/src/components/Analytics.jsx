@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, TrendingUp, Users, MousePointer, Eye, ExternalLink, AlertCircle, CheckCircle, Settings } from 'lucide-react';
+import { ArrowLeft, ArrowRight, TrendingUp, Users, MousePointer, Eye, ExternalLink, AlertCircle, CheckCircle, Settings, Zap, Calendar } from 'lucide-react';
 import { apiService } from '../utils/api';
 
 const Analytics = ({ onClose }) => {
@@ -288,15 +288,7 @@ const Analytics = ({ onClose }) => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-2">What you'll get:</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Website overview (users, sessions, page views)</li>
-                <li>• Search Console data (clicks, impressions, CTR)</li>
-                <li>• Published blog performance tracking</li>
-                <li>• 28-day analytics dashboard</li>
-              </ul>
-            </div>
+          
 
             <div className="space-y-3">
               <h4 className="font-medium text-[#4a4a6a]">Required Access:</h4>
@@ -452,20 +444,48 @@ const Analytics = ({ onClose }) => {
   // Main Analytics Dashboard
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-[#4a4a6a]">Analytics Dashboard</h2>
-          <p className="text-[#4a4a6a]">Last 28 days performance overview</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={() => setShowSetup(true)} className="border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-            <Settings className="w-4 h-4 mr-1" /> Settings
-          </Button>
-          <Button variant="outline" onClick={onClose} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back
-          </Button>
-        </div>
-      </div>
+      {/* Content Calendar CTA */}
+      {isConnected && overviewData && (
+        <Card className="border-0 bg-gradient-to-r from-[#6658f4] to-[#8b7ff5] text-white shadow-lg overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
+          <CardContent className="p-6 relative z-10">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2 flex items-center space-x-2">
+                    <span>📊 Turn Insights Into Action!</span>
+                  </h3>
+                  <p className="text-white/90 text-sm">
+                    {overviewData.analytics?.totalUsers > 1000
+                      ? 'Your content is performing well! Keep the momentum with more optimized posts'
+                      : 'Boost your traffic with AI-powered content from your calendar'
+                    }
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  if (onClose) {
+                    onClose();
+                  }
+                  // Small delay to ensure proper navigation
+                  setTimeout(() => {
+                    window.location.hash = '#content-calendar';
+                  }, 100);
+                }}
+                className="bg-white text-[#6658f4] hover:bg-white/90 font-semibold shadow-md transition-all hover:scale-105"
+              >
+                Generate More Content
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {loading && (
         <div className="flex items-center justify-center py-8">
@@ -485,22 +505,53 @@ const Analytics = ({ onClose }) => {
 
       {overviewData && (
         <>
-          {/* Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          {/* Primary Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <Card className="border-[#b0b0d8]">
-              <CardContent className="p-4">
+              <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-[#4a4a6a] font-medium">Total Users</p>
-                    <p className="text-2xl font-bold text-[#4a4a6a]">
+                    <p className="text-3xl font-bold text-[#4a4a6a]">
                       {formatNumber(overviewData.analytics?.totalUsers)}
                     </p>
                   </div>
-                  <Users className="w-8 h-8 text-blue-500" />
+                  <Users className="w-10 h-10 text-[#6658f4]" />
                 </div>
               </CardContent>
             </Card>
 
+            <Card className="border-[#b0b0d8]">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[#4a4a6a] font-medium">Total Clicks</p>
+                    <p className="text-3xl font-bold text-[#4a4a6a]">
+                      {formatNumber(overviewData.searchConsole?.totalClicks)}
+                    </p>
+                  </div>
+                  <MousePointer className="w-10 h-10 text-[#6658f4]" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-[#b0b0d8]">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[#4a4a6a] font-medium">Impressions</p>
+                    <p className="text-3xl font-bold text-[#4a4a6a]">
+                      {formatNumber(overviewData.searchConsole?.totalImpressions)}
+                    </p>
+                  </div>
+                  <Eye className="w-10 h-10 text-[#7c77ff]" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Secondary Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card className="border-[#b0b0d8]">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -510,35 +561,7 @@ const Analytics = ({ onClose }) => {
                       {formatNumber(overviewData.analytics?.totalSessions)}
                     </p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-green-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-[#b0b0d8]">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[#4a4a6a] font-medium">Total Clicks</p>
-                    <p className="text-2xl font-bold text-[#4a4a6a]">
-                      {formatNumber(overviewData.searchConsole?.totalClicks)}
-                    </p>
-                  </div>
-                  <MousePointer className="w-8 h-8 text-purple-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-[#b0b0d8]">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[#4a4a6a] font-medium">Impressions</p>
-                    <p className="text-2xl font-bold text-[#4a4a6a]">
-                      {formatNumber(overviewData.searchConsole?.totalImpressions)}
-                    </p>
-                  </div>
-                  <Eye className="w-8 h-8 text-orange-500" />
+                  <TrendingUp className="w-8 h-8 text-[#8b87ff]" />
                 </div>
               </CardContent>
             </Card>
@@ -552,7 +575,7 @@ const Analytics = ({ onClose }) => {
                       {overviewData.searchConsole?.avgCTR ? (overviewData.searchConsole.avgCTR * 100).toFixed(2) + '%' : '0%'}
                     </p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-green-600" />
+                  <TrendingUp className="w-8 h-8 text-[#8b87ff]" />
                 </div>
               </CardContent>
             </Card>
@@ -566,7 +589,7 @@ const Analytics = ({ onClose }) => {
                       {overviewData.searchConsole?.avgPosition ? overviewData.searchConsole.avgPosition.toFixed(1) : '0'}
                     </p>
                   </div>
-                  <Eye className="w-8 h-8 text-indigo-500" />
+                  <Eye className="w-8 h-8 text-[#8b87ff]" />
                 </div>
               </CardContent>
             </Card>
@@ -598,8 +621,8 @@ const Analytics = ({ onClose }) => {
                               style={{ height: `${clickHeight}px` }}
                               title={`Clicks: ${day.clicks}`}
                             ></div>
-                            <div 
-                              className="w-4 bg-orange-400 rounded-t" 
+                            <div
+                              className="w-4 bg-[#7c77ff] rounded-t"
                               style={{ height: `${impressionHeight}px` }}
                               title={`Impressions: ${day.impressions}`}
                             ></div>
@@ -617,7 +640,7 @@ const Analytics = ({ onClose }) => {
                       <span className="text-sm text-gray-600">Clicks</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 bg-orange-400 rounded"></div>
+                      <div className="w-4 h-4 bg-[#7c77ff] rounded"></div>
                       <span className="text-sm text-gray-600">Impressions</span>
                     </div>
                   </div>
@@ -745,7 +768,7 @@ const Analytics = ({ onClose }) => {
                         </div>
                         <div className="flex items-center space-x-4 text-sm">
                           <span className="text-purple-600">{country.clicks} clicks</span>
-                          <span className="text-orange-600">{country.impressions} views</span>
+                          <span className="text-[#7c77ff]">{country.impressions} views</span>
                         </div>
                       </div>
                     ))}
@@ -779,7 +802,7 @@ const Analytics = ({ onClose }) => {
                         </div>
                         <div className="flex items-center space-x-4 text-sm">
                           <span className="text-purple-600">{device.clicks} clicks</span>
-                          <span className="text-orange-600">{device.impressions} views</span>
+                          <span className="text-[#7c77ff]">{device.impressions} views</span>
                         </div>
                       </div>
                     ))}
@@ -989,8 +1012,8 @@ const Analytics = ({ onClose }) => {
                                         style={{ height: `${clickHeight}px` }}
                                         title={`${day.date}: ${day.clicks || 0} clicks`}
                                       ></div>
-                                      <div 
-                                        className="w-3 bg-orange-400 rounded-t" 
+                                      <div
+                                        className="w-3 bg-[#7c77ff] rounded-t"
                                         style={{ height: `${impressionHeight}px` }}
                                         title={`${day.date}: ${day.impressions || 0} impressions`}
                                       ></div>

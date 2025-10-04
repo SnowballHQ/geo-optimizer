@@ -516,7 +516,7 @@ const SuperUserAnalysisResults = ({
               Analysis Results: {analysisData.domain}
             </h1>
             <p className="text-sm text-gray-500">
-              Analysis ID: {analysisData.analysisId} • {new Date(analysisData.createdAt).toLocaleDateString()}
+              {new Date(analysisData.createdAt).toLocaleDateString()}
             </p>
           </div>
         </div>

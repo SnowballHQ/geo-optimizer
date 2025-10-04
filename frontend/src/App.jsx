@@ -3,6 +3,7 @@ import { Dashboard, HomeLayout, Landing, Login, Logout, Register, BlogScoring, D
 import History from "./pages/History";
 import BlogEditor from "./pages/BlogEditor";
 import OnboardingFlow from "./components/OnboardingFlow";
+import OnboardingPreview from "./components/OnboardingPreview";
 import DomainAnalysisDashboard from "./pages/DomainAnalysisDashboard";
 import SuperUserAnalysisPage from "./pages/SuperUserAnalysisPage";
 import SuperUserHistoryPage from "./pages/SuperUserHistoryPage";
@@ -53,23 +54,27 @@ const router = createBrowserRouter([
         element: <OnboardingFlow />,
       },
       {
+        path: "onboarding-preview",
+        element: <OnboardingPreview />,
+      },
+      {
         path: "domain-analysis",
         element: <DomainAnalysisDashboard />,
       },
       {
-        path: "super-user-analysis",
+        path: "playground",
         element: <SuperUserAnalysisPage />,
       },
       {
-        path: "super-user-history",
+        path: "playground/history",
         element: <SuperUserHistoryPage />,
       },
       {
-        path: "super-user-analysis/:brandId",
+        path: "playground/brand/:brandId",
         element: <SuperUserAnalysisPage />,
       },
       {
-        path: "super-user-analysis/view/:analysisId",
+        path: "playground/analysis/:analysisId",
         element: <SuperUserAnalysisViewPage />,
       }
     ],

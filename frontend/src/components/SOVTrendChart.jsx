@@ -163,7 +163,7 @@ const SOVTrendChart = ({ brandId }) => {
 
   if (loading) {
     return (
-      <Card className="border border-[#b0b0d8] bg-white">
+      <Card className="border-0.3 border-[#b0b0d8] bg-white">
         <CardHeader>
           <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
             <TrendingUp className="w-5 h-5" />
@@ -185,7 +185,7 @@ const SOVTrendChart = ({ brandId }) => {
 
   if (error) {
     return (
-      <Card className="border border-[#b0b0d8] bg-white">
+      <Card className="border-0.3 border-[#b0b0d8] bg-white">
         <CardHeader>
           <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
             <TrendingUp className="w-5 h-5" />
@@ -210,7 +210,7 @@ const SOVTrendChart = ({ brandId }) => {
 
   if (!chartData || chartData.length === 0) {
     return (
-      <Card className="border border-[#b0b0d8] bg-white">
+      <Card className="border-0.3 border-[#b0b0d8] bg-white">
         <CardHeader>
           <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
             <TrendingUp className="w-5 h-5" />
@@ -249,7 +249,7 @@ const SOVTrendChart = ({ brandId }) => {
   }
 
   return (
-    <Card className="border border-[#b0b0d8] bg-white">
+    <Card className="border-0.3 border-[#b0b0d8] bg-white">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>

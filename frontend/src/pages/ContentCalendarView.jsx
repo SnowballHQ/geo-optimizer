@@ -10,9 +10,9 @@ import InlineRichTextEditor from '../components/InlineRichTextEditor';
 
 import { apiService } from '../utils/api';
 import { getUserName } from '../utils/auth';
-import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, Upload, X, Eye, RefreshCw, ArrowLeft } from 'lucide-react';
+import { CalendarIcon, Edit, CheckCircle, Clock, Send, Plus, Image, FileText, Calendar, Grid, List, ChevronLeft, ChevronRight, ChevronDown, Upload, X, Eye, RefreshCw, ArrowLeft, Sparkles, Brain, Zap } from 'lucide-react';
 
-const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }) => {
+const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, onEditorStateChange }) => {
   const navigate = useNavigate();
   const [companyName, setCompanyName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -24,7 +24,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   
   // New state variables for enhanced features
-  const [currentView, setCurrentView] = useState('week'); // week, month, list
+  const [currentView, setCurrentView] = useState('month'); // week, month, list - default is month
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showContentEditor, setShowContentEditor] = useState(false);
   const [editingContent, setEditingContent] = useState(null);
@@ -48,7 +48,10 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
   const [selectedContent, setSelectedContent] = useState(null);
   const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
-  
+
+  // Status dropdown state
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(null); // stores item _id
+
   const [editorFormData, setEditorFormData] = useState({
     title: '',
     description: '',
@@ -472,6 +475,65 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
       status: 'draft'
     });
     setContentRichText('');
+
+    // Notify Dashboard that we're exiting editor mode
+    if (onEditorStateChange) {
+      onEditorStateChange(false);
+    }
+  };
+
+  // Handle clicking empty date cell to create new content
+  const handleCreateContentForDate = (date) => {
+    const newContent = {
+      _id: `temp-${Date.now()}`, // Temporary ID
+      date: date.toISOString().split('T')[0],
+      title: '',
+      description: '',
+      keywords: [],
+      targetAudience: '',
+      content: '',
+      outline: '',
+      status: 'draft'
+    };
+
+    setSelectedContent(newContent);
+    setEditorFormData({
+      title: '',
+      description: '',
+      keywords: '',
+      targetAudience: '',
+      content: '',
+      outline: '',
+      status: 'draft'
+    });
+    setContentRichText('');
+    setActiveEditorTool('content-editor');
+
+    // Notify Dashboard that we're entering editor mode
+    if (onEditorStateChange) {
+      onEditorStateChange(true);
+    }
+  };
+
+  // Handle quick status change
+  const handleQuickStatusChange = async (item, newStatus) => {
+    try {
+      // Update in backend
+      await apiService.updateContentCalendarEntry(item._id, { status: newStatus });
+
+      // Update local state
+      setContentPlan(prevPlan =>
+        prevPlan.map(content =>
+          content._id === item._id ? { ...content, status: newStatus } : content
+        )
+      );
+
+      setStatusDropdownOpen(null);
+      // toast.success(`Status updated to ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update status. Please try again.');
+    }
   };
 
   // Rich text editor handlers for content editor (legacy modal - now using inline editor)
@@ -571,6 +633,11 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
     });
     setContentRichText(content.content || '');
     setActiveEditorTool('content-editor');
+
+    // Notify Dashboard that we're entering editor mode
+    if (onEditorStateChange) {
+      onEditorStateChange(true);
+    }
   };
 
   const handleTemplateSelect = (template) => {
@@ -898,6 +965,112 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
     }
   };
 
+  // ============ Helper Functions for Calendar Date Calculations ============
+
+  // Helper function to get start of week (Sunday)
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+  };
+
+  // Helper function to get all dates for current week view
+  const getWeekDates = (date) => {
+    const startOfWeek = getStartOfWeek(date);
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      dates.push(day);
+    }
+    return dates;
+  };
+
+  // Helper function to get all dates for month calendar (including prev/next month padding)
+  const getMonthCalendarDates = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    const firstDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+    const lastDate = lastDay.getDate();
+
+    const dates = [];
+
+    // Add previous month's days to fill the first week
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const prevDate = new Date(year, month, -i);
+      dates.push({ date: prevDate, isCurrentMonth: false });
+    }
+
+    // Add current month's days
+    for (let i = 1; i <= lastDate; i++) {
+      const currentDate = new Date(year, month, i);
+      dates.push({ date: currentDate, isCurrentMonth: true });
+    }
+
+    // Add next month's days to fill the last week
+    const remainingDays = 42 - dates.length; // 6 rows × 7 days = 42
+    for (let i = 1; i <= remainingDays; i++) {
+      const nextDate = new Date(year, month + 1, i);
+      dates.push({ date: nextDate, isCurrentMonth: false });
+    }
+
+    return dates;
+  };
+
+  // Helper function to get content for a specific date
+  const getContentForDate = (date) => {
+    if (!contentPlan) return [];
+
+    const dateStr = date.toISOString().split('T')[0];
+    return contentPlan.filter(item => {
+      const itemDateStr = new Date(item.date).toISOString().split('T')[0];
+      return itemDateStr === dateStr;
+    });
+  };
+
+  // Helper function to check if date is today
+  const isToday = (date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  // Navigate to today
+  const navigateToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  // Navigate weeks/months
+  const navigateDate = (direction) => {
+    const newDate = new Date(currentDate);
+    if (currentView === 'week') {
+      newDate.setDate(newDate.getDate() + (direction * 35)); // Navigate by 5 weeks
+    } else if (currentView === 'month') {
+      newDate.setMonth(newDate.getMonth() + direction);
+    }
+    setCurrentDate(newDate);
+  };
+
+  // Helper function to get 5 weeks of dates (35 days total)
+  const getMultiWeekDates = (date) => {
+    const startOfWeek = getStartOfWeek(date);
+    const dates = [];
+    for (let i = 0; i < 35; i++) { // 5 weeks × 7 days = 35 days
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      dates.push(day);
+    }
+    return dates;
+  };
+
+  // ============ End Helper Functions ============
+
   const handleSaveCMSCredentials = async () => {
     if (!cmsPlatform) return;
     
@@ -967,19 +1140,32 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
           <Card className="border border-[#ffffff] bg-white">
             <CardHeader>
               <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-                <CalendarIcon className="w-6 h-6 text-[#7c77ff]" />
-                <span>Content Calendar</span>
+                <div className="w-8 h-8 bg-gradient-to-r from-[#7c77ff] to-[#6658f4] rounded-lg flex items-center justify-center">
+                  <Brain className="w-5 h-5 text-white animate-pulse" />
+                </div>
+                <span className="bg-gradient-to-r from-[#7c77ff] to-[#6658f4] bg-clip-text text-transparent font-semibold">
+                  AI Content Calendar
+                </span>
               </CardTitle>
               <CardDescription className="text-[#4a4a6a]">
-                Setting up your personalized content calendar...
+                <span className="flex items-center space-x-1">
+                  <Zap className="w-4 h-4 text-[#6658f4]" />
+                  <span>Setting up your <strong>AI-powered</strong> personalized content calendar...</span>
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#7765e3] mx-auto mb-4"></div>
-                  <p className="text-lg font-medium text-[#4a4a6a]">Creating Your Content Calendar...</p>
-                  <p className="text-sm text-[#6b7280] mt-2">Using your brand profile to generate personalized content</p>
+                  <p className="text-lg font-medium text-[#4a4a6a] flex items-center space-x-2">
+                    <Brain className="w-5 h-5 text-[#6658f4] animate-pulse" />
+                    <span>AI Creating Your Content Calendar...</span>
+                  </p>
+                  <p className="text-sm text-[#6b7280] mt-2 flex items-center space-x-1">
+                    <Sparkles className="w-4 h-4 text-[#6658f4]" />
+                    <span>Using your brand profile to generate <strong>AI-powered</strong> personalized content</span>
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -993,11 +1179,15 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
         <Card className="border border-[#ffffff] bg-white">
           <CardHeader>
             <CardTitle className="text-[#4a4a6a] flex items-center space-x-2">
-              <CalendarIcon className="w-6 h-6 text-[#7c77ff]" />
-              <span>Content Calendar Generator</span>
+              <div className="w-8 h-8 bg-gradient-to-r from-[#7c77ff] to-[#6658f4] rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-[#7c77ff] to-[#6658f4] bg-clip-text text-transparent font-semibold">
+                🚀 AI-Powered Content Calendar
+              </span>
             </CardTitle>
             <CardDescription className="text-[#4a4a6a]">
-              Generate a 30-day AI-powered content plan for your company
+              Generate a <span className="font-semibold text-[#6658f4]">30-day AI-powered</span> content plan tailored to your company
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1032,7 +1222,17 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
               disabled={!companyName.trim() || isGenerating}
               className="w-full gradient-primary"
             >
-              {isGenerating ? 'Generating...' : 'Generate Calendar'}
+              {isGenerating ? (
+                <>
+                  <Brain className="w-4 h-4 mr-2 animate-pulse" />
+                  AI Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate AI-Powered Calendar
+                </>
+              )}
             </Button>
                 
                 <Button 
@@ -1053,85 +1253,179 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
   // Render inline content editor if active
   if (activeEditorTool === 'content-editor') {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold text-[#4a4a6a]">Content Editor</h2>
-            <p className="text-[#4a4a6a]">Edit and generate content for your calendar</p>
-          </div>
-          <Button variant="outline" onClick={handleCloseInlineEditor} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Calendar
-          </Button>
-        </div>
-        
-        <div className="space-y-8">
-          {/* Content Details Section - Row Layout */}
-          <Card className="border border-[#b0b0d8] bg-white">
-            <CardHeader>
-              <CardTitle className="text-[#4a4a6a]">Content Details</CardTitle>
-              <CardDescription>Edit the basic information for this content</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Title
-                  </label>
-                  <Input
-                    type="text"
-                    value={editorFormData.title}
-                    onChange={(e) => setEditorFormData(prev => ({ ...prev, title: e.target.value }))}
-                    className="border-[#b0b0d8] focus:border-[#6658f4]"
-                    placeholder="Enter blog title..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Keywords
-                  </label>
-                  <Input
-                    type="text"
-                    value={editorFormData.keywords}
-                    onChange={(e) => setEditorFormData(prev => ({ ...prev, keywords: e.target.value }))}
-                    className="border-[#b0b0d8] focus:border-[#6658f4]"
-                    placeholder="keyword1, keyword2, keyword3..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Target Audience
-                  </label>
-                  <Input
-                    type="text"
-                    value={editorFormData.targetAudience}
-                    onChange={(e) => setEditorFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
-                    className="border-[#b0b0d8] focus:border-[#6658f4]"
-                    placeholder="Who is this content for?"
-                  />
+      <div className="min-h-screen bg-gray-50">
+        {/* Shopify-style Header Bar */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                onClick={handleCloseInlineEditor}
+                className="text-gray-600 hover:text-gray-900 p-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">Content Editor</h1>
+                <div className="flex items-center space-x-3">
+                  <p className="text-sm text-gray-500">Edit and generate content for your calendar</p>
+                  {selectedContent?.date && (
+                    <span className="text-xs text-gray-500">
+                      {new Date(selectedContent.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  )}
                 </div>
               </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                  Description
-                </label>
-                <Textarea
-                  value={editorFormData.description}
-                  onChange={(e) => setEditorFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="border-[#b0b0d8] focus:border-[#6658f4] min-h-[100px]"
-                  placeholder="Brief description of the content..."
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleCloseInlineEditor}
+                className="border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveInlineContent}
+                className="gradient-primary shadow-md hover:shadow-lg transition-shadow"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Shopify-style Two-Column Layout */}
+        <div className="flex flex-col lg:flex-row">
+          {/* Main Content Area (70%) */}
+          <div className="flex-1 lg:max-w-4xl p-6">
+            {/* Large Title Input - Shopify Style */}
+            <div className="mb-8">
+              <input
+                type="text"
+                value={editorFormData.title}
+                onChange={(e) => setEditorFormData(prev => ({ ...prev, title: e.target.value }))}
+                className="w-full text-3xl font-semibold text-gray-900 border-none focus:outline-none focus:ring-0 placeholder-gray-400 bg-transparent"
+                placeholder="Enter your blog title..."
+              />
+              <div className="h-px bg-gray-200 mt-2"></div>
+              <div className="flex items-center justify-between mt-2">
+                <p className={`text-xs font-medium ${
+                  editorFormData.title.length === 0 ? 'text-gray-400' :
+                  editorFormData.title.length < 40 ? 'text-yellow-600' :
+                  editorFormData.title.length <= 60 ? 'text-green-600' :
+                  'text-red-600'
+                }`}>
+                  {editorFormData.title.length} / 60
+                </p>
+              </div>
+            </div>
+
+            {/* Content Outline Section */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Content Outline</h3>
+                <Button
+                  onClick={handleGenerateInlineOutline}
+                  disabled={isGeneratingOutline || !editorFormData.title.trim()}
+                  size="sm"
+                  className="bg-[#6658f4] hover:bg-[#5547e3] text-white"
+                >
+                  {isGeneratingOutline ? (
+                    <>
+                      <Brain className="w-4 h-4 mr-2 animate-pulse" />
+                      AI Generating...
+                    </>
+                  ) : editorFormData.outline ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-1" />
+                      Regenerate
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-1" />
+                      Generate Outline
+                    </>
+                  )}
+                </Button>
+              </div>
+              <Textarea
+                value={editorFormData.outline || ''}
+                onChange={(e) => setEditorFormData(prev => ({ ...prev, outline: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 min-h-[150px] font-mono text-sm"
+                placeholder="Your content outline will appear here..."
+              />
+              {!editorFormData.outline && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Generate an AI-powered outline to structure your content
+                </p>
+              )}
+            </div>
+
+            {/* Main Content Editor */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Blog Content</h3>
+                <Button
+                  onClick={handleGenerateInlineBlog}
+                  disabled={isGeneratingBlog || !editorFormData.outline}
+                  size="sm"
+                  className="gradient-primary"
+                >
+                  {isGeneratingBlog ? (
+                    <>
+                      <Brain className="w-4 h-4 mr-2 animate-pulse" />
+                      AI Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 mr-1" />
+                      Generate Content
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="bg-white border border-gray-300 rounded-lg overflow-hidden h-[400px] overflow-y-auto">
+                <InlineRichTextEditor
+                  content={contentRichText || editorFormData.content || ''}
+                  onChange={(htmlContent) => {
+                    setContentRichText(htmlContent);
+                    setEditorFormData(prev => ({ ...prev, content: htmlContent }));
+                  }}
+                  placeholder="Start writing your blog post here, or generate content from your outline..."
                 />
               </div>
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mt-2">
+                {contentRichText || editorFormData.content ? (
+                  <p className="text-xs text-gray-500">
+                    {(contentRichText || editorFormData.content || '').replace(/<[^>]*>/g, '').split(/\s+/).filter(w => w).length} words • ~{Math.ceil((contentRichText || editorFormData.content || '').replace(/<[^>]*>/g, '').split(/\s+/).filter(w => w).length / 200)} min read
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    Create an outline first, then generate content
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Settings Sidebar (30%) */}
+          <div className="w-full lg:w-80 bg-white lg:border-l border-gray-200 lg:border-t-0 border-t p-6 overflow-y-auto lg:max-h-screen">
+            {/* Publishing Card */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                Publishing
+              </h4>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Status
                   </label>
                   <select
                     value={editorFormData.status}
                     onChange={(e) => setEditorFormData(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#b0b0d8] rounded-md focus:border-[#6658f4] focus:outline-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 text-sm"
                   >
                     <option value="draft">Draft</option>
                     <option value="approved">Approved</option>
@@ -1139,123 +1433,61 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
                   </select>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Outline Generation Section */}
-          <Card className="border border-[#b0b0d8] bg-white">
-            <CardHeader>
-              <CardTitle className="text-[#4a4a6a] flex items-center justify-between">
-                Content Outline Editor
-                <Button
-                  onClick={handleGenerateInlineOutline}
-                  disabled={isGeneratingOutline || !editorFormData.title.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
-                >
-                  {isGeneratingOutline ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Generating...
-                    </>
-                  ) : editorFormData.outline ? '🔄 Regenerate Outline' : '✨ Generate Outline'}
-                </Button>
-              </CardTitle>
-              <CardDescription>AI-generated content structure and outline - directly editable</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            {/* SEO Card */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                SEO & Targeting
+              </h4>
+              <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Content Outline
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
                   </label>
                   <Textarea
-                    value={editorFormData.outline || ''}
-                    onChange={(e) => setEditorFormData(prev => ({ ...prev, outline: e.target.value }))}
-                    className="border-[#b0b0d8] focus:border-[#6658f4] min-h-[200px] font-mono text-sm"
-                    placeholder="Click 'Generate Outline' to create an AI-powered content structure, or type your own outline here..."
+                    value={editorFormData.description}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-md focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 text-sm"
+                    rows={3}
+                    placeholder="Brief description for SEO..."
                   />
+                  <p className={`text-xs mt-1 font-medium ${
+                    editorFormData.description.length === 0 ? 'text-gray-400' :
+                    editorFormData.description.length < 120 ? 'text-yellow-600' :
+                    editorFormData.description.length <= 160 ? 'text-green-600' :
+                    'text-red-600'
+                  }`}>
+                    {editorFormData.description.length} / 160
+                  </p>
                 </div>
-                {!editorFormData.outline && (
-                  <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-md">
-                    <p className="text-sm">No outline generated yet.</p>
-                    <p className="text-xs mt-1">Fill in the content details above, then click "Generate Outline" to create the content structure.</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Blog Content Editor Section */}
-          <Card className="border border-[#b0b0d8] bg-white">
-            <CardHeader>
-              <CardTitle className="text-[#4a4a6a] flex items-center justify-between">
-                Blog Content Editor
-                <Button
-                  onClick={handleGenerateInlineBlog}
-                  disabled={isGeneratingBlog || !editorFormData.outline}
-                  className="bg-[#7765e3] hover:bg-[#6658f4] text-white text-sm px-4 py-2"
-                >
-                  {isGeneratingBlog ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating...
-                    </>
-                  ) : '📝 Generate Blog'}
-                </Button>
-              </CardTitle>
-              <CardDescription>AI-generated blog content that you can edit and customize directly in the editor below</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#4a4a6a] mb-2">
-                    Blog Content
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Keywords
                   </label>
-                  <InlineRichTextEditor
-                    content={contentRichText || editorFormData.content || ''}
-                    onChange={(htmlContent) => {
-                      setContentRichText(htmlContent);
-                      setEditorFormData(prev => ({ ...prev, content: htmlContent }));
-                    }}
-                    placeholder="Click 'Generate Blog' to create AI-powered content, or start writing your blog post here..."
+                  <Input
+                    type="text"
+                    value={editorFormData.keywords}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, keywords: e.target.value }))}
+                    className="border-gray-300 focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 text-sm"
+                    placeholder="keyword1, keyword2, keyword3..."
                   />
                 </div>
-                {!contentRichText && !editorFormData.content && (
-                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-                    <p className="text-sm">No blog content generated yet.</p>
-                    <p className="text-xs mt-1">Generate an outline first, then click "Generate Blog" to create the full content.</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Save Options Section */}
-          <Card className="border border-[#b0b0d8] bg-white">
-            <CardContent className="pt-6">
-              <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="text-lg font-semibold text-[#4a4a6a] mb-2">Save Your Content</h4>
-                  <p className="text-sm text-[#4a4a6a]">Save your outline and blog content to the content calendar</p>
-                </div>
-                <div className="flex space-x-3">
-                  <Button
-                    variant="outline"
-                    onClick={handleCloseInlineEditor}
-                    className="border-gray-300 text-gray-600 hover:border-gray-400"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSaveInlineContent}
-                    className="bg-[#7765e3] hover:bg-[#6658f4] text-white"
-                  >
-                    💾 Save Content
-                  </Button>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Audience
+                  </label>
+                  <Input
+                    type="text"
+                    value={editorFormData.targetAudience}
+                    onChange={(e) => setEditorFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
+                    className="border-gray-300 focus:border-[#6658f4] focus:ring-2 focus:ring-[#6658f4]/20 text-sm"
+                    placeholder="Who is this for?"
+                  />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1263,51 +1495,6 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
 
   return (
     <div className="space-y-6">
-      {/* Header Actions */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold text-[#4a4a6a]">
-            Content Calendar for {companyName}
-          </h3>
-          <p className="text-sm text-[#4a4a6a]">
-            {contentPlan.filter(item => item.status === 'approved').length} of {contentPlan.length} posts approved
-          </p>
-        </div>
-        <div className="flex space-x-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowCmsSetup(true)}
-            className="border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]"
-          >
-            CMS Setup
-          </Button>
-
-          <Button
-            onClick={handleApproveCalendar}
-            disabled={isApproving}
-            className="gradient-primary"
-          >
-            {isApproving ? 'Approving...' : 'Approve Calendar'}
-          </Button>
-
-          <Button
-            onClick={handlePublishNow}
-            disabled={!contentPlan || !contentPlan.some(item => item.status === 'approved')}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Publish Now
-          </Button>
-
-          <Button
-            onClick={handleUpdatePlatformToShopify}
-            disabled={!contentPlan}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            Update to Shopify
-          </Button>
-        </div>
-      </div>
-
       {/* Calendar Navigation */}
       <div className="flex items-center justify-between bg-white border border-[#b0b0d8] rounded-lg p-3">
         <div className="flex items-center space-x-4">
@@ -1319,11 +1506,11 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          
+
           <div className="text-lg font-semibold text-[#4a4a6a]">
-            {currentView === 'week' && `Week of ${currentDate.toLocaleDateString()}`}
+            {currentView === 'week' && `Calendar View - Starting ${currentDate.toLocaleDateString()}`}
             {currentView === 'month' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            {currentView === 'list' && 'Content List View'}
+            {currentView === 'list' && 'All Content - List View'}
           </div>
           
           <Button
@@ -1344,7 +1531,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
             className={currentView === 'week' ? 'gradient-primary' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
           >
             <Grid className="w-4 h-4 mr-1" />
-            Week
+            Calendar
           </Button>
           <Button
             variant={currentView === 'month' ? 'default' : 'outline'}
@@ -1364,25 +1551,17 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
             <List className="w-4 h-4 mr-1" />
             List
           </Button>
-          
+
+          <div className="w-px h-6 bg-gray-300 mx-1" />
+
           <Button
             variant="outline"
             size="sm"
             onClick={handleRefreshCalendar}
-            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4] ml-2"
+            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
             title="Refresh calendar data"
           >
             <RefreshCw className="w-4 h-4" />
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/editor/new')}
-            className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4] ml-2"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            New Post
           </Button>
         </div>
       </div>
@@ -1390,92 +1569,294 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
       {/* Calendar Grid */}
        {currentView === 'week' && (
       <div className="grid grid-cols-7 gap-2">
+        {/* Day Headers */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="text-center text-sm font-medium text-[#4a4a6a] p-2">
+          <div key={day} className="text-center text-sm font-medium text-[#4a4a6a] p-2 border-b border-[#e0e0e0]">
             {day}
           </div>
         ))}
-        
-        {contentPlan.map((item, index) => (
-             <div 
-               key={index} 
-               className="relative min-h-[120px] border border-[#b0b0d8] rounded-lg p-2 hover:border-[#6658f4] hover:shadow-md transition-all duration-200 cursor-pointer group bg-white"
-               onClick={() => handleCardClick(item)}
-             >
-            <div className="text-xs text-[#4a4a6a] mb-1">
-              {new Date(item.date).getDate()}
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-[#4a4a6a] line-clamp-2">
-                {item.title}
+
+        {/* Calendar Cells - 35 days (5 weeks) */}
+        {getMultiWeekDates(currentDate).map((date, index) => {
+          const dayContent = getContentForDate(date);
+          const isCurrentDay = isToday(date);
+
+          return (
+            <div
+              key={index}
+              className={`relative min-h-[180px] border rounded-lg p-3 transition-all duration-200 bg-white ${
+                isCurrentDay
+                  ? 'border-[#6658f4] border-2 bg-[#f8f9ff]'
+                  : 'border-[#b0b0d8] hover:border-[#6658f4]'
+              }`}
+            >
+              {/* Date Number */}
+              <div className={`text-sm font-semibold mb-2 ${isCurrentDay ? 'text-[#6658f4]' : 'text-[#4a4a6a]'}`}>
+                {date.getDate()}
+                {isCurrentDay && (
+                  <span className="ml-1 text-xs bg-[#6658f4] text-white px-1.5 py-0.5 rounded">Today</span>
+                )}
               </div>
-              <Badge className={`text-xs ${getStatusColor(item.status)}`}>
-                <span className="flex items-center space-x-1">
-                  {getStatusIcon(item.status)}
-                  <span>{item.status}</span>
-                </span>
-              </Badge>
+
+              {/* Content Items */}
+              <div className="space-y-2">
+                {dayContent.length > 0 ? (
+                  dayContent.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="relative border border-[#e0e0e0] rounded-md p-2 hover:border-[#6658f4] hover:shadow-sm transition-all duration-200 cursor-pointer group bg-white"
+                      onClick={() => handleCardClick(item)}
+                    >
+                      {/* Status Color Bar */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-md ${
+                        item.status === 'draft' ? 'bg-gray-400' :
+                        item.status === 'approved' ? 'bg-blue-500' :
+                        item.status === 'published' ? 'bg-green-500' : 'bg-gray-300'
+                      }`} />
+
+                      {/* Content Type Icon */}
+                      <div className="absolute top-1 right-1">
+                        {item.contentType === 'blog' || !item.contentType ? (
+                          <FileText className="w-3 h-3 text-[#6658f4]" title="Blog Post" />
+                        ) : item.contentType === 'social' ? (
+                          <Image className="w-3 h-3 text-blue-500" title="Social Media" />
+                        ) : item.contentType === 'newsletter' ? (
+                          <Send className="w-3 h-3 text-green-500" title="Newsletter" />
+                        ) : item.contentType === 'case-study' ? (
+                          <Brain className="w-3 h-3 text-purple-500" title="Case Study" />
+                        ) : (
+                          <FileText className="w-3 h-3 text-[#6658f4]" title="Content" />
+                        )}
+                      </div>
+
+                      <div className="pl-2 space-y-1 pr-5">
+                        {/* Title */}
+                        <div className="text-xs font-medium text-[#4a4a6a] line-clamp-2 leading-tight">
+                          {item.title}
+                        </div>
+
+                        {/* Status Badge with Dropdown */}
+                        <div className="relative">
+                          <Badge
+                            className={`text-xs cursor-pointer hover:opacity-80 transition-opacity ${getStatusColor(item.status)}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStatusDropdownOpen(statusDropdownOpen === item._id ? null : item._id);
+                            }}
+                          >
+                            <span className="flex items-center space-x-1">
+                              {getStatusIcon(item.status)}
+                              <span className="capitalize">{item.status}</span>
+                              <ChevronDown className="w-3 h-3 ml-0.5" />
+                            </span>
+                          </Badge>
+
+                          {/* Status Dropdown */}
+                          {statusDropdownOpen === item._id && (
+                            <div className="absolute z-50 mt-1 bg-white border border-[#b0b0d8] rounded-md shadow-lg py-1 min-w-[120px]">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickStatusChange(item, 'draft');
+                                }}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center space-x-2"
+                              >
+                                <FileText className="w-3 h-3 text-gray-500" />
+                                <span>Draft</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickStatusChange(item, 'approved');
+                                }}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center space-x-2"
+                              >
+                                <CheckCircle className="w-3 h-3 text-blue-600" />
+                                <span>Approved</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickStatusChange(item, 'published');
+                                }}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center space-x-2"
+                              >
+                                <Send className="w-3 h-3 text-green-600" />
+                                <span>Published</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Keywords */}
+                        {item.keywords && item.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {item.keywords.slice(0, 2).map((keyword, kidx) => (
+                              <span key={kidx} className="text-xs bg-[#f0f0ff] text-[#6658f4] px-1.5 py-0.5 rounded">
+                                {keyword}
+                              </span>
+                            ))}
+                            {item.keywords.length > 2 && (
+                              <span className="text-xs text-gray-500">+{item.keywords.length - 2}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Hover Actions */}
+                      <div className="absolute inset-0 bg-white/95 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-md flex items-center justify-center space-x-2 z-10">
+                        {item.status === 'approved' && (
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePublishSingleContent(item);
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1"
+                          >
+                            <Send className="w-3 h-3 mr-1" />
+                            Publish
+                          </Button>
+                        )}
+                        <div className="text-xs text-[#6658f4]">Click to edit</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div
+                    onClick={() => handleCreateContentForDate(date)}
+                    className="text-center py-6 text-xs text-gray-400 hover:text-[#6658f4] hover:bg-[#f8f9ff] rounded cursor-pointer transition-all group"
+                  >
+                    <Plus className="w-5 h-5 mx-auto mb-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="font-medium">Click to add content</div>
+                  </div>
+                )}
+              </div>
             </div>
-               
-               {/* Hover Actions - Only show on hover */}
-               <div className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg flex items-center justify-center space-x-2 z-10">
-                 <Button
-                   size="sm"
-                   variant="outline"
-                   onClick={(e) => {
-                     e.stopPropagation();
-                     handleEditContent(item);
-                   }}
-                   className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                 >
-                   <Edit className="w-3 h-3 mr-1" />
-                   Edit
-                 </Button>
-                 <Button
-                   size="sm"
-                   variant="outline"
-                   onClick={(e) => {
-                     e.stopPropagation();
-                     handleViewContent(item);
-                   }}
-                   className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
-                 >
-                   <Eye className="w-3 h-3 mr-1" />
-                   View
-                 </Button>
-                 
-                 {/* Publish Button - Only show for approved content */}
-                 {item.status === 'approved' && (
-                   <Button
-                     size="sm"
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       handlePublishSingleContent(item);
-                     }}
-                     className="bg-green-600 hover:bg-green-700 text-white"
-                   >
-                     <Send className="w-3 h-3 mr-1" />
-                     Publish
-                   </Button>
-                 )}
-               </div>
-               
-               {/* Click to edit hint */}
-               <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <div className="text-xs text-[#6658f4] bg-white/80 px-1 rounded">
-                   Click to edit
-                 </div>
-               </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
        )}
 
       {/* Month View */}
       {currentView === 'month' && (
-        <div className="bg-white border border-[#b0b0d8] rounded-lg p-4">
-          <div className="text-center text-lg font-semibold text-[#4a4a6a] mb-4">
-            Month view coming soon...
+        <div className="bg-white border border-[#b0b0d8] rounded-lg p-2">
+          {/* Day Headers */}
+          <div className="grid grid-cols-7 gap-1 mb-1">
+            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
+              <div key={day} className="text-center text-xs font-semibold text-[#4a4a6a] p-2 border-b border-[#e0e0e0]">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Month Calendar Grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {getMonthCalendarDates(currentDate).map((dateObj, index) => {
+              const dayContent = getContentForDate(dateObj.date);
+              const isCurrentDay = isToday(dateObj.date);
+              const isCurrentMonth = dateObj.isCurrentMonth;
+
+              return (
+                <div
+                  key={index}
+                  className={`relative min-h-[120px] border rounded-md p-2 transition-all duration-200 ${
+                    isCurrentDay
+                      ? 'border-[#6658f4] border-2 bg-[#f8f9ff]'
+                      : isCurrentMonth
+                      ? 'border-[#d0d0e0] bg-white hover:border-[#6658f4]'
+                      : 'border-[#e8e8f0] bg-gray-50'
+                  }`}
+                >
+                  {/* Date Number */}
+                  <div className={`text-xs font-semibold mb-1 ${
+                    isCurrentDay
+                      ? 'text-[#6658f4]'
+                      : isCurrentMonth
+                      ? 'text-[#4a4a6a]'
+                      : 'text-gray-400'
+                  }`}>
+                    {dateObj.date.getDate()}
+                    {isCurrentDay && (
+                      <span className="ml-1 text-xs bg-[#6658f4] text-white px-1 py-0.5 rounded">Today</span>
+                    )}
+                  </div>
+
+                  {/* Content Items */}
+                  <div className="space-y-1">
+                    {dayContent.length > 0 ? (
+                      <>
+                        {dayContent.slice(0, 2).map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="relative border border-[#e0e0e0] rounded p-1 hover:border-[#6658f4] transition-all duration-150 cursor-pointer group bg-white text-xs"
+                            onClick={() => handleCardClick(item)}
+                          >
+                            {/* Status Color Bar */}
+                            <div className={`absolute left-0 top-0 bottom-0 w-0.5 rounded-l ${
+                              item.status === 'draft' ? 'bg-gray-400' :
+                              item.status === 'approved' ? 'bg-blue-500' :
+                              item.status === 'published' ? 'bg-green-500' : 'bg-gray-300'
+                            }`} />
+
+                            {/* Content Type Icon */}
+                            <div className="absolute top-0.5 right-0.5">
+                              {item.contentType === 'blog' || !item.contentType ? (
+                                <FileText className="w-2.5 h-2.5 text-[#6658f4]" title="Blog" />
+                              ) : item.contentType === 'social' ? (
+                                <Image className="w-2.5 h-2.5 text-blue-500" title="Social" />
+                              ) : item.contentType === 'newsletter' ? (
+                                <Send className="w-2.5 h-2.5 text-green-500" title="Newsletter" />
+                              ) : item.contentType === 'case-study' ? (
+                                <Brain className="w-2.5 h-2.5 text-purple-500" title="Case Study" />
+                              ) : (
+                                <FileText className="w-2.5 h-2.5 text-[#6658f4]" />
+                              )}
+                            </div>
+
+                            <div className="pl-1.5 pr-4">
+                              {/* Title */}
+                              <div className="font-medium text-[#4a4a6a] line-clamp-1 text-xs leading-tight">
+                                {item.title}
+                              </div>
+
+                              {/* Status Icon */}
+                              <div className="flex items-center space-x-1 mt-0.5">
+                                <span className={`text-xs ${
+                                  item.status === 'draft' ? 'text-gray-500' :
+                                  item.status === 'approved' ? 'text-blue-600' :
+                                  item.status === 'published' ? 'text-green-600' : 'text-gray-500'
+                                }`}>
+                                  {getStatusIcon(item.status)}
+                                </span>
+                                <span className="text-xs capitalize text-gray-600">{item.status}</span>
+                              </div>
+                            </div>
+
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 bg-[#6658f4]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded" />
+                          </div>
+                        ))}
+                        {dayContent.length > 2 && (
+                          <div className="text-xs text-center text-[#6658f4] font-medium cursor-pointer hover:underline">
+                            +{dayContent.length - 2} more
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      isCurrentMonth && (
+                        <div
+                          onClick={() => handleCreateContentForDate(dateObj.date)}
+                          className="text-center py-3 text-xs text-gray-300 hover:text-[#6658f4] hover:bg-[#f8f9ff] rounded cursor-pointer transition-all group"
+                        >
+                          <Plus className="w-4 h-4 mx-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -1483,32 +1864,144 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false }
       {/* List View */}
       {currentView === 'list' && (
         <div className="space-y-3">
+          {/* List Items */}
           {contentPlan.map((item, index) => (
-            <Card key={index} className="border border-[#b0b0d8] bg-white hover:border-[#6658f4] transition-colors">
+            <Card
+              key={index}
+              className="border border-[#b0b0d8] bg-white hover:border-[#6658f4] transition-colors"
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
+                  {/* Content */}
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <h4 className="font-semibold text-[#4a4a6a]">{item.title}</h4>
-                      <Badge className={getStatusColor(item.status)}>
-                        {item.status}
-                      </Badge>
+
+                      {/* Content Type Badge */}
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 flex items-center space-x-1">
+                        {item.contentType === 'blog' || !item.contentType ? (
+                          <>
+                            <FileText className="w-3 h-3" />
+                            <span>Blog</span>
+                          </>
+                        ) : item.contentType === 'social' ? (
+                          <>
+                            <Image className="w-3 h-3" />
+                            <span>Social</span>
+                          </>
+                        ) : item.contentType === 'newsletter' ? (
+                          <>
+                            <Send className="w-3 h-3" />
+                            <span>Newsletter</span>
+                          </>
+                        ) : item.contentType === 'case-study' ? (
+                          <>
+                            <Brain className="w-3 h-3" />
+                            <span>Case Study</span>
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="w-3 h-3" />
+                            <span>Content</span>
+                          </>
+                        )}
+                      </span>
+
+                      {/* Status Badge with Dropdown */}
+                      <div className="relative">
+                        <Badge
+                          className={`cursor-pointer hover:opacity-80 transition-opacity ${getStatusColor(item.status)}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusDropdownOpen(statusDropdownOpen === item._id ? null : item._id);
+                          }}
+                        >
+                          <span className="flex items-center space-x-1">
+                            {getStatusIcon(item.status)}
+                            <span className="capitalize">{item.status}</span>
+                            <ChevronDown className="w-3 h-3 ml-0.5" />
+                          </span>
+                        </Badge>
+
+                        {/* Status Dropdown */}
+                        {statusDropdownOpen === item._id && (
+                          <div className="absolute z-50 mt-1 left-0 bg-white border border-[#b0b0d8] rounded-md shadow-lg py-1 min-w-[120px]">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickStatusChange(item, 'draft');
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            >
+                              <FileText className="w-4 h-4 text-gray-500" />
+                              <span>Draft</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickStatusChange(item, 'approved');
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            >
+                              <CheckCircle className="w-4 h-4 text-blue-600" />
+                              <span>Approved</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickStatusChange(item, 'published');
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            >
+                              <Send className="w-4 h-4 text-green-600" />
+                              <span>Published</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       <span className="text-sm text-[#4a4a6a]">
                         {new Date(item.date).toLocaleDateString()}
                       </span>
                     </div>
                     <p className="text-sm text-[#4a4a6a] line-clamp-2">{item.description}</p>
+
+                    {/* Keywords */}
+                    {item.keywords && item.keywords.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {item.keywords.slice(0, 5).map((keyword, kidx) => (
+                          <span key={kidx} className="text-xs bg-[#f0f0ff] text-[#6658f4] px-2 py-0.5 rounded">
+                            {keyword}
+                          </span>
+                        ))}
+                        {item.keywords.length > 5 && (
+                          <span className="text-xs text-gray-500">+{item.keywords.length - 5} more</span>
+                        )}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Actions */}
                   <div className="flex space-x-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleEditContent(item)}
+                      onClick={() => handleCardClick(item)}
                       className="border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]"
                     >
                       <Edit className="w-4 h-4 mr-1" />
                       Edit
                     </Button>
+                    {item.status === 'approved' && (
+                      <Button
+                        size="sm"
+                        onClick={() => handlePublishSingleContent(item)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Send className="w-4 h-4 mr-1" />
+                        Publish
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>

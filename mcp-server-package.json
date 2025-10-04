@@ -1,0 +1,15 @@
+{
+  "name": "snowball-mcp-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP server for Snowball project debugging and testing",
+  "main": "mcp-snowball-server.js",
+  "scripts": {
+    "start": "node mcp-snowball-server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "axios": "^1.6.0",
+    "mongodb": "^6.3.0"
+  }
+}

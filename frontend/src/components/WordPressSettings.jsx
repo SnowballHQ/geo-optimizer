@@ -3,12 +3,15 @@ import { toast } from 'react-toastify';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Globe, ExternalLink, Check, AlertCircle, Loader2, FileText } from 'lucide-react';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
-const WordPressSettings = () => {
+const WordPressSettings = ({ onConnectionChange }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [wordpressInfo, setWordpressInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/v1/wordpress`;
 
@@ -123,6 +126,9 @@ const WordPressSettings = () => {
         toast.success('WordPress disconnected successfully');
         setConnectionStatus('disconnected');
         setWordpressInfo(null);
+        if (onConnectionChange) {
+          onConnectionChange('wordpress', 'disconnected');
+        }
       } else {
         toast.error('Failed to disconnect WordPress');
       }
@@ -331,17 +337,6 @@ const WordPressSettings = () => {
         </div>
       )}
 
-      {/* Information Card */}
-      <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
-        <h4 className="font-medium text-blue-900 mb-2">How it works</h4>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>• Connect your WordPress.com account using secure OAuth authentication</li>
-          <li>• Publish blog content directly from our platform to your WordPress.com sites</li>
-          <li>• Access all your WordPress.com sites from one connected account</li>
-          <li>• Your access tokens are encrypted and securely stored</li>
-          <li>• You can disconnect anytime from this settings page</li>
-        </ul>
-      </div>
     </div>
   );
 };
