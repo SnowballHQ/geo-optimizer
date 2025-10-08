@@ -304,14 +304,14 @@ const Landing = () => {
               <Link to="/blog" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
                 Blog
               </Link>
+              <Link to="/ai-tools" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
+                AI Tools
+              </Link>
               <a href="#pricing" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
                 Pricing
               </a>
               <a href="#testimonials" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
                 Customers
-              </a>
-              <a href="#faq" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
-                FAQ
               </a>
             </div>
             {/* Auth Buttons */}

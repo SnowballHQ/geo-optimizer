@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { Sparkles } from 'lucide-react';
-import BlogCard from '../components/BlogCard';
-import { getBlogPosts } from '../services/contentful';
+import { Sparkles, Cpu } from 'lucide-react';
+import AIToolCard from '../components/AIToolCard';
+import { getAITools } from '../services/contentful';
 
-const Blog = () => {
+const AITools = () => {
   const navigate = useNavigate();
-  const [blogPosts, setBlogPosts] = useState([]);
+  const [aiTools, setAITools] = useState([]);
+  const [filteredTools, setFilteredTools] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('all');
 
   const handleGetStarted = () => {
     navigate('/register');
@@ -21,20 +22,47 @@ const Blog = () => {
     navigate('/login');
   };
 
-  // Fetch blog posts on component mount
+  // Categories for filtering
+  const categories = [
+    { id: 'all', label: 'All Tools', icon: Cpu },
+    { id: 'Content Writing', label: 'Content Writing', icon: Sparkles },
+    { id: 'SEO', label: 'SEO Tools', icon: Sparkles },
+    { id: 'Image', label: 'Image Generation', icon: Sparkles },
+    { id: 'Code', label: 'Code Assistants', icon: Sparkles },
+    { id: 'Marketing', label: 'Marketing', icon: Sparkles },
+    { id: 'Analytics', label: 'Analytics', icon: Sparkles },
+  ];
+
+  // Fetch AI tools on component mount
   useEffect(() => {
-    fetchBlogs();
+    fetchTools();
   }, []);
 
-  const fetchBlogs = async () => {
+  const fetchTools = async () => {
     setLoading(true);
     try {
-      const posts = await getBlogPosts(20);
-      setBlogPosts(posts);
+      const tools = await getAITools(50);
+      setAITools(tools);
+      setFilteredTools(tools);
     } catch (error) {
-      console.error('Error loading blog posts:', error);
+      console.error('Error loading AI tools:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle category filter
+  const handleCategoryChange = (categoryId) => {
+    setActiveCategory(categoryId);
+    if (categoryId === 'all') {
+      setFilteredTools(aiTools);
+    } else {
+      const filtered = aiTools.filter(tool =>
+        tool.category && tool.category.some(cat =>
+          cat.toLowerCase().includes(categoryId.toLowerCase())
+        )
+      );
+      setFilteredTools(filtered);
     }
   };
 
@@ -68,10 +96,10 @@ const Blog = () => {
               <Link to="/#features" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
                 Features
               </Link>
-              <Link to="/blog" className="text-sm text-primary-600 font-medium">
+              <Link to="/blog" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
                 Blog
               </Link>
-              <Link to="/ai-tools" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
+              <Link to="/ai-tools" className="text-sm text-primary-600 font-medium">
                 AI Tools
               </Link>
               <Link to="/#pricing" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
@@ -109,12 +137,39 @@ const Blog = () => {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-black leading-tight">
-              Content <span className="text-gradient-primary">Mastery</span>
+              AI Tools <span className="text-gradient-primary">Directory</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Expert tips, cutting-edge strategies, and actionable insights to help you dominate content creation and search rankings
+              Discover the best AI-powered tools for content creation, SEO, marketing, and productivity. Curated and verified by experts.
             </p>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Category Filter */}
+      <section className="sticky top-16 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200 py-4 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryChange(category.id)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 whitespace-nowrap ${
+                    activeCategory === category.id
+                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <category.icon className="w-4 h-4" />
+                  <span>{category.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="text-sm text-gray-500">
+              {filteredTools.length} tool{filteredTools.length !== 1 ? 's' : ''}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -125,9 +180,9 @@ const Blog = () => {
             // Loading State
             <div className="text-center py-20">
               <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-primary-600 border-t-transparent"></div>
-              <p className="mt-4 text-gray-600 text-lg">Loading articles...</p>
+              <p className="mt-4 text-gray-600 text-lg">Loading AI tools...</p>
             </div>
-          ) : blogPosts.length === 0 ? (
+          ) : filteredTools.length === 0 ? (
             // Empty State
             <motion.div
               className="text-center py-20"
@@ -136,27 +191,38 @@ const Blog = () => {
               transition={{ duration: 0.5 }}
             >
               <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center">
-                <Sparkles className="w-12 h-12 text-primary-600" />
+                <Cpu className="w-12 h-12 text-primary-600" />
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-3">No articles found</h3>
+              <h3 className="text-3xl font-bold text-gray-900 mb-3">No tools found</h3>
               <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
-                Check back soon for new content!
+                {activeCategory !== 'all'
+                  ? 'No tools found in this category. Try selecting a different category.'
+                  : 'Check back soon for new AI tools!'}
               </p>
+              {activeCategory !== 'all' && (
+                <Button
+                  onClick={() => handleCategoryChange('all')}
+                  className="gradient-primary text-white"
+                >
+                  View All Tools
+                </Button>
+              )}
             </motion.div>
           ) : (
             <>
-              {/* Blog Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {blogPosts.map((post, index) => (
-                  <BlogCard key={post.id} post={post} index={index} />
+              {/* Tools Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredTools.map((tool, index) => (
+                  <AIToolCard key={tool.id} tool={tool} index={index} />
                 ))}
               </div>
 
-              {/* Post Count */}
-              {blogPosts.length > 0 && (
+              {/* Tool Count */}
+              {filteredTools.length > 0 && (
                 <div className="mt-16 text-center">
                   <p className="text-sm text-gray-500">
-                    Showing {blogPosts.length} article{blogPosts.length !== 1 ? 's' : ''}
+                    Showing {filteredTools.length} tool{filteredTools.length !== 1 ? 's' : ''}
+                    {activeCategory !== 'all' && ` in ${categories.find(c => c.id === activeCategory)?.label}`}
                   </p>
                 </div>
               )}
@@ -165,33 +231,23 @@ const Blog = () => {
         </div>
       </section>
 
-      {/* Newsletter CTA */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-50 to-white border-y border-gray-100">
-        <div className="max-w-4xl mx-auto">
+      {/* Request Tool CTA */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-50 to-white border-y border-gray-100">
+        <div className="max-w-4xl mx-auto text-center">
           <Card className="border-2 border-primary-200 shadow-xl overflow-hidden">
-            <CardContent className="p-12 text-center bg-gradient-to-br from-primary-50/50 to-white">
+            <CardContent className="p-12 bg-gradient-to-br from-primary-50/50 to-white">
               <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
                 <Sparkles className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-3xl font-bold text-gray-900 mb-4">
-                Never miss an update
+                Don't see your favorite tool?
               </h3>
               <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-                Subscribe to our newsletter and get the latest content strategies, SEO tips, and industry insights delivered to your inbox weekly.
+                Let us know which AI tool you'd like us to add to our directory. We're constantly expanding our collection!
               </p>
-              <form className="max-w-md mx-auto flex gap-3">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-400 focus:outline-none"
-                />
-                <Button type="submit" className="gradient-primary text-white px-6">
-                  Subscribe
-                </Button>
-              </form>
-              <p className="text-xs text-gray-500 mt-4">
-                No spam. Unsubscribe anytime.
-              </p>
+              <Button className="gradient-primary text-white px-8 py-3 text-lg">
+                Request a Tool
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -210,10 +266,10 @@ const Blog = () => {
             viewport={{ once: true }}
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Ready to transform your content?
+              Optimize your content with Snowball AI
             </h2>
             <p className="text-xl text-primary-100 mb-8">
-              Join thousands of content creators using Snowball AI to optimize their content and dominate search rankings
+              While you explore these amazing AI tools, don't forget to optimize your content for maximum impact with Snowball AI
             </p>
             <Button
               size="lg"
@@ -229,4 +285,4 @@ const Blog = () => {
   );
 };
 
-export default Blog;
+export default AITools;
