@@ -2,6 +2,8 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { Dashboard, HomeLayout, Landing, Login, Logout, Register, BlogScoring, DomainAnalysis } from "./pages";
 import History from "./pages/History";
 import BlogEditor from "./pages/BlogEditor";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import OnboardingFlow from "./components/OnboardingFlow";
 import OnboardingPreview from "./components/OnboardingPreview";
 import DomainAnalysisDashboard from "./pages/DomainAnalysisDashboard";
@@ -28,6 +30,14 @@ const router = createBrowserRouter([
       {
         path: "register",
         element: <Register />,
+      },
+      {
+        path: "blog",
+        element: <Blog />,
+      },
+      {
+        path: "blog/:slug",
+        element: <BlogPost />,
       },
       {
         path: "dashboard",

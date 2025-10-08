@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
@@ -27,13 +27,18 @@ import {
   Bot,
   Plus,
   Minus,
-  Check
+  Check,
+  BookOpen
 } from 'lucide-react';
 import { SiWordpress, SiShopify, SiWebflow } from 'react-icons/si';
+import BlogCard from '../components/BlogCard';
+import { getBlogPosts } from '../services/contentful';
 
 const Landing = () => {
   const navigate = useNavigate();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [blogPosts, setBlogPosts] = useState([]);
+  const [loadingBlogs, setLoadingBlogs] = useState(false);
 
   const handleGetStarted = () => {
     navigate('/register');
@@ -42,6 +47,24 @@ const Landing = () => {
   const handleLogin = () => {
     navigate('/login');
   };
+
+  // Fetch blog posts on component mount
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      setLoadingBlogs(true);
+      try {
+        const posts = await getBlogPosts(3); // Fetch 3 latest posts
+        setBlogPosts(posts);
+      } catch (error) {
+        console.error('Error loading blog posts:', error);
+        // Silently fail - blog section won't show if there's an error
+      } finally {
+        setLoadingBlogs(false);
+      }
+    };
+
+    fetchBlogs();
+  }, []);
 
   // Parallax scroll effect
   const { scrollY } = useScroll();
@@ -278,6 +301,9 @@ const Landing = () => {
               <a href="#features" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
                 Features
               </a>
+              <Link to="/blog" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
+                Blog
+              </Link>
               <a href="#pricing" className="text-sm text-gray-600 hover:text-primary-600 transition-colors duration-200 font-medium">
                 Pricing
               </a>
@@ -288,7 +314,6 @@ const Landing = () => {
                 FAQ
               </a>
             </div>
-
             {/* Auth Buttons */}
             <div className="flex items-center space-x-3">
               <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.15 }}>
@@ -730,6 +755,57 @@ const Landing = () => {
           </motion.p>
         </div>
       </section>
+
+      {/* Blog Section */}
+      {blogPosts.length > 0 && (
+        <section className="py-28 md:py-32 px-4 sm:px-6 lg:px-8 bg-white">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              className="text-center space-y-4 mb-16"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <Badge className="gradient-primary text-white border-0 shadow-lg px-4 py-2 text-sm font-medium">
+                <BookOpen className="w-4 h-4 mr-2" />
+                Latest Insights
+              </Badge>
+              <h2 className="text-4xl md:text-5xl font-bold text-black">
+                From our <span className="text-gradient-primary">blog</span>
+              </h2>
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                Expert tips, insights, and best practices for content optimization
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+              {blogPosts.map((post, index) => (
+                <BlogCard key={post.id} post={post} index={index} />
+              ))}
+            </div>
+
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              viewport={{ once: true }}
+            >
+              <Link to="/blog">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-2 border-gray-300 hover:border-primary-400 hover:text-primary-600 transition-all duration-300"
+                >
+                  View All Articles
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* FAQ Section */}
       <section id="faq" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50/20 via-white to-primary-50/20 relative overflow-hidden" style={{ contain: 'layout style paint' }}>
