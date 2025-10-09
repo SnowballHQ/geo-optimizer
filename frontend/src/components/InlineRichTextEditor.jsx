@@ -71,14 +71,14 @@ const InlineRichTextEditor = ({ content, onChange, placeholder = "Start writing 
     ],
     content: content || '',
     editorProps: {
-      attributes: { 
+      attributes: {
         class: 'prose prose-lg max-w-none focus:outline-none min-h-[300px] p-4 border border-gray-200 rounded-md',
         placeholder: placeholder
       },
       handlePaste: (view, event, slice) => {
         const items = Array.from(event.clipboardData?.items || []);
         const imageItem = items.find(item => item.type.startsWith('image/'));
-        
+
         if (imageItem) {
           event.preventDefault();
           const file = imageItem.getAsFile();
@@ -109,6 +109,13 @@ const InlineRichTextEditor = ({ content, onChange, placeholder = "Start writing 
       }
     },
   });
+
+  // Update editor content when content prop changes (fixes blog generation not showing)
+  React.useEffect(() => {
+    if (editor && content !== undefined && content !== editor.getHTML()) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
 
   const addLink = () => {
     const url = window.prompt('Enter URL:');

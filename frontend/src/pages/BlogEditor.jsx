@@ -258,9 +258,44 @@ const BlogEditor = () => {
   };
 
   const handleGenerateOutline = async () => {
+    if (!formData.title) {
+      toast.error('Please enter a title first');
+      return;
+    }
+
     try {
       setGeneratingOutline(true);
-      
+
+      let actualPostId = postId;
+
+      // If this is a new post, save it first to get a real ID
+      if (postId === 'new') {
+        console.log('New post detected - saving draft first to get ID...');
+
+        const draftData = {
+          date: new Date().toISOString().split('T')[0],
+          title: formData.title,
+          description: formData.description || '',
+          keywords: formData.keywords ? formData.keywords.split(',').map(k => k.trim()).filter(k => k) : [],
+          targetAudience: formData.targetAudience || '',
+          status: 'draft'
+        };
+
+        const saveResponse = await apiService.createContentCalendarEntry(draftData);
+
+        if (saveResponse.data && saveResponse.data.data && saveResponse.data.data._id) {
+          actualPostId = saveResponse.data.data._id;
+          console.log('Draft saved with ID:', actualPostId);
+
+          // Update URL to reflect saved post
+          navigate(`/editor/${actualPostId}`, { replace: true });
+
+          toast.success('Draft saved! Generating outline...');
+        } else {
+          throw new Error('Failed to save draft');
+        }
+      }
+
       const outlineData = {
         title: formData.title,
         description: formData.description,
@@ -268,8 +303,8 @@ const BlogEditor = () => {
         targetAudience: formData.targetAudience
       };
 
-      console.log('Sending outline generation request:', outlineData);
-      const response = await apiService.generateContentOutline(postId, outlineData);
+      console.log('Generating outline for post:', actualPostId);
+      const response = await apiService.generateContentOutline(actualPostId, outlineData);
       console.log('Outline generation response:', response);
       
       if (response.data && response.data.success && response.data.data && response.data.data.outline) {
@@ -310,6 +345,37 @@ const BlogEditor = () => {
 
     setIsGeneratingBlog(true);
     try {
+      let actualPostId = postId;
+
+      // If this is a new post, save it first to get a real ID
+      if (postId === 'new') {
+        console.log('New post detected - saving draft first to get ID...');
+
+        const draftData = {
+          date: new Date().toISOString().split('T')[0],
+          title: formData.title,
+          description: formData.description || '',
+          keywords: formData.keywords ? formData.keywords.split(',').map(k => k.trim()).filter(k => k) : [],
+          targetAudience: formData.targetAudience || '',
+          outline: formData.outline,
+          status: 'draft'
+        };
+
+        const saveResponse = await apiService.createContentCalendarEntry(draftData);
+
+        if (saveResponse.data && saveResponse.data.data && saveResponse.data.data._id) {
+          actualPostId = saveResponse.data.data._id;
+          console.log('Draft saved with ID:', actualPostId);
+
+          // Update URL to reflect saved post
+          navigate(`/editor/${actualPostId}`, { replace: true });
+
+          toast.success('Draft saved! Generating blog content...');
+        } else {
+          throw new Error('Failed to save draft');
+        }
+      }
+
       const blogData = {
         title: formData.title,
         description: formData.description,
@@ -318,8 +384,8 @@ const BlogEditor = () => {
         outline: formData.outline
       };
 
-      console.log('Sending blog creation request:', blogData);
-      const response = await apiService.createBlogFromOutline(postId, blogData);
+      console.log('Generating blog content for post:', actualPostId);
+      const response = await apiService.createBlogFromOutline(actualPostId, blogData);
       console.log('Blog creation response:', response);
       
       if (response.data && response.data.success && response.data.data && response.data.data.blogContent) {

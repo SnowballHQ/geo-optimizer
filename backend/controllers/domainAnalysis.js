@@ -12,11 +12,31 @@ class DomainAnalysisController {
   async getDomainAnalysisData(req, res) {
     try {
       const userId = req.user.id;
-      
-      // Get user's brand profile
-      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+
+      // Get user's brand profile (exclude admin analysis brands, get oldest/original brand)
+      const brand = await BrandProfile.findOne({
+        ownerUserId: userId,
+        $or: [
+          { isAdminAnalysis: { $exists: false } },
+          { isAdminAnalysis: false }
+        ]
+      }).sort({ createdAt: 1 });
       if (!brand) {
         return res.status(404).json({ error: 'Brand profile not found' });
+      }
+
+      // Check for suspicious domains that indicate data corruption from competitor analysis
+      const suspiciousDomains = ['oneshot.ai', 'oneshot.si', 'clay.com', 'apollo.io', 'salesforce.com', 'hubspot.com'];
+      const isSuspiciousDomain = suspiciousDomains.some(d => brand.domain && brand.domain.includes(d));
+
+      if (isSuspiciousDomain) {
+        console.log(`⚠️ ⚠️ ⚠️ DATA CORRUPTION DETECTED ⚠️ ⚠️ ⚠️`);
+        console.log(`User: ${userId}`);
+        console.log(`Stored domain: ${brand.domain}`);
+        console.log(`Brand name: ${brand.brandName}`);
+        console.log(`This appears to be a competitor domain that overwrote the user's actual brand!`);
+        console.log(`User's categories and analysis data exist but brand identity is corrupted.`);
+        console.log(`⚠️ MANUAL FIX REQUIRED: Update this user's BrandProfile with their correct domain.`);
       }
 
       // Check if brandInformation is missing and fetch it if needed
@@ -132,8 +152,14 @@ class DomainAnalysisController {
   async getShareOfVoice(req, res) {
     try {
       const userId = req.user.id;
-      
-      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+
+      const brand = await BrandProfile.findOne({
+        ownerUserId: userId,
+        $or: [
+          { isAdminAnalysis: { $exists: false } },
+          { isAdminAnalysis: false }
+        ]
+      }).sort({ createdAt: 1 });
       if (!brand) {
         return res.status(404).json({ error: 'Brand profile not found' });
       }
@@ -159,8 +185,14 @@ class DomainAnalysisController {
   async getBrandStrength(req, res) {
     try {
       const userId = req.user.id;
-      
-      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+
+      const brand = await BrandProfile.findOne({
+        ownerUserId: userId,
+        $or: [
+          { isAdminAnalysis: { $exists: false } },
+          { isAdminAnalysis: false }
+        ]
+      }).sort({ createdAt: 1 });
       if (!brand) {
         return res.status(404).json({ error: 'Brand profile not found' });
       }
@@ -186,8 +218,14 @@ class DomainAnalysisController {
   async getAIResponses(req, res) {
     try {
       const userId = req.user.id;
-      
-      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+
+      const brand = await BrandProfile.findOne({
+        ownerUserId: userId,
+        $or: [
+          { isAdminAnalysis: { $exists: false } },
+          { isAdminAnalysis: false }
+        ]
+      }).sort({ createdAt: 1 });
       if (!brand) {
         return res.status(404).json({ error: 'Brand profile not found' });
       }
@@ -254,8 +292,14 @@ class DomainAnalysisController {
   async getSoVStatus(req, res) {
     try {
       const userId = req.user.id;
-      
-      const brand = await BrandProfile.findOne({ ownerUserId: userId });
+
+      const brand = await BrandProfile.findOne({
+        ownerUserId: userId,
+        $or: [
+          { isAdminAnalysis: { $exists: false } },
+          { isAdminAnalysis: false }
+        ]
+      }).sort({ createdAt: 1 });
       if (!brand) {
         return res.status(404).json({ error: 'Brand profile not found' });
       }
