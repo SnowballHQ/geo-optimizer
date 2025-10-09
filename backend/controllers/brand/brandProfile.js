@@ -46,21 +46,11 @@ exports.findOrCreateBrandProfile = async ({ domain, brandName, userId, isAdminAn
       console.log("✅ User's existing brand profile found for same domain:", existingBrand);
       return existingBrand;
     } else {
-      // User is trying to analyze a different domain - update existing brand
-      console.log("🔄 User switching domains - updating existing brand profile");
-      console.log("Old domain:", existingBrand.domain, "→ New domain:", domain);
-      
-      // Update the existing brand profile with new domain and name
-      existingBrand.domain = domain;
-      existingBrand.brandName = brandName || domain;
-      existingBrand.updatedAt = new Date();
-      
-      // Clear previous analysis data since domain changed
-      existingBrand.brandTonality = "";
-      existingBrand.brandInformation = "";
-      
-      await existingBrand.save();
-      console.log("✅ Brand profile updated with new domain:", existingBrand);
+      // User analyzing different domain (e.g., competitor blogs)
+      // Return existing brand WITHOUT overwriting to preserve main brand data
+      console.log("⚠️ User analyzing different domain - returning existing brand without modification");
+      console.log("Existing domain:", existingBrand.domain, "| Requested domain:", domain);
+      console.log("💡 Preserving user's main brand data to prevent corruption");
       return existingBrand;
     }
   } else {
