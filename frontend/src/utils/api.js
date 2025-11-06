@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { navigationService } from './navigationService';
 
 // API Configuration - Fix deployment URL mismatch
 let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -57,7 +58,19 @@ api.interceptors.response.use(
     // Handle different error types
     if (error.response?.status === 401) {
       localStorage.removeItem('auth');
-      window.location.replace('/login');
+
+      // Get current path for return-to functionality
+      const currentPath = navigationService.getCurrentPath();
+      const returnTo = currentPath && currentPath !== '/login' && currentPath !== '/register'
+        ? currentPath
+        : null;
+
+      // Use navigation service for SPA navigation
+      navigationService.navigateTo('/login', {
+        replace: true,
+        state: returnTo ? { returnTo } : undefined
+      });
+
       toast.error('Session expired. Please login again.');
     } else if (error.response?.status === 403) {
       toast.error('Access denied');
@@ -90,16 +103,20 @@ export const apiService = {
   register: (data) => api.post('/api/v1/register', data),
   logout: () => {
     console.log('🚪 LOGOUT: Starting logout process');
-    
+
     // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
     console.log('🧹 LOGOUT: All storage cleared');
-    
-    // Always redirect to main landing page (root)
+
+    // Always redirect to main landing page (root) using navigation service
     console.log('🔄 LOGOUT: Redirecting to main landing page');
-    window.location.href = '/';
+    navigationService.navigateTo('/', { replace: true });
   },
+
+  // User Profile
+  getUserProfile: () => api.get('/api/v1/me'),
+  updateUserProfile: (data) => api.put('/api/v1/profile', data),
   
   // Onboarding API methods
   getOnboardingProgress: () => api.get('/api/v1/onboarding/progress'),

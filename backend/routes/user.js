@@ -81,7 +81,7 @@ const handleValidationErrors = (req, res, next) => {
 };
 
 // Import authentication controllers
-const { login, register, dashboard, getAllUsers, googleAuth } = require("../controllers/user");
+const { login, register, dashboard, getAllUsers, googleAuth, updateUserProfile } = require("../controllers/user");
 
 // Import brand settings controllers
 const { getBrandSettings, saveBrandSettings, refreshBrandVoice } = require("../controllers/user/brandSettings");
@@ -104,10 +104,15 @@ router.get("/me", userApiLimiter, authenticationMiddleware, (req, res) => {
       name: req.user.name,
       email: req.user.email,
       role: req.user.role,
-      profilePicture: req.user.profilePicture
+      profilePicture: req.user.profilePicture,
+      company: req.user.company,
+      jobTitle: req.user.jobTitle
     }
   });
 });
+
+// Update user profile
+router.put("/profile", userApiLimiter, authenticationMiddleware, updateUserProfile);
 
 // Logout route
 router.post("/logout", userApiLimiter, authenticationMiddleware, (req, res) => {

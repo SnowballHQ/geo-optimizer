@@ -31,7 +31,8 @@ const BlogEditor = () => {
   const [showImageUploadModal, setShowImageUploadModal] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
-  
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -60,6 +61,20 @@ const BlogEditor = () => {
     checkShopifyConnection();
     checkWebflowConnection();
   }, []);
+
+  // Warn user about unsaved changes before leaving the page
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const checkShopifyConnection = async () => {
     try {
@@ -150,6 +165,15 @@ const BlogEditor = () => {
     console.log('postId changed to:', postId);
   }, [postId]);
 
+  // Track unsaved changes
+  useEffect(() => {
+    // Don't mark as dirty during initial load
+    if (loading) return;
+
+    // Mark as having unsaved changes when formData or richTextContent changes
+    setHasUnsavedChanges(true);
+  }, [formData, richTextContent]);
+
   const fetchPostData = async () => {
     try {
       setLoading(true);
@@ -234,12 +258,14 @@ const BlogEditor = () => {
         }));
         
         console.log('Post updated successfully');
+        setHasUnsavedChanges(false);
         alert('Post saved successfully!');
       } else {
         // Create new post
         const response = await apiService.createContentCalendarEntry(updatedFormData);
         // Redirect to the new post's editor
         if (response.data && response.data.data && response.data.data._id) {
+          setHasUnsavedChanges(false);
           navigate(`/editor/${response.data.data._id}`);
         } else {
           console.error('Invalid response structure for new post:', response);
@@ -742,6 +768,7 @@ const BlogEditor = () => {
         status: 'draft'
       }));
 
+      setHasUnsavedChanges(false);
       toast.success('Draft saved successfully!');
     } catch (error) {
       console.error('Error saving draft:', error);
@@ -845,13 +872,13 @@ const BlogEditor = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
+                    Meta Description
                   </label>
                   <Textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Enter blog post description"
+                    placeholder="Enter blog post meta description"
                     rows={3}
                     className="w-full"
                   />
@@ -1101,6 +1128,17 @@ const BlogEditor = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Save Button Section - Better UX */}
+            <div className="mt-6 flex justify-center">
+              <Button
+                onClick={handleSaveAsDraft}
+                disabled={saving}
+                className="bg-[#7765e3] hover:bg-[#6658f4] text-white px-8 py-3 text-lg"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
             </div>
           </div>
         </div>

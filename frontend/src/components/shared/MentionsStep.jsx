@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Search, Building2, ArrowRight, MessageSquare, FileText } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
+import { apiService } from '../../utils/api';
 
 const MentionsStep = ({ 
   brandId, 
@@ -40,23 +41,12 @@ const MentionsStep = ({
           let data;
           if (isSuperUser && analysisId) {
             // Super User endpoint
-            const { apiService } = await import('../../utils/api');
             const response = await apiService.get(`/api/v1/super-user/analysis/${analysisId}/mentions/${encodeURIComponent(brand)}`);
             data = response.data;
           } else {
             // Regular user endpoint
-            const response = await fetch(`/api/v1/brand/mentions/company/${encodeURIComponent(brand)}?brandId=${brandId}`, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('auth')}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (response.ok) {
-              data = await response.json();
-            } else {
-              data = { mentions: [] };
-            }
+            const response = await apiService.get(`/api/v1/brand/mentions/company/${encodeURIComponent(brand)}?brandId=${brandId}`);
+            data = response.data;
           }
           
           const mentionCount = data.mentions?.length || data.totalMentions || 0;
@@ -86,25 +76,14 @@ const MentionsStep = ({
       let data;
       if (isSuperUser && analysisId) {
         // Super User endpoint
-        const { apiService } = await import('../../utils/api');
         const response = await apiService.get(`/api/v1/super-user/analysis/${analysisId}/mentions/${encodeURIComponent(brand)}`);
         data = response.data;
       } else {
         // Regular user endpoint
-        const response = await fetch(`/api/v1/brand/mentions/company/${encodeURIComponent(brand)}?brandId=${brandId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          data = await response.json();
-        } else {
-          data = { mentions: [] };
-        }
+        const response = await apiService.get(`/api/v1/brand/mentions/company/${encodeURIComponent(brand)}?brandId=${brandId}`);
+        data = response.data;
       }
-      
+
       setBrandMentions(data.mentions || []);
     } catch (error) {
       console.error(`Error loading mentions for ${brand}:`, error);

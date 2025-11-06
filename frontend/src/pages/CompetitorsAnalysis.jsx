@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Users, ChevronRight, Building2, MessageSquare, FileText, X } from 'lucide-react';
+import { apiService } from '../utils/api';
 
 const CompetitorsAnalysis = ({ competitors, brandId }) => {
   const [selectedCompetitor, setSelectedCompetitor] = useState(null);
@@ -68,42 +69,23 @@ const CompetitorsAnalysis = ({ competitors, brandId }) => {
     
     console.log("🔍 Clicked competitor:", competitor.name);
     console.log("🏢 Brand ID:", brandId);
-    
-    // Debug authentication token
-    const token = localStorage.getItem('auth');
-    console.log("🔑 Token available:", !!token);
-    console.log("🔑 Token length:", token ? token.length : 0);
-    console.log("🔑 Token starts with:", token ? token.substring(0, 20) + '...' : 'N/A');
-    
+
     setSelectedCompetitor(competitor);
     setLoadingMentions(true);
-    
+
     try {
       const apiUrl = `/api/v1/brand/mentions/company/${encodeURIComponent(competitor.name)}?brandId=${brandId}`;
       console.log("📡 API URL:", apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+
+      const response = await apiService.get(apiUrl);
 
       console.log("📡 Response status:", response.status);
-      console.log("📡 Response ok:", response.ok);
-      console.log("📡 Response headers:", Object.fromEntries(response.headers.entries()));
+      console.log("📡 Response data:", response.data);
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log("📡 Response data:", data);
-        setMentionData(data.mentions || []);
-      } else {
-        const errorText = await response.text();
-        console.error("❌ API Error:", errorText);
-        setMentionData([]);
-      }
+      setMentionData(response.data.mentions || []);
     } catch (error) {
       console.error('❌ Error fetching mention data:', error);
+      console.error('❌ Error response:', error.response?.data);
       setMentionData([]);
     } finally {
       setLoadingMentions(false);

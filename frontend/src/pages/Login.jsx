@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -19,6 +19,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChange = (e) => {
     setFormData({
@@ -28,6 +29,16 @@ const Login = () => {
   };
 
   const handleLoginSuccess = async (response) => {
+    // Check if there's a returnTo path from session expiration
+    const returnTo = location.state?.returnTo;
+
+    if (returnTo) {
+      // User was redirected from a 401 error, take them back to where they were
+      console.log('Redirecting to returnTo path:', returnTo);
+      navigate(returnTo, { replace: true });
+      return;
+    }
+
     try {
       const onboardingResponse = await apiService.getOnboardingStatus();
 
@@ -38,21 +49,21 @@ const Login = () => {
 
           if (userBrands.length > 0) {
             console.log('User has brands, going to brand dashboard');
-            navigate('/dashboard?redirect=brand-dashboard');
+            navigate('/dashboard?redirect=brand-dashboard', { replace: true });
           } else {
             console.log('User has no brands, going to main dashboard');
-            navigate('/dashboard');
+            navigate('/dashboard', { replace: true });
           }
         } catch (brandsError) {
           console.error('Error fetching user brands:', brandsError);
-          navigate('/dashboard');
+          navigate('/dashboard', { replace: true });
         }
       } else {
-        navigate('/onboarding');
+        navigate('/onboarding', { replace: true });
       }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
-      navigate('/onboarding');
+      navigate('/onboarding', { replace: true });
     }
   };
 

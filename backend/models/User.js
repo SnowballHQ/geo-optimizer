@@ -41,6 +41,14 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    company: {
+        type: String,
+        default: null
+    },
+    jobTitle: {
+        type: String,
+        default: null
+    },
     provider: {
         type: String,
         enum: ['local', 'google'],

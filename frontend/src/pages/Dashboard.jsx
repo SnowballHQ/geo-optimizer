@@ -19,6 +19,7 @@ import SuperUserDomainAnalysis from '../components/SuperUserDomainAnalysis';
 import Analytics from '../components/Analytics';
 import StripePaymentSettings from '../components/StripePaymentSettings';
 import CMSConnectionSelector from '../components/CMSConnectionSelector';
+import { toast } from 'react-toastify';
 
 import { apiService } from '../utils/api';
 import { getUserName, isSuperuser } from '../utils/auth';
@@ -51,9 +52,16 @@ import {
 const Dashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState('dashboard');
+
+  // Read initial section and tool from URL
+  const urlParams = new URLSearchParams(location.search);
+  const initialSection = urlParams.get('section') || 'dashboard';
+  const initialTool = urlParams.get('tool') || null;
+  const initialRedirect = urlParams.get('redirect');
+
+  const [activeSection, setActiveSection] = useState(initialRedirect === 'brand-dashboard' ? 'brand-dashboard' : initialSection);
   const [showAnalyzeLink, setShowAnalyzeLink] = useState(false);
-  const [activeTool, setActiveTool] = useState(null); // 'domain' | 'blog' | null
+  const [activeTool, setActiveTool] = useState(initialTool); // 'domain' | 'blog' | null
   const [domainToAnalyze, setDomainToAnalyze] = useState('');
   const [userName, setUserName] = useState(getUserName());
   const [isLoadingContentCalendar, setIsLoadingContentCalendar] = useState(false);
@@ -95,6 +103,25 @@ const Dashboard = () => {
     dataRetention: '6-months'
   });
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+
+  // Helper function to update section and URL simultaneously
+  const navigateToSection = (section, tool = null) => {
+    setActiveSection(section);
+    setActiveTool(tool);
+
+    // Build query params
+    const params = new URLSearchParams();
+    if (section !== 'dashboard') {
+      params.set('section', section);
+    }
+    if (tool) {
+      params.set('tool', tool);
+    }
+
+    // Update URL and add to browser history
+    const newUrl = params.toString() ? `/dashboard?${params.toString()}` : '/dashboard';
+    navigate(newUrl);
+  };
 
   // Function to get dynamic welcome message based on content calendar state
   const getWelcomeMessage = () => {
@@ -280,14 +307,38 @@ const Dashboard = () => {
     }
   }, [activeSection, activeSettingsTab]);
 
+  // Fetch user profile data when settings section is active
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (activeSection === 'settings' && activeSettingsTab === 'account') {
+        try {
+          const response = await apiService.getUserProfile();
+          const userData = response.data.user;
+
+          setAccountSettings(prev => ({
+            ...prev,
+            fullName: userData.name || '',
+            email: userData.email || '',
+            company: userData.company || '',
+            role: userData.jobTitle || ''
+          }));
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          toast.error('Failed to load profile data');
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [activeSection, activeSettingsTab]);
+
   // Handle navigation state from blog editor
   useEffect(() => {
     if (location.state?.showContentCalendar) {
       setIsLoadingContentCalendar(true);
-      setActiveTool('content-calendar');
-      setActiveSection('dashboard');
+      navigateToSection('dashboard', 'content-calendar');
       setShouldAutoLoadContent(true); // Only auto-load when coming from blog editor
-      
+
       // Simulate loading time for better UX
       setTimeout(() => {
         setIsLoadingContentCalendar(false);
@@ -298,41 +349,30 @@ const Dashboard = () => {
   // Handle URL parameters for direct navigation
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
-    const section = urlParams.get('section');
     const focus = urlParams.get('focus');
-    
-    if (section === 'settings') {
-      setActiveSection('settings');
-      if (focus === 'cms') {
-        setShowCMSSelector(true);
-      }
-      // Clean up URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (section === 'analytics') {
-      setActiveSection('dashboard');
-      setActiveTool('analytics');
-      // Delay URL cleanup to ensure state is set properly
-      setTimeout(() => {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }, 100);
-    } else if (section === 'content-calendar') {
-      setActiveSection('dashboard');
-      setActiveTool('content-calendar');
-      // Delay URL cleanup to ensure state is set properly
-      setTimeout(() => {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }, 100);
+    const redirectParam = urlParams.get('redirect');
+
+    // Handle focus parameter for CMS selector
+    if (focus === 'cms') {
+      setShowCMSSelector(true);
     }
 
-    // Handle brand-dashboard redirect from login
-    const redirectParam = urlParams.get('redirect');
+    // Handle brand-dashboard redirect from login (one-time parameter)
     if (redirectParam === 'brand-dashboard') {
-      setActiveSection('brand-dashboard');
-      setActiveTool(null);
-      // Clean up the URL parameter
-      setTimeout(() => {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }, 100);
+      navigateToSection('brand-dashboard', null);
+    }
+  }, [location.search]);
+
+  // Sync component state with URL when back/forward buttons are used
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const section = urlParams.get('section') || 'dashboard';
+    const tool = urlParams.get('tool') || null;
+
+    // Only update if different from current state to avoid infinite loops
+    if (section !== activeSection || tool !== activeTool) {
+      setActiveSection(section);
+      setActiveTool(tool);
     }
   }, [location.search]);
 
@@ -393,7 +433,7 @@ const Dashboard = () => {
   // Reset auto-load flag when manually clicking content calendar
   const handleContentCalendarClick = () => {
     setShouldAutoLoadContent(false);
-    setActiveTool('content-calendar');
+    navigateToSection('dashboard', 'content-calendar');
   };
 
   const handleLogout = () => {
@@ -403,17 +443,27 @@ const Dashboard = () => {
   const handleSaveAccountSettings = async () => {
     setIsSavingAccount(true);
     try {
-      // TODO: Implement actual API call when backend endpoint is ready
-      // const response = await apiService.updateAccountSettings(accountSettings);
+      // Prepare data to send to backend
+      const profileData = {
+        name: accountSettings.fullName,
+        email: accountSettings.email,
+        company: accountSettings.company,
+        jobTitle: accountSettings.role
+      };
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await apiService.updateUserProfile(profileData);
 
-      // toast.success('Account settings saved successfully!');
-      console.log('Account settings saved:', accountSettings);
+      // Update local user name if it changed
+      if (response.data.user.name) {
+        setUserName(response.data.user.name);
+      }
+
+      toast.success('Profile updated successfully!');
+      console.log('Profile updated:', response.data.user);
     } catch (error) {
-      console.error('Error saving account settings:', error);
-      // toast.error('Failed to save account settings');
+      console.error('Error saving profile:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to save profile settings';
+      toast.error(errorMessage);
     } finally {
       setIsSavingAccount(false);
     }
@@ -441,7 +491,7 @@ const Dashboard = () => {
   const handleDomainAnalysisSubmit = (e) => {
     e.preventDefault();
     if (domainToAnalyze.trim()) {
-      setActiveTool('domain');
+      navigateToSection('dashboard', 'domain');
     }
   };
 
@@ -454,11 +504,11 @@ const Dashboard = () => {
               <h2 className="text-2xl font-semibold text-[#4a4a6a]">Domain Analysis</h2>
               <p className="text-[#4a4a6a]">Comprehensive brand insights and competitive intelligence</p>
             </div>
-            <Button variant="outline" onClick={() => setActiveTool(null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
+            <Button variant="outline" onClick={() => navigateToSection('dashboard', null)} className="inline-flex items-center border-[#b0b0d8] text-[#4a4a6a] hover:bg-white hover:border-[#6658f4]">
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Button>
           </div>
-          <DomainAnalysis onClose={() => setActiveTool(null)} />
+          <DomainAnalysis onClose={() => navigateToSection('dashboard', null)} />
         </div>
       );
     }
@@ -591,7 +641,7 @@ const Dashboard = () => {
           {/* Show Dashboard only for superusers
           {isUserSuperuser && (
             <button
-              onClick={() => { setActiveSection('dashboard'); setActiveTool(null); }}
+              onClick={() => navigateToSection('dashboard', null)}
               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 activeSection === 'dashboard' && !activeTool
                   ? 'nav-active'
@@ -607,7 +657,7 @@ const Dashboard = () => {
           {/* Domain Analysis - only for superusers
           {isUserSuperuser && (
             <button
-              onClick={() => { setActiveSection('dashboard'); setActiveTool('domain'); }}
+              onClick={() => navigateToSection('dashboard', 'domain')}
               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 activeSection === 'domain-analysis' || activeTool === 'domain'
                   ? 'nav-active'
@@ -622,7 +672,7 @@ const Dashboard = () => {
                      {/* Brand Dashboard - visible to all users with brands except superusers */}
            {userBrands.length > 0 && !isSuperuser() && (
              <button
-               onClick={() => { setActiveSection('brand-dashboard'); setActiveTool(null); }}
+               onClick={() => navigateToSection('brand-dashboard', null)}
                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                  activeSection === 'brand-dashboard'
                    ? 'nav-active'
@@ -636,7 +686,7 @@ const Dashboard = () => {
 
           {/* Content Calendar - visible to all users */}
           <button
-            onClick={() => { setActiveSection('dashboard'); setActiveTool('content-calendar'); }}
+            onClick={() => navigateToSection('dashboard', 'content-calendar')}
             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeSection === 'content-calendar' || activeTool === 'content-calendar'
                 ? 'nav-active'
@@ -649,7 +699,7 @@ const Dashboard = () => {
 
           {/* Published Blogs - visible to all users */}
           <button
-            onClick={() => { setActiveSection('dashboard'); setActiveTool('published-blogs'); }}
+            onClick={() => navigateToSection('dashboard', 'published-blogs')}
             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeSection === 'published-blogs' || activeTool === 'published-blogs'
                 ? 'nav-active'
@@ -662,7 +712,7 @@ const Dashboard = () => {
 
           {/* Analytics - visible to all users */}
           <button
-            onClick={() => { setActiveSection('dashboard'); setActiveTool('analytics'); }}
+            onClick={() => navigateToSection('dashboard', 'analytics')}
             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeSection === 'analytics' || activeTool === 'analytics'
                 ? 'nav-active'
@@ -675,7 +725,7 @@ const Dashboard = () => {
 
           {/* Blog Analysis - visible to all users */}
           <button
-            onClick={() => { setActiveSection('dashboard'); setActiveTool('blog'); }}
+            onClick={() => navigateToSection('dashboard', 'blog')}
             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeSection === 'blog-analysis' || activeTool === 'blog'
                 ? 'nav-active'
@@ -710,7 +760,7 @@ const Dashboard = () => {
 
           {/* Settings - now available for all users */}
           <button
-            onClick={() => { setActiveSection('settings'); setActiveTool(null); }}
+            onClick={() => navigateToSection('settings', null)}
             className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeSection === 'settings'
                 ? 'nav-active'
@@ -906,7 +956,7 @@ const Dashboard = () => {
                      {userBrands.length > 0 && !isSuperuser() && (
                        <Card
                          className="cursor-pointer card-hover border-0.3 border-[#b0b0d8] bg-white animate-in slide-in-from-bottom-2 duration-500 ease-out delay-400"
-                         onClick={() => { setActiveSection('brand-dashboard'); setActiveTool(null); }}
+                         onClick={() => navigateToSection('brand-dashboard', null)}
                        >
                         <CardContent className="p-6">
                           <div className="flex items-center space-x-4 mb-4">
@@ -1013,7 +1063,7 @@ const Dashboard = () => {
                        </div>
                      </div>
                      <Button
-                       onClick={() => { setActiveSection('dashboard'); setActiveTool('content-calendar'); }}
+                       onClick={() => navigateToSection('dashboard', 'content-calendar')}
                        className="bg-white text-[#6658f4] hover:bg-white/90 font-semibold shadow-md transition-all hover:scale-105"
                      >
                        Go to Content Calendar
@@ -1026,7 +1076,7 @@ const Dashboard = () => {
                {/* Direct Domain Analysis Integration */}
                <DomainAnalysis
                  initialDomain={userBrands.length > 0 ? userBrands[0].domain : ""}
-                 onClose={() => setActiveSection('dashboard')}
+                 onClose={() => navigateToSection('dashboard', null)}
                />
              </div>
            )}

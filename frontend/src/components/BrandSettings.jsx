@@ -94,7 +94,7 @@ const BrandSettings = () => {
               value={brandTonality}
               onChange={(e) => setBrandTonality(e.target.value)}
               placeholder="e.g., Professional yet approachable, innovative, customer-focused, trustworthy..."
-              className="min-h-[100px] resize-none border-input focus:border-primary focus:ring-primary/20"
+              className="min-h-[200px] resize-y border-input focus:border-primary focus:ring-primary/20"
               maxLength={500}
             />
             <div className="text-tiny text-muted-foreground text-right mt-1">
@@ -113,7 +113,7 @@ const BrandSettings = () => {
               value={brandInformation}
               onChange={(e) => setBrandInformation(e.target.value)}
               placeholder="e.g., We are a B2B SaaS company specializing in AI-powered sales automation. Our platform helps sales teams increase productivity through intelligent lead scoring, automated outreach, and data-driven insights..."
-              className="min-h-[100px] resize-none border-input focus:border-primary focus:ring-primary/20"
+              className="min-h-[250px] resize-y border-input focus:border-primary focus:ring-primary/20"
               maxLength={2000}
             />
             <div className="text-tiny text-muted-foreground text-right mt-1">

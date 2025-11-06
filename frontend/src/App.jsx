@@ -105,8 +105,8 @@ function App() {
   return (
     <ErrorBoundary>
       <RouterProvider router={router} />
-      <ToastContainer 
-        position='top-center'
+      <ToastContainer
+        position='bottom-right'
         autoClose={5000}
         hideProgressBar={false}
         newestOnTop={false}

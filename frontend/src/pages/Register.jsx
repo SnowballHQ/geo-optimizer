@@ -34,13 +34,13 @@ const Register = () => {
       const onboardingResponse = await apiService.getOnboardingStatus();
 
       if (onboardingResponse.data.isCompleted) {
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } else {
-        navigate('/onboarding');
+        navigate('/onboarding', { replace: true });
       }
     } catch (onboardingError) {
       console.error('Error checking onboarding status:', onboardingError);
-      navigate('/onboarding');
+      navigate('/onboarding', { replace: true });
     }
   };
 

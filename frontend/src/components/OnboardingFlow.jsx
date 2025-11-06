@@ -84,7 +84,7 @@ const OnboardingFlow = () => {
         console.log('✅ Onboarding completed successfully:', response.data.analysisSteps);
 
         // All users who complete onboarding go to full dashboard with brand dashboard view
-        navigate('/dashboard?redirect=brand-dashboard');
+        navigate('/dashboard?redirect=brand-dashboard', { replace: true });
       } else {
         throw new Error('Onboarding completion failed');
       }
@@ -137,9 +137,9 @@ const OnboardingFlow = () => {
   }
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="h-screen flex bg-white overflow-hidden">
       {/* Left Sidebar - Progress Panel */}
-      <div className="hidden lg:flex lg:w-72 bg-gradient-to-br from-primary-600 to-primary-800 p-8 flex-col relative">
+      <div className="hidden lg:flex lg:w-72 bg-gradient-to-br from-primary-600 to-primary-800 p-8 flex-col relative sticky top-0 h-screen overflow-y-auto">
         {/* Logo */}
         <Link to="/" className="mb-12">
           <div className="flex items-center space-x-3">

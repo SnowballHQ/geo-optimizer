@@ -112,50 +112,47 @@ const GoogleSignIn = ({ onSuccess, onError, disabled = false }) => {
     }
   };
 
-  if (disabled) {
-    return (
-      <div className="w-full h-12 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
-        <span className="text-gray-400 text-sm">Google Sign-in unavailable</span>
-      </div>
-    );
-  }
-
-  // Show processing state during backend authentication
-  if (isProcessing) {
-    return (
-      <div className="w-full h-12 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-blue-600 text-sm">Authenticating with Google...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading state while Google API loads
-  if (!isGoogleLoaded && initAttempts > 0 && initAttempts < maxAttempts) {
-    return (
-      <div className="w-full h-12 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-blue-600 text-sm">Loading Google Sign-in... ({initAttempts}/{maxAttempts})</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state if Google API failed to load
-  if (initAttempts >= maxAttempts && !isGoogleLoaded) {
-    return (
-      <div className="w-full h-12 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
-        <span className="text-red-600 text-sm">Google Sign-in failed to load. Please refresh the page.</span>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full">
-      <div ref={googleButtonRef} className="w-full flex justify-center"></div>
+      {/* Disabled State */}
+      {disabled && (
+        <div className="w-full h-12 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
+          <span className="text-gray-400 text-sm">Google Sign-in unavailable</span>
+        </div>
+      )}
+
+      {/* Processing State - Authenticating with backend */}
+      {!disabled && isProcessing && (
+        <div className="w-full h-16 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-2">
+            <span className="text-blue-600 text-sm">Authenticating with Google...</span>
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State - Google API loading */}
+      {!disabled && !isProcessing && !isGoogleLoaded && initAttempts > 0 && initAttempts < maxAttempts && (
+        <div className="w-full h-16 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-2">
+            <span className="text-blue-600 text-sm">Loading Google Sign-in... ({initAttempts}/{maxAttempts})</span>
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      )}
+
+      {/* Error State - Google API failed to load */}
+      {!disabled && !isProcessing && initAttempts >= maxAttempts && !isGoogleLoaded && (
+        <div className="w-full h-12 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
+          <span className="text-red-600 text-sm">Google Sign-in failed to load. Please refresh the page.</span>
+        </div>
+      )}
+
+      {/* Google Sign-in Button */}
+      {!disabled && !isProcessing && (isGoogleLoaded || initAttempts === 0) && (
+        <div ref={googleButtonRef} className="w-full flex justify-center"></div>
+      )}
+
       {/* Debug info - remove in production */}
       {process.env.NODE_ENV === 'development' && (
         <div className="mt-2 text-xs text-gray-500">

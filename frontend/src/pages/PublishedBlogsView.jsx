@@ -153,10 +153,10 @@ const PublishedBlogsView = ({ inline = false, onClose }) => {
       onClose();
       // Use setTimeout to ensure the onClose completes before navigation
       setTimeout(() => {
-        navigate('/dashboard?section=analytics');
+        navigate('/dashboard?tool=analytics');
       }, 50);
     } else {
-      navigate('/dashboard?section=analytics');
+      navigate('/dashboard?tool=analytics');
     }
   };
 

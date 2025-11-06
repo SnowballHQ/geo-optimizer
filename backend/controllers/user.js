@@ -365,6 +365,75 @@ const googleAuth = async (req, res) => {
   }
 };
 
+const updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, email, company, jobTitle } = req.body;
+
+    // Find the user
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
+    }
+
+    // If email is being changed, check if it's already taken by another user
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (existingUser && existingUser._id.toString() !== userId) {
+        return res.status(409).json({
+          success: false,
+          error: "This email is already in use"
+        });
+      }
+      user.email = email.toLowerCase();
+    }
+
+    // Update allowed fields
+    if (name) user.name = name.trim();
+    if (company !== undefined) user.company = company.trim() || null;
+    if (jobTitle !== undefined) user.jobTitle = jobTitle.trim() || null;
+
+    await user.save();
+
+    console.log('✅ Profile updated successfully for user:', user.email);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        company: user.company,
+        jobTitle: user.jobTitle,
+        profilePicture: user.profilePicture,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('❌ Profile update error:', error);
+
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: "Profile validation failed",
+        details: validationErrors
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update profile. Please try again."
+    });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -375,4 +444,5 @@ module.exports = {
   getAnalysisHistory,
   deleteAnalysis,
   googleAuth,
+  updateUserProfile,
 };

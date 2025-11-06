@@ -1026,7 +1026,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
 
   // Helper function to get content for a specific date
   const getContentForDate = (date) => {
-    if (!contentPlan) return [];
+    if (!contentPlan || !Array.isArray(contentPlan)) return [];
 
     const dateStr = date.toISOString().split('T')[0];
     return contentPlan.filter(item => {
@@ -1567,7 +1567,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
       </div>
 
       {/* Calendar Grid */}
-       {currentView === 'week' && (
+       {currentView === 'week' && contentPlan && (
       <div className="grid grid-cols-7 gap-2">
         {/* Day Headers */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -1739,7 +1739,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
        )}
 
       {/* Month View */}
-      {currentView === 'month' && (
+      {currentView === 'month' && contentPlan && (
         <div className="bg-white border border-[#b0b0d8] rounded-lg p-2">
           {/* Day Headers */}
           <div className="grid grid-cols-7 gap-1 mb-1">
@@ -1862,7 +1862,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
       )}
 
       {/* List View */}
-      {currentView === 'list' && (
+      {currentView === 'list' && contentPlan && (
         <div className="space-y-3">
           {/* List Items */}
           {contentPlan.map((item, index) => (
