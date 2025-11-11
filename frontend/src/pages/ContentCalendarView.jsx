@@ -1217,10 +1217,10 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
               )}
               
               <div className="space-y-3">
-            <Button 
+            <Button
               onClick={handleGenerateCalendar}
               disabled={!companyName.trim() || isGenerating}
-              className="w-full gradient-primary"
+              className="w-full gradient-primary text-white"
             >
               {isGenerating ? (
                 <>
@@ -1287,7 +1287,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
               </Button>
               <Button
                 onClick={handleSaveInlineContent}
-                className="gradient-primary shadow-md hover:shadow-lg transition-shadow"
+                className="gradient-primary text-white shadow-md hover:shadow-lg transition-shadow"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Save Changes
@@ -1371,7 +1371,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                   onClick={handleGenerateInlineBlog}
                   disabled={isGeneratingBlog || !editorFormData.outline}
                   size="sm"
-                  className="gradient-primary"
+                  className="gradient-primary text-white"
                 >
                   {isGeneratingBlog ? (
                     <>
@@ -1406,6 +1406,17 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                     Create an outline first, then generate content
                   </p>
                 )}
+              </div>
+
+              {/* Save Changes Button Below Editor */}
+              <div className="mt-6 flex justify-center">
+                <Button
+                  onClick={handleSaveInlineContent}
+                  className="gradient-primary text-white shadow-md hover:shadow-lg transition-shadow px-8 py-2"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Save Changes
+                </Button>
               </div>
             </div>
           </div>
@@ -1443,7 +1454,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
               <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
+                    Meta Description
                   </label>
                   <Textarea
                     value={editorFormData.description}
@@ -1528,7 +1539,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
             variant={currentView === 'week' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setCurrentView('week')}
-            className={currentView === 'week' ? 'gradient-primary' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
+            className={currentView === 'week' ? 'gradient-primary text-white' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
           >
             <Grid className="w-4 h-4 mr-1" />
             Calendar
@@ -1537,7 +1548,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
             variant={currentView === 'month' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setCurrentView('month')}
-            className={currentView === 'month' ? 'gradient-primary' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
+            className={currentView === 'month' ? 'gradient-primary text-white' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
           >
             <Calendar className="w-4 h-4 mr-1" />
             Month
@@ -1546,7 +1557,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
             variant={currentView === 'list' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setCurrentView('list')}
-            className={currentView === 'list' ? 'gradient-primary' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
+            className={currentView === 'list' ? 'gradient-primary text-white' : 'border-[#b0b0d8] text-[#4a4a6a] hover:border-[#6658f4]'}
           >
             <List className="w-4 h-4 mr-1" />
             List
@@ -2164,7 +2175,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                 </Button>
                 <Button
                   onClick={handleSaveContent}
-                  className="gradient-primary"
+                  className="gradient-primary text-white"
                 >
                   Save Changes
                 </Button>
@@ -2198,7 +2209,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                        setViewingContent(null);
                        handleEditContent(viewingContent);
                      }}
-                     className="gradient-primary"
+                     className="gradient-primary text-white"
                    >
                      <Edit className="w-4 h-4 mr-2" />
                      Edit Content
@@ -2385,7 +2396,7 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                     id="media-upload"
                   />
                   <label htmlFor="media-upload">
-                    <Button className="gradient-primary cursor-pointer">
+                    <Button className="gradient-primary text-white cursor-pointer">
                       Choose Files
                     </Button>
                   </label>
@@ -2630,9 +2641,9 @@ const ContentCalendarView = ({ inline = false, onClose, shouldAutoLoad = false, 
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    onClick={handleSaveCMSCredentials} 
-                    className="gradient-primary"
+                  <Button
+                    onClick={handleSaveCMSCredentials}
+                    className="gradient-primary text-white"
                     disabled={!cmsPlatform || isSavingCredentials}
                   >
                     {isSavingCredentials ? 'Saving...' : 'Save & Test Connection'}
